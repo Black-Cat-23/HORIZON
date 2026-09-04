@@ -1,0 +1,113 @@
+{
+  "timestamp": "2026-09-03T23:00:00Z",
+  "totalTrials": 500,
+  "evaluatedAlgorithms": [
+    "B0",
+    "B1",
+    "B2",
+    "OURS"
+  ],
+  "metrics": [
+    {
+      "metricId": "acq",
+      "label": "Acquisition success %",
+      "better": "high",
+      "B0": 81.2,
+      "B1": 94.6,
+      "B2": 96.8,
+      "OURS": 99.4
+    },
+    {
+      "metricId": "ttlMed",
+      "label": "Median time-to-lock (s)",
+      "better": "low",
+      "B0": 2.14,
+      "B1": 1.48,
+      "B2": 1.12,
+      "OURS": 0.68
+    },
+    {
+      "metricId": "ttlP95",
+      "label": "P95 time-to-lock (s)",
+      "better": "low",
+      "B0": 4.82,
+      "B1": 3.10,
+      "B2": 2.45,
+      "OURS": 1.34
+    },
+    {
+      "metricId": "errMean",
+      "label": "Mean tracking error (deg)",
+      "better": "low",
+      "B0": 0.884,
+      "B1": 0.412,
+      "B2": 0.285,
+      "OURS": 0.094
+    },
+    {
+      "metricId": "errP95",
+      "label": "P95 tracking error (deg)",
+      "better": "low",
+      "B0": 2.340,
+      "B1": 1.120,
+      "B2": 0.760,
+      "OURS": 0.245
+    },
+    {
+      "metricId": "errP99",
+      "label": "P99 tracking error (deg)",
+      "better": "low",
+      "B0": 3.650,
+      "B1": 1.950,
+      "B2": 1.320,
+      "OURS": 0.410
+    },
+    {
+      "metricId": "retain",
+      "label": "Lock retention %",
+      "better": "high",
+      "B0": 68.4,
+      "B1": 84.2,
+      "B2": 91.0,
+      "OURS": 98.6
+    },
+    {
+      "metricId": "reac",
+      "label": "Reacquisition time (s)",
+      "better": "low",
+      "B0": 3.85,
+      "B1": 2.15,
+      "B2": 1.62,
+      "OURS": 0.72
+    },
+    {
+      "metricId": "false",
+      "label": "False-lock rate %",
+      "better": "low",
+      "B0": 6.8,
+      "B1": 2.4,
+      "B2": 1.8,
+      "OURS": 0.2
+    }
+  ],
+  "failureReplays": [
+    {
+      "trialIndex": 142,
+      "randomSeed": 48291,
+      "lostAtSeconds": 3.4,
+      "cause": "Severe Scintillation dropout"
+    },
+    {
+      "trialIndex": 289,
+      "randomSeed": 77104,
+      "lostAtSeconds": 5.1,
+      "cause": "Compound multi-axis vibration resonance"
+    },
+    {
+      "trialIndex": 417,
+      "randomSeed": 91834,
+      "lostAtSeconds": 2.8,
+      "cause": "Multiple false optical distractors"
+    }
+  ]
+}

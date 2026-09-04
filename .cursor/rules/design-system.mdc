@@ -1,0 +1,43 @@
+---
+description: "COARSE-ALIGN-X visual design system — colors, typography, motion. Applies to all UI work, Unity and web."
+alwaysApply: true
+---
+
+# Design System — COARSE-ALIGN-X
+
+## Color tokens (never deviate without asking first)
+- `--void`: #070912           background, deep field
+- `--field`: #141a30          panel/surface background
+- `--lock-cyan`: #7fd4e8      primary accent, confirmed/locked state ONLY
+- `--disturbance-amber`: #e8a15c   RESERVED exclusively for active disturbance/degraded state — never decorative
+- `--confirm-green`: #6fe8a8       RESERVED exclusively for successful acquisition/lock confirmation — never decorative
+- `--lost-red`: #e86f7f            RESERVED exclusively for lost-lock/failure state — never decorative
+
+Rule: amber, green, and red are STATE colors, not palette colors. If you are about to use one
+decoratively (a button, a header accent, a hover state with no semantic meaning), stop and use
+lock-cyan or a neutral gray instead. A color that means something everywhere means nothing.
+
+## Typography
+- Display / headings: Space Grotesk or Bricolage Grotesque
+- ALL numeric/telemetry values (metrics, counters, live data): JetBrains Mono or Space Mono —
+  this is non-negotiable, every number in this project renders in monospace, no exceptions
+- Body text: General Sans (Fontshare) or an equivalent humanist sans
+
+BANNED, do not use under any circumstance: Inter, Roboto, Open Sans, Arial, or any default
+system font as a primary typeface. These read as generic/AI-templated.
+
+## Motion principles
+- No bounce, no elastic/spring overshoot easing, anywhere. Use restrained cubic-bezier easing only.
+- All movement is damped (exponential smoothing), never snapped/instant, except for hard state
+  transitions (e.g. lock confirmed) where a single sharp cut IS the correct emphasis.
+- One element animates at a time per moment of attention. Do not animate multiple unrelated
+  UI elements simultaneously "for effect."
+
+## Cursor / pointer
+- Custom reticle-style cursor across interactive surfaces where feasible, tightening slightly on
+  hover over interactive elements — thematically a "confidence tightening on lock," not decorative.
+
+## Before generating any new UI element
+Ask: does this color/font/motion choice already exist in this system? If you're about to introduce
+a new color, a new typeface, or a bounce/spring easing not listed above, STOP and ask the user first
+rather than defaulting to a generic choice.

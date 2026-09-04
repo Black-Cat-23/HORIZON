@@ -1,0 +1,44 @@
+---
+description: "COARSE-ALIGN-X Unity UGUI — five screens, nav rail, shared telemetry. No fake per-screen data."
+globs: "**/*.{cs,uxml,uss,unity,html,css,js}"
+alwaysApply: false
+---
+
+# Unity Application UI Spec (5 screens)
+
+Applies `.cursor/rules/design-system.mdc` to in-app screens.
+
+**Nav:** persistent left-edge rail (5 icons, `--field`). Active icon `--lock-cyan`; inactive 40% gray.
+Screen changes: cross-fade only, ≤200ms, no slide/bounce.
+
+**Shared state:** every screen reads the same telemetry/config objects. Empty states when data
+does not exist yet — never placeholder numbers. Mission Setup preview uses the same world as Live/Stress.
+
+## Screen 1 — Mission Setup
+Two-column: 35% `--field` config (Target, Camera, Disturbance presets NOMINAL/DIFFICULT/SEVERE/RECOVERY/ADVERSARIAL,
+algorithm multi-select B0-Naive / B1-Classical / B2-Neural / Ours). 65% live 3D preview of the same world.
+Section labels: Space Grotesk, all-caps, small, `--lock-cyan`. Numeric inputs: monospace.
+Primary: `RUN` bottom-right, `--lock-cyan` fill → cross-fade to Screen 2.
+
+## Screen 2 — Live Simulation
+Full-viewport 3D; HUD on translucent `--field` (~85% opacity). HUD panels do not move.
+Top-left Mode Manager: SEARCH → ACQUIRE → TRACK → DEGRADED → REACQUIRE. Active node filled
+(TRACK `--confirm-green`, DEGRADED `--disturbance-amber`, REACQUIRE `--lost-red`, SEARCH/ACQUIRE `--lock-cyan`);
+inactive outline-only. Top-right live metrics (angular error, FPS, latency ms) — replace values, no tweening.
+Bottom: last ~8 timestamped events; oldest fades.
+
+## Screen 3 — Tracking Console
+Three stacked `--field` panels: (1) state vector `[θx, θy, ωx, ωy, ax, ay]` monospace grid with units;
+(2) angular-space covariance ellipse, `--lock-cyan`, fill opacity = confidence — not a spinner;
+(3) actual trajectory solid `--lock-cyan` vs predicted dashed/dimmer.
+
+## Screen 4 — Stress Lab
+Left: disturbance sliders (vibration, sensor noise, motion blur, intensity fluctuation, occlusion,
+false distractors, actuator latency). Non-zero labels `--disturbance-amber`. Right: same live 3D as Screen 2.
+Top presets set all sliders; manual change deselects preset → "Custom".
+
+## Screen 5 — Benchmark Lab
+Config row: same algorithm checkboxes, trial count (default 500), `RUN N TRIALS` with monospace `247 / 500`
+(no generic progress bar). Results table: Ours better = `--confirm-green`, worse = `--lost-red` — only here.
+Include robustness envelope plot. Failure replay list with `REPLAY` → Screen 2 seeded trial.
+Empty: "No runs yet — configure and press RUN".

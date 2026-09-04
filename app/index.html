@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HORIZON — COARSE-ALIGN-X</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://api.fontshare.com" />
+  <link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./css/app.css" />
+</head>
+<body>
+  <div class="reticle" id="reticle" aria-hidden="true">
+    <svg viewBox="0 0 32 32">
+      <circle cx="16" cy="16" r="10" fill="none" stroke="#7fd4e8" stroke-width="1.2" opacity="0.9"/>
+      <line x1="16" y1="2" x2="16" y2="8" stroke="#7fd4e8" stroke-width="1.2"/>
+      <line x1="16" y1="24" x2="16" y2="30" stroke="#7fd4e8" stroke-width="1.2"/>
+      <line x1="2" y1="16" x2="8" y2="16" stroke="#7fd4e8" stroke-width="1.2"/>
+      <line x1="24" y1="16" x2="30" y2="16" stroke="#7fd4e8" stroke-width="1.2"/>
+      <circle cx="16" cy="16" r="1.4" fill="#7fd4e8"/>
+    </svg>
+  </div>
+
+  <div class="app">
+    <nav class="rail" aria-label="Screens">
+      <div class="rail-mark">HORIZON</div>
+      <button class="rail-btn is-active" data-screen="setup" title="Mission Setup">
+        <svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>
+      </button>
+      <button class="rail-btn" data-screen="live" title="Live Simulation">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/></svg>
+      </button>
+      <button class="rail-btn" data-screen="console" title="Tracking Console">
+        <svg viewBox="0 0 24 24"><path d="M4 18 L10 10 L14 14 L20 6"/></svg>
+      </button>
+      <button class="rail-btn" data-screen="stress" title="Stress Lab">
+        <svg viewBox="0 0 24 24"><path d="M4 16h4l2-8 3 12 2-8h5"/></svg>
+      </button>
+      <button class="rail-btn" data-screen="bench" title="Benchmark Lab">
+        <svg viewBox="0 0 24 24"><rect x="5" y="12" width="3" height="7"/><rect x="11" y="8" width="3" height="11"/><rect x="17" y="5" width="3" height="14"/></svg>
+      </button>
+    </nav>
+
+    <main class="stage">
+      <section class="screen is-active" id="screen-setup">
+        <div class="setup">
+          <aside class="setup-form">
+            <p class="label">Target</p>
+            <div class="section">
+              <label class="field-row">Speed (deg/s) <input id="cfg-speed" type="number" step="0.1" value="12" /></label>
+              <label class="field-row">Acceleration (deg/s²) <input id="cfg-acc" type="number" step="0.1" value="1.5" /></label>
+              <label class="field-row">Initial angular offset (deg) <input id="cfg-offset" type="number" step="0.1" value="8" /></label>
+            </div>
+            <p class="label">Camera</p>
+            <div class="section">
+              <label class="field-row">FOV (deg) <input id="cfg-fov" type="number" step="1" value="40" /></label>
+              <label class="field-row">Resolution
+                <select id="cfg-res">
+                  <option value="1280x720">1280×720</option>
+                  <option value="1920x1080" selected>1920×1080</option>
+                  <option value="2560x1440">2560×1440</option>
+                </select>
+              </label>
+            </div>
+            <p class="label">Disturbance</p>
+            <div class="section">
+              <label class="field-row">Preset
+                <select id="cfg-preset">
+                  <option>NOMINAL</option>
+                  <option>DIFFICULT</option>
+                  <option>SEVERE</option>
+                  <option>RECOVERY</option>
+                  <option>ADVERSARIAL</option>
+                </select>
+              </label>
+            </div>
+            <p class="label">Algorithm</p>
+            <div class="section check-row" id="algo-setup"></div>
+          </aside>
+          <div class="setup-preview">
+            <div class="world-host" id="world-setup"></div>
+            <button class="primary" id="btn-run">RUN</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" id="screen-live">
+        <div class="world-host" id="world-live"></div>
+        <div class="hud hud-tl">
+          <p class="label">Mode Manager</p>
+          <div class="mode-graph" id="mode-graph"></div>
+        </div>
+        <div class="hud hud-tr">
+          <p class="label">Telemetry</p>
+          <dl class="metrics">
+            <dt>Angular error</dt><dd class="mono" id="m-err">—</dd>
+            <dt>FPS</dt><dd class="mono" id="m-fps">—</dd>
+            <dt>Latency (ms)</dt><dd class="mono" id="m-lat">—</dd>
+          </dl>
+        </div>
+        <div class="hud hud-bot">
+          <p class="label">Event log</p>
+          <ul class="event-log" id="event-log"></ul>
+        </div>
+      </section>
+
+      <section class="screen" id="screen-console">
+        <div class="console">
+          <div class="panel">
+            <p class="label">State vector</p>
+            <div class="state-grid" id="state-grid"></div>
+          </div>
+          <div class="panel">
+            <p class="label">Uncertainty — angular space</p>
+            <div class="plot-host"><canvas id="cov-plot"></canvas></div>
+          </div>
+          <div class="panel">
+            <p class="label">Predicted vs actual</p>
+            <div class="plot-host"><canvas id="traj-plot"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" id="screen-stress">
+        <div class="stress">
+          <div class="preset-row" id="preset-row"></div>
+          <div class="stress-body">
+            <div class="stress-controls" id="stress-sliders"></div>
+            <div class="world-host" id="world-stress"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" id="screen-bench">
+        <div class="bench">
+          <div class="bench-config">
+            <div class="check-row" id="algo-bench" style="grid-auto-flow:column;grid-template-columns:none;display:flex;gap:14px;"></div>
+            <label class="field-row" style="margin:0;">Trials <input id="trial-n" type="number" min="1" value="500" /></label>
+            <button class="primary" id="btn-trials" style="position:static;">RUN N TRIALS</button>
+            <button class="ghost" id="btn-load-bench" style="position:static;border:1px solid rgba(127,212,232,0.3);background:transparent;color:var(--lock-cyan);padding:8px 14px;font-family:var(--font-mono);font-size:12px;">LOAD CANONICAL BENCHMARK</button>
+            <span class="mono trial-count" id="trial-progress"></span>
+          </div>
+          <div id="bench-body">
+            <div class="empty">No runs yet — configure and press RUN or load canonical benchmark</div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+      }
+    }
+  </script>
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
