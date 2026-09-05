@@ -710,7 +710,7 @@ class SimulationDebugViewer(QMainWindow):
         )
 
         # 8. Render Phase 4 & Phase 5 Perception + State Tracking Feed
-        if detection_res.diagnostics is not None and detection_res.diagnostics.annotated_frame is not None:
+        if self._perception_mode == "CLASSICAL" and detection_res.diagnostics is not None and detection_res.diagnostics.annotated_frame is not None:
             disp_annotated = detection_res.diagnostics.annotated_frame.copy()
         else:
             disp_annotated = cv2.cvtColor(dist_cam_frame, cv2.COLOR_GRAY2BGR)
@@ -719,9 +719,9 @@ class SimulationDebugViewer(QMainWindow):
         # White = GT [Eval], Red = Measurement, Cyan = Estimate + Ellipse, Yellow = Prediction
         disp_annotated = draw_tracking_annotations(
             frame=disp_annotated,
-            estimate=self._last_estimate,
+            estimate=self._last_estimate if in_fov else None,
             ground_truth_pos=(effective_u, effective_v) if in_fov else None,
-            measurement_pos=detection_res.centroid if detection_res.detected else None,
+            measurement_pos=detection_res.centroid if (detection_res.detected and in_fov) else None,
             draw_ellipse=True,
             draw_velocity_vector=True,
         )

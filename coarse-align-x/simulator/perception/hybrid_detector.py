@@ -305,6 +305,10 @@ class HybridBeaconDetector:
             return out
 
         for i, cand in enumerate(res_c.candidates):
+            contrast = cand.peak_intensity - cand.background_level
+            if contrast < 25.0 or cand.snr < 1.8:
+                continue
+
             # Compute centroid from candidate contour/bbox
             M = cv2.moments(cand.contour)
             if M["m00"] != 0:
@@ -327,7 +331,7 @@ class HybridBeaconDetector:
                     peak_intensity=cand.peak_intensity,
                     mean_intensity=cand.mean_intensity,
                     background_estimate=cand.background_level,
-                    local_contrast=cand.peak_intensity - cand.background_level,
+                    local_contrast=contrast,
                     classical_confidence=cand.score,
                     neural_confidence=None,
                     source=CandidateSource.CLASSICAL,
