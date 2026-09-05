@@ -1,4 +1,4 @@
-# COARSE-ALIGN-X — Master Project Contract
+# HORIZON — Master Project Contract
 
 ## Purpose
 Build the SIH26169 solution as a software-in-the-loop experimental platform for developing, stress-testing and statistically benchmarking coarse Pointing/Acquisition/Tracking (PAT) algorithms for mobile Free-Space Optical Communication (FSOC) terminals.
@@ -7,8 +7,8 @@ This is NOT a generic "AI camera tracker" and NOT a physical FSOC hardware build
 
 ## Source of truth
 1. Official SIH26169 problem statement.
-2. `COARSE-ALIGN-X_SIH26169_Documentation(1).pdf` supplied by the team.
-3. `COARSE-ALIGN-X_UIUX_Experience_Documentation.pdf` supplied by the team.
+2. `HORIZON_SIH26169_Documentation(1).pdf` supplied by the team.
+3. `HORIZON_UIUX_Experience_Documentation.pdf` supplied by the team.
 4. Verified external research referenced by those documents.
 
 Never invent a PS requirement, numerical target, scientific constant, benchmark number, or claim of novelty.
@@ -29,7 +29,7 @@ The application must support:
 - automatically generated performance report
 
 ## Product identity
-Name: COARSE-ALIGN-X
+Name: HORIZON
 Descriptor: Adaptive PAT Validation Platform
 
 Core thesis:

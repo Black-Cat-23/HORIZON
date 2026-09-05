@@ -1,4 +1,4 @@
-# COARSE-ALIGN-X — Build Order & Agent Handoff
+# HORIZON — Build Order & Agent Handoff
 
 ## Goal
 Two coding agents are allowed, but there must be ONE source-controlled repository and ONE architecture.
@@ -34,7 +34,7 @@ Important: do NOT let the two agents independently redefine interfaces or archit
 
 ## Repository contract
 Suggested root:
-/coarse-align-x
+/horizon
   /UnityApp
   /Research
   /Benchmarks

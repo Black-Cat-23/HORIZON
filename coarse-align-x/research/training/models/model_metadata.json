@@ -1,0 +1,16 @@
+{
+  "model_name": "YOLOv8n-Beacon",
+  "model_family": "YOLOv8",
+  "export_format": "ONNX",
+  "opset_version": 12,
+  "input_width": 640,
+  "input_height": 640,
+  "input_channels": 3,
+  "precision": "FP32",
+  "class_names": [
+    "beacon"
+  ],
+  "num_classes": 1,
+  "onnx_file_path": "research\\training\\models\\yolov8n_beacon.onnx",
+  "export_timestamp": "2026-09-05 05:39:32"
+}

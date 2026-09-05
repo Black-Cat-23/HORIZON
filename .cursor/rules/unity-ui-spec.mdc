@@ -1,5 +1,5 @@
 ---
-description: "COARSE-ALIGN-X Unity UGUI — five screens, nav rail, shared telemetry. No fake per-screen data."
+description: "HORIZON Unity UGUI — five screens, nav rail, shared telemetry. No fake per-screen data."
 globs: "**/*.{cs,uxml,uss,unity,html,css,js}"
 alwaysApply: false
 ---

@@ -1,9 +1,9 @@
 ---
-description: "COARSE-ALIGN-X visual design system — colors, typography, motion. Applies to all UI work, Unity and web."
+description: "HORIZON visual design system — colors, typography, motion. Applies to all UI work, Unity and web."
 alwaysApply: true
 ---
 
-# Design System — COARSE-ALIGN-X
+# Design System — HORIZON
 
 ## Color tokens (never deviate without asking first)
 - `--void`: #070912           background, deep field

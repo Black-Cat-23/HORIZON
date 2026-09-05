@@ -1,0 +1,84 @@
+# =============================================================================
+# HORIZON  —  Default Configuration
+# SIH26169: AI-Based Virtual Camera Tracking for Coarse Alignment of FSOC
+# =============================================================================
+# Phase 1: Simulation Foundation
+# All values here are baseline defaults per the SIH26169 parameter requirements.
+# =============================================================================
+
+world:
+  width: 2000           # pixels
+  height: 2000          # pixels
+  background_level: 0   # 0–255, default black
+
+camera:
+  width: 640            # pixels
+  height: 480           # pixels
+  fov_horizontal_deg: 4.0
+  fov_vertical_deg: 3.0
+  update_rate_hz: 30
+  rate_limit_deg_s: 5.0 # maximum gimbal pan/tilt rate (deg/s)
+
+target:
+  count: 1              # Phase 1 supports exactly 1 target
+  size_px: 10           # valid range: 5–20
+  intensity: 255        # beacon brightness 0–255
+  initial_position:     # null = deterministic from seed
+    x: null
+    y: null
+
+simulation:
+  frequency_hz: 60      # fixed simulation timestep = 1/60 s
+  seed: 42
+  duration_seconds: 10.0
+
+trajectory:
+  type: straight        # straight | circular | figure8 | random | spiral | sinusoidal
+  straight:
+    velocity_x: 80.0    # pixels/second
+    velocity_y: 60.0    # pixels/second
+    boundary_mode: bounce  # bounce | clamp
+  circular:
+    center_x: 1000.0
+    center_y: 1000.0
+    radius: 300.0
+    angular_velocity: 1.0  # rad/s
+    phase: 0.0             # rad
+  figure8:
+    center_x: 1000.0
+    center_y: 1000.0
+    amplitude_x: 400.0
+    amplitude_y: 300.0
+    angular_velocity: 0.8  # rad/s
+    phase: 0.0             # rad
+  random:
+    max_speed: 150.0           # pixels/second
+    max_acceleration: 200.0    # pixels/second²
+    acceleration_change_rate: 5.0  # Hz — how often acceleration direction changes
+    boundary_mode: bounce
+  spiral:
+    center_x: 1000.0
+    center_y: 1000.0
+    initial_radius: 50.0
+    expansion_rate: 20.0   # pixels/second radial growth
+    angular_velocity: 1.5  # rad/s
+    phase: 0.0
+  sinusoidal:
+    center_x: 1000.0
+    center_y: 1000.0
+    amplitude_x: 400.0
+    amplitude_y: 300.0
+    frequency_x: 0.5      # Hz
+    frequency_y: 0.7      # Hz
+    phase_x: 0.0
+    phase_y: 0.0
+
+logging:
+  enabled: true
+  level: INFO              # DEBUG | INFO | WARNING | ERROR
+  output_directory: logs
+
+ground_truth:
+  enabled: true
+  format: csv              # csv | json
+  output_directory: data/ground_truth

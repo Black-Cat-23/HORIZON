@@ -1,6 +1,6 @@
 namespace Horizon
 {
-    /// <summary>COARSE-ALIGN-X tokens. Do not add decorative uses of amber/green/red.</summary>
+    /// <summary>HORIZON tokens. Do not add decorative uses of amber/green/red.</summary>
     public static class HorizonTokens
     {
         public const string Void = "#070912";

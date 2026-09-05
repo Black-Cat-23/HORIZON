@@ -1,4 +1,4 @@
-# COARSE-ALIGN-X — Unity Application UI Spec (5 screens)
+# HORIZON — Unity Application UI Spec (5 screens)
 
 Applies the design system in `.cursor/rules/design-system.mdc` to the actual in-app UGUI screens.
 This did not exist before — the website doc (THE LOCK-ON) only referenced "extend this language

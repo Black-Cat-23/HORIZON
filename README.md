@@ -1,8 +1,7 @@
 # HORIZON
 
-**Homing & Optical Intelligence for Robust Zone-Oriented Navigation**
-
-Visual language: **HORIZON**. Tokens and motion live in `/docs/`.
+**AI-Based Virtual Camera Tracking System for Coarse Alignment of Mobile FSOC Terminals**
+*(Smart India Hackathon 2026 — PS SIH26169)*
 
 ## Run the operator UI
 

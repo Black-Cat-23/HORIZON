@@ -23,11 +23,11 @@ Before changing a single file, read all of the following:
 5. docs/HORIZON_UNITY_3D_WORLD_BIBLE.md
 6. docs/UNITY_APP_UI_SPEC.md
 7. docs/02_CURSOR_UNITY_MASTER_PROMPT.md
-8. COARSE-ALIGN-X_SIH26169_Documentation(1).pdf, if present as reference material
-9. COARSE-ALIGN-X_UIUX_Experience_Documentation.pdf, if present as reference material
+8. HORIZON_SIH26169_Documentation(1).pdf, if present as reference material
+9. HORIZON_UIUX_Experience_Documentation.pdf, if present as reference material
 10. all .cursor/rules/*.mdc files
 
-Treat HORIZON as the current project name everywhere. COARSE-ALIGN-X is only a historical/reference name and must not appear in newly created runtime UI, namespaces, filenames, object names, assembly names, product text or documentation unless explicitly marked as historical reference.
+Treat HORIZON as the current project name everywhere. HORIZON is only a historical/reference name and must not appear in newly created runtime UI, namespaces, filenames, object names, assembly names, product text or documentation unless explicitly marked as historical reference.
 
 ## SOURCE HIERARCHY
 
