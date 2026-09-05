@@ -223,11 +223,10 @@ class HybridBeaconDetector:
                 cand.centroid, estimator_prediction, prediction_covariance
             )
 
-            # Suppress isolated small noise specks lacking neural proposal match or strong contrast
-            penalty = 1.0
-            if self._neural_detector.is_model_loaded:
-                if cand.area < 6.0 or (cand.local_contrast is not None and cand.local_contrast < 35.0):
-                    penalty = 0.25
+            # Strict Unmatched Penalty: When Neural detector is active and running,
+            # candidates not proposed/matched by Neural YOLOv8n are unverified optical noise clusters.
+            # Apply penalty = 0.20 to prevent false-positive detections on background noise specks when target is outside FOV.
+            penalty = 0.20 if self._neural_detector.is_model_loaded else 1.0
 
             fused_score = float(
                 np.clip((0.60 * c_class + 0.25 * s_optical + 0.15 * s_temporal) * penalty, 0.0, 1.0)
