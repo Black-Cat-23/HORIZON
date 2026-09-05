@@ -52,10 +52,11 @@ from simulator.core.config import (
 )
 from simulator.core.simulation import SimulationEngine
 from simulator.disturbances.presets import get_preset_config
-# Phase 4 & Phase 7 Perception Imports
+# Phase 4, Phase 7 & Phase 8 Perception Imports
 from simulator.perception.config import CentroidConfig, DetectorConfig
 from simulator.perception.detector import ClassicalBeaconDetector, DetectionResult
 from simulator.perception.neural_detector import NeuralBeaconDetector
+from simulator.perception.hybrid_detector import HybridBeaconDetector
 from tracking.association.track import Track
 from tracking.estimation.kalman import TargetKalmanFilter, EstimatorStatus
 from tracking.diagnostics.visualization import draw_tracking_annotations
@@ -87,16 +88,19 @@ class SimulationDebugViewer(QMainWindow):
         self._engine = SimulationEngine(self._config)
         self._engine.initialize()
 
-        # Phase 4 & Phase 7 Perception Detectors
+        # Phase 4, Phase 7 & Phase 8 Perception Detectors
         self._centroid_method = "weighted_cog"
-        self._perception_mode = "CLASSICAL"
+        self._perception_mode = "HYBRID"
         self._classical_detector = ClassicalBeaconDetector(
             DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="CLASSICAL")
         )
         self._neural_detector = NeuralBeaconDetector(
             DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="NEURAL")
         )
-        self._detector = self._classical_detector
+        self._hybrid_detector = HybridBeaconDetector(
+            DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="HYBRID")
+        )
+        self._detector = self._hybrid_detector
         self._last_detection: Optional[DetectionResult] = None
 
         # Phase 5 Optical Target Tracker & State Estimator
@@ -274,9 +278,9 @@ class SimulationDebugViewer(QMainWindow):
         # 4. Controls & Configuration
         controls_box = QGroupBox("Configuration & Presets", self)
         form_layout = QFormLayout(controls_box)
-        # Perception Mode selector (CLASSICAL vs NEURAL)
+        # Perception Mode selector (CLASSICAL vs NEURAL vs HYBRID)
         self._combo_perc_mode = QComboBox(self)
-        self._combo_perc_mode.addItems(["CLASSICAL", "NEURAL"])
+        self._combo_perc_mode.addItems(["CLASSICAL", "NEURAL", "HYBRID"])
         self._combo_perc_mode.setCurrentText(self._perception_mode)
         self._combo_perc_mode.currentTextChanged.connect(self._on_perc_mode_changed)
         form_layout.addRow("Perception Engine:", self._combo_perc_mode)
@@ -358,6 +362,8 @@ class SimulationDebugViewer(QMainWindow):
         self._perception_mode = mode_str
         if mode_str == "NEURAL":
             self._detector = self._neural_detector
+        elif mode_str == "HYBRID":
+            self._detector = self._hybrid_detector
         else:
             self._detector = self._classical_detector
         self._lbl_status.setText(f"Perception Mode: {mode_str}")
@@ -371,7 +377,15 @@ class SimulationDebugViewer(QMainWindow):
         self._neural_detector = NeuralBeaconDetector(
             DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="NEURAL")
         )
-        self._detector = self._neural_detector if self._perception_mode == "NEURAL" else self._classical_detector
+        self._hybrid_detector = HybridBeaconDetector(
+            DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="HYBRID")
+        )
+        if self._perception_mode == "NEURAL":
+            self._detector = self._neural_detector
+        elif self._perception_mode == "HYBRID":
+            self._detector = self._hybrid_detector
+        else:
+            self._detector = self._classical_detector
         self._update_display()
 
     def _on_preset_changed(self, preset_name: str) -> None:

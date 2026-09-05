@@ -55,13 +55,39 @@ class NeuralDetectorConfig:
 
 
 @dataclass(frozen=True)
+class HybridFusionConfig:
+    """Parameters and weight allocations for Phase 8 Hybrid Perception Fusion."""
+    classical_weight: float = 0.30
+    neural_weight: float = 0.30
+    spatial_weight: float = 0.15
+    size_weight: float = 0.10
+    optical_weight: float = 0.10
+    temporal_weight: float = 0.05
+    max_matching_distance_px: float = 25.0
+    min_matching_iou: float = 0.10
+    acceptance_threshold: float = 0.35
+    disagreement_rejection_threshold: float = 0.15
+    enable_optical_centroid_refinement: bool = True
+    enable_temporal_consistency: bool = True
+
+
+@dataclass(frozen=True)
+class HybridDetectorConfig:
+    """Configuration for Phase 8 HybridBeaconDetector System."""
+    fusion: HybridFusionConfig = field(default_factory=HybridFusionConfig)
+    fallback_mode: Literal["CLASSICAL_ONLY", "NEURAL_ONLY", "NO_DETECTION"] = "CLASSICAL_ONLY"
+
+
+@dataclass(frozen=True)
 class DetectorConfig:
-    """Root configuration for classical and neural perception engines."""
+    """Root configuration for classical, neural, and hybrid perception engines."""
     input_width: int = 640
     input_height: int = 480
     min_detection_confidence: float = 0.35
-    perception_mode: Literal["CLASSICAL", "NEURAL"] = "CLASSICAL"
+    perception_mode: Literal["CLASSICAL", "NEURAL", "HYBRID"] = "HYBRID"
     preprocessing: PreprocessingConfig = field(default_factory=PreprocessingConfig)
     scoring: CandidateScoringConfig = field(default_factory=CandidateScoringConfig)
     centroid: CentroidConfig = field(default_factory=CentroidConfig)
     neural: NeuralDetectorConfig = field(default_factory=NeuralDetectorConfig)
+    hybrid: HybridDetectorConfig = field(default_factory=HybridDetectorConfig)
+

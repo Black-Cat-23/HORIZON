@@ -1,0 +1,87 @@
+{
+  "A_classical_only": {
+    "GAUSSIAN": {
+      "detection_rate_pct": 100.0,
+      "mean_error_px": 0.1104152953658386,
+      "mean_latency_ms": 45.968290000200795
+    },
+    "RAIN": {
+      "detection_rate_pct": 100.0,
+      "mean_error_px": 0.07459026542754435,
+      "mean_latency_ms": 4.0198500000769855
+    },
+    "LOW_LIGHT": {
+      "detection_rate_pct": 100.0,
+      "mean_error_px": 0.11012806405783696,
+      "mean_latency_ms": 4.6669050003401935
+    }
+  },
+  "B_neural_only": {
+    "GAUSSIAN": {
+      "detection_rate_pct": 100.0,
+      "mean_error_px": 0.08797007160671139,
+      "mean_latency_ms": 46.23157000023639
+    },
+    "RAIN": {
+      "detection_rate_pct": 100.0,
+      "mean_error_px": 0.14616946507435666,
+      "mean_latency_ms": 41.86569499943289
+    },
+    "LOW_LIGHT": {
+      "detection_rate_pct": 100.0,
+      "mean_error_px": 0.0415459318194154,
+      "mean_latency_ms": 42.974565000076836
+    }
+  },
+  "C_basic_fusion": {
+    "GAUSSIAN": {
+      "detection_rate_pct": 100.0,
+      "mean_error_px": 0.6496028824445764,
+      "mean_latency_ms": 72.72624999968684
+    },
+    "RAIN": {
+      "detection_rate_pct": 100.0,
+      "mean_error_px": 0.7319572659138557,
+      "mean_latency_ms": 47.80885500058503
+    },
+    "LOW_LIGHT": {
+      "detection_rate_pct": 100.0,
+      "mean_error_px": 0.7616128320649673,
+      "mean_latency_ms": 48.11538499998278
+    }
+  },
+  "D_fusion_optical_refinement": {
+    "GAUSSIAN": {
+      "detection_rate_pct": 100.0,
+      "mean_error_px": 0.09203199226969017,
+      "mean_latency_ms": 71.12468000050285
+    },
+    "RAIN": {
+      "detection_rate_pct": 100.0,
+      "mean_error_px": 0.07654600234717354,
+      "mean_latency_ms": 52.5278850001996
+    },
+    "LOW_LIGHT": {
+      "detection_rate_pct": 100.0,
+      "mean_error_px": 0.12674537159705718,
+      "mean_latency_ms": 48.72373499983951
+    }
+  },
+  "E_full_hybrid_ours": {
+    "GAUSSIAN": {
+      "detection_rate_pct": 100.0,
+      "mean_error_px": 0.11498018650906708,
+      "mean_latency_ms": 74.01335499998822
+    },
+    "RAIN": {
+      "detection_rate_pct": 100.0,
+      "mean_error_px": 0.0778744309565495,
+      "mean_latency_ms": 49.564899999677436
+    },
+    "LOW_LIGHT": {
+      "detection_rate_pct": 100.0,
+      "mean_error_px": 0.1278111745854667,
+      "mean_latency_ms": 48.76365999953123
+    }
+  }
+}
