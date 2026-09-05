@@ -48,8 +48,18 @@ def compute_weighted_cog(
     u = sum((I_i - bg) * (u_i + 0.5)) / sum(I_i - bg)
     v = sum((I_i - bg) * (v_i + 0.5)) / sum(I_i - bg)
     """
+    # Denoise ROI frame to remove isolated S&P impulse specks
+    if roi_frame.shape[0] >= 3 and roi_frame.shape[1] >= 3:
+        clean_roi = cv2.medianBlur(roi_frame, 3)
+    else:
+        clean_roi = roi_frame
+
     # Net intensity above background
-    weights = np.maximum(roi_frame.astype(np.float64) - bg_level, 0.0)
+    weights = np.maximum(clean_roi.astype(np.float64) - bg_level, 0.0)
+    max_w = np.max(weights) if weights.size > 0 else 0.0
+    if max_w > 0:
+        weights = np.where(weights >= 0.15 * max_w, weights, 0.0)
+
     # Mask out non-candidate pixels to prevent distant noise pulling the centroid
     if roi_mask is not None:
         weights = np.where(roi_mask > 0, weights, 0.0)

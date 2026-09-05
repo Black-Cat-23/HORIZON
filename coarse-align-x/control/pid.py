@@ -83,6 +83,10 @@ class PIDController:
         # Total PID output
         u = p_term + i_term + d_term
 
-        # Output saturation safety clamp
+        # Output saturation safety clamp with anti-windup back-calculation
         u_clamped = float(np.clip(u, -self.output_limit, self.output_limit))
+        if abs(u_clamped - u) > 1e-4 and (u * error > 0):
+            self.integral -= error * dt
+            self.integral = float(np.clip(self.integral, -self.max_integral, self.max_integral))
+
         return u_clamped

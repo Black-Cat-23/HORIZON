@@ -1,0 +1,1636 @@
+{
+  "experiment_id": "EXP_B1_nominal_42",
+  "count": 10,
+  "trials": [
+    {
+      "experiment_id": "EXP_B1_nominal_42",
+      "trial_id": "TRIAL_B1_nominal_1300419797",
+      "algorithm": "B1",
+      "seed": 1300419797,
+      "scenario_id": "nominal",
+      "status": "EXCESSIVE_ERROR",
+      "success": false,
+      "metrics": {
+        "simulation_duration": 1.9833333333333334,
+        "average_fps": 132.53473786072507,
+        "minimum_fps": 39.457070710405205,
+        "processing_time": 9.832560833334961,
+        "P95_processing_time": 17.434634999699483,
+        "acquisition_start_timestamp": 0.016666666666666666,
+        "acquisition_confirmed_timestamp": 0.06666666666666667,
+        "acquisition_time": 0.05,
+        "reacquisition_time": null,
+        "median_reacquisition_time": null,
+        "mean_tracking_error": 85.06536296948362,
+        "median_tracking_error": 22.047769930055765,
+        "RMSE_tracking_error": 131.4447518120168,
+        "P95_tracking_error": 276.7597180299107,
+        "P99_tracking_error": 297.4812733378428,
+        "maximum_tracking_error": 302.59170884499684,
+        "RMSE_angular_error_rad": 0.014338398147415474,
+        "lock_retention_rate": 0.4701867816091954,
+        "target_loss_count": 0,
+        "successful_reacquisition_count": 0,
+        "failed_reacquisition_count": 0,
+        "false_detection_rate": 0.525,
+        "detection_success_rate": 0.475,
+        "controller_saturation_count": 0,
+        "prediction_only_duration": 1.04125
+      },
+      "failure_reason": "EXCESSIVE_ERROR",
+      "resolved_configuration": {
+        "experiment_id": "EXP_B1_nominal_42",
+        "algorithm": "B1",
+        "master_seed": 42,
+        "trial_seed": 1300419797,
+        "trial_index": 0,
+        "scenario_id": "nominal",
+        "simulation_duration": 2.0,
+        "simulation_frequency": 60.0,
+        "camera_configuration": {
+          "width": 640,
+          "height": 480,
+          "fov_horizontal_deg": 4.0,
+          "fov_vertical_deg": 3.0,
+          "update_rate_hz": 30.0,
+          "rate_limit_deg_s": 5.0
+        },
+        "target_configuration": {
+          "count": 1,
+          "size_px": 10,
+          "intensity": 255,
+          "initial_position": {
+            "x": null,
+            "y": null
+          }
+        },
+        "trajectory_configuration": {
+          "type": "circular",
+          "straight": {
+            "velocity_x": 80.0,
+            "velocity_y": 60.0,
+            "boundary_mode": "bounce"
+          },
+          "circular": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "radius": 300.0,
+            "angular_velocity": 1.0,
+            "phase": 0.0
+          },
+          "figure8": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "amplitude_x": 400.0,
+            "amplitude_y": 300.0,
+            "angular_velocity": 0.8,
+            "phase": 0.0
+          },
+          "random": {
+            "max_speed": 150.0,
+            "max_acceleration": 200.0,
+            "acceleration_change_rate": 5.0,
+            "boundary_mode": "bounce"
+          },
+          "spiral": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "initial_radius": 50.0,
+            "expansion_rate": 20.0,
+            "angular_velocity": 1.5,
+            "phase": 0.0
+          },
+          "sinusoidal": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "amplitude_x": 400.0,
+            "amplitude_y": 300.0,
+            "frequency_x": 0.5,
+            "frequency_y": 0.7,
+            "phase_x": 0.0,
+            "phase_y": 0.0
+          }
+        },
+        "disturbance_configuration": {
+          "enabled": true,
+          "salt_pepper": {
+            "enabled": false,
+            "probability": 0.0
+          },
+          "gaussian": {
+            "enabled": true,
+            "sigma": 2.0
+          },
+          "poisson": {
+            "enabled": false,
+            "peak_photons": 50.0
+          },
+          "camera_jitter": {
+            "enabled": true,
+            "max_x_px": 0.5,
+            "max_y_px": 0.5,
+            "distribution": "uniform"
+          },
+          "platform_motion": {
+            "enabled": false,
+            "model": "linear",
+            "max_dx_px_per_frame": 20.0,
+            "max_dy_px_per_frame": 20.0,
+            "velocity_x": 60.0,
+            "velocity_y": 30.0,
+            "boundary_limit_px": 100.0
+          },
+          "atmosphere": {
+            "enabled": false,
+            "condition": "clear",
+            "contrast_factor": null,
+            "brightness_factor": null
+          }
+        },
+        "perception_configuration": {},
+        "estimator_configuration": {},
+        "controller_configuration": {},
+        "software_version": "1.0.0",
+        "git_commit": "a176faea3c887adb2819a23b05f4c97f7fbca6eb",
+        "timestamp": 1788611118.5378497
+      },
+      "software_version": "1.0.0",
+      "timing_summary": {
+        "sim_time_s": 2.0,
+        "wall_time_s": 1.2523679999976594
+      },
+      "event_summary": {
+        "target_loss_count": 0,
+        "successful_reacquisition_count": 0
+      },
+      "exception_trace": null
+    },
+    {
+      "experiment_id": "EXP_B1_nominal_42",
+      "trial_id": "TRIAL_B1_nominal_329180678",
+      "algorithm": "B1",
+      "seed": 329180678,
+      "scenario_id": "nominal",
+      "status": "EXCESSIVE_ERROR",
+      "success": false,
+      "metrics": {
+        "simulation_duration": 1.9833333333333334,
+        "average_fps": 128.77106152074822,
+        "minimum_fps": 47.39426339309261,
+        "processing_time": 9.872192499794133,
+        "P95_processing_time": 17.786834999424173,
+        "acquisition_start_timestamp": 0.016666666666666666,
+        "acquisition_confirmed_timestamp": 0.06666666666666667,
+        "acquisition_time": 0.05,
+        "reacquisition_time": null,
+        "median_reacquisition_time": null,
+        "mean_tracking_error": 84.88738856164731,
+        "median_tracking_error": 21.643003459038976,
+        "RMSE_tracking_error": 131.30397877030668,
+        "P95_tracking_error": 276.60216890305753,
+        "P99_tracking_error": 297.34360981049474,
+        "maximum_tracking_error": 302.45904213397546,
+        "RMSE_angular_error_rad": 0.01432304219069117,
+        "lock_retention_rate": 0.4701867816091954,
+        "target_loss_count": 0,
+        "successful_reacquisition_count": 0,
+        "failed_reacquisition_count": 0,
+        "false_detection_rate": 0.525,
+        "detection_success_rate": 0.475,
+        "controller_saturation_count": 0,
+        "prediction_only_duration": 1.04125
+      },
+      "failure_reason": "EXCESSIVE_ERROR",
+      "resolved_configuration": {
+        "experiment_id": "EXP_B1_nominal_42",
+        "algorithm": "B1",
+        "master_seed": 42,
+        "trial_seed": 329180678,
+        "trial_index": 1,
+        "scenario_id": "nominal",
+        "simulation_duration": 2.0,
+        "simulation_frequency": 60.0,
+        "camera_configuration": {
+          "width": 640,
+          "height": 480,
+          "fov_horizontal_deg": 4.0,
+          "fov_vertical_deg": 3.0,
+          "update_rate_hz": 30.0,
+          "rate_limit_deg_s": 5.0
+        },
+        "target_configuration": {
+          "count": 1,
+          "size_px": 10,
+          "intensity": 255,
+          "initial_position": {
+            "x": null,
+            "y": null
+          }
+        },
+        "trajectory_configuration": {
+          "type": "circular",
+          "straight": {
+            "velocity_x": 80.0,
+            "velocity_y": 60.0,
+            "boundary_mode": "bounce"
+          },
+          "circular": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "radius": 300.0,
+            "angular_velocity": 1.0,
+            "phase": 0.0
+          },
+          "figure8": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "amplitude_x": 400.0,
+            "amplitude_y": 300.0,
+            "angular_velocity": 0.8,
+            "phase": 0.0
+          },
+          "random": {
+            "max_speed": 150.0,
+            "max_acceleration": 200.0,
+            "acceleration_change_rate": 5.0,
+            "boundary_mode": "bounce"
+          },
+          "spiral": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "initial_radius": 50.0,
+            "expansion_rate": 20.0,
+            "angular_velocity": 1.5,
+            "phase": 0.0
+          },
+          "sinusoidal": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "amplitude_x": 400.0,
+            "amplitude_y": 300.0,
+            "frequency_x": 0.5,
+            "frequency_y": 0.7,
+            "phase_x": 0.0,
+            "phase_y": 0.0
+          }
+        },
+        "disturbance_configuration": {
+          "enabled": true,
+          "salt_pepper": {
+            "enabled": false,
+            "probability": 0.0
+          },
+          "gaussian": {
+            "enabled": true,
+            "sigma": 2.0
+          },
+          "poisson": {
+            "enabled": false,
+            "peak_photons": 50.0
+          },
+          "camera_jitter": {
+            "enabled": true,
+            "max_x_px": 0.5,
+            "max_y_px": 0.5,
+            "distribution": "uniform"
+          },
+          "platform_motion": {
+            "enabled": false,
+            "model": "linear",
+            "max_dx_px_per_frame": 20.0,
+            "max_dy_px_per_frame": 20.0,
+            "velocity_x": 60.0,
+            "velocity_y": 30.0,
+            "boundary_limit_px": 100.0
+          },
+          "atmosphere": {
+            "enabled": false,
+            "condition": "clear",
+            "contrast_factor": null,
+            "brightness_factor": null
+          }
+        },
+        "perception_configuration": {},
+        "estimator_configuration": {},
+        "controller_configuration": {},
+        "software_version": "1.0.0",
+        "git_commit": "a176faea3c887adb2819a23b05f4c97f7fbca6eb",
+        "timestamp": 1788611118.5909925
+      },
+      "software_version": "1.0.0",
+      "timing_summary": {
+        "sim_time_s": 2.0,
+        "wall_time_s": 1.2523819000016374
+      },
+      "event_summary": {
+        "target_loss_count": 0,
+        "successful_reacquisition_count": 0
+      },
+      "exception_trace": null
+    },
+    {
+      "experiment_id": "EXP_B1_nominal_42",
+      "trial_id": "TRIAL_B1_nominal_1293866282",
+      "algorithm": "B1",
+      "seed": 1293866282,
+      "scenario_id": "nominal",
+      "status": "EXCESSIVE_ERROR",
+      "success": false,
+      "metrics": {
+        "simulation_duration": 1.9833333333333334,
+        "average_fps": 130.59070261562886,
+        "minimum_fps": 41.21298044446325,
+        "processing_time": 10.02136999980697,
+        "P95_processing_time": 18.806989998483914,
+        "acquisition_start_timestamp": 0.016666666666666666,
+        "acquisition_confirmed_timestamp": 0.06666666666666667,
+        "acquisition_time": 0.05,
+        "reacquisition_time": null,
+        "median_reacquisition_time": null,
+        "mean_tracking_error": 85.48835712553212,
+        "median_tracking_error": 22.43386145134493,
+        "RMSE_tracking_error": 131.9784851545607,
+        "P95_tracking_error": 277.7132078466926,
+        "P99_tracking_error": 298.4641236604854,
+        "maximum_tracking_error": 303.5816412047237,
+        "RMSE_angular_error_rad": 0.014396619423384632,
+        "lock_retention_rate": 0.4701867816091954,
+        "target_loss_count": 0,
+        "successful_reacquisition_count": 0,
+        "failed_reacquisition_count": 0,
+        "false_detection_rate": 0.525,
+        "detection_success_rate": 0.475,
+        "controller_saturation_count": 0,
+        "prediction_only_duration": 1.04125
+      },
+      "failure_reason": "EXCESSIVE_ERROR",
+      "resolved_configuration": {
+        "experiment_id": "EXP_B1_nominal_42",
+        "algorithm": "B1",
+        "master_seed": 42,
+        "trial_seed": 1293866282,
+        "trial_index": 2,
+        "scenario_id": "nominal",
+        "simulation_duration": 2.0,
+        "simulation_frequency": 60.0,
+        "camera_configuration": {
+          "width": 640,
+          "height": 480,
+          "fov_horizontal_deg": 4.0,
+          "fov_vertical_deg": 3.0,
+          "update_rate_hz": 30.0,
+          "rate_limit_deg_s": 5.0
+        },
+        "target_configuration": {
+          "count": 1,
+          "size_px": 10,
+          "intensity": 255,
+          "initial_position": {
+            "x": null,
+            "y": null
+          }
+        },
+        "trajectory_configuration": {
+          "type": "circular",
+          "straight": {
+            "velocity_x": 80.0,
+            "velocity_y": 60.0,
+            "boundary_mode": "bounce"
+          },
+          "circular": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "radius": 300.0,
+            "angular_velocity": 1.0,
+            "phase": 0.0
+          },
+          "figure8": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "amplitude_x": 400.0,
+            "amplitude_y": 300.0,
+            "angular_velocity": 0.8,
+            "phase": 0.0
+          },
+          "random": {
+            "max_speed": 150.0,
+            "max_acceleration": 200.0,
+            "acceleration_change_rate": 5.0,
+            "boundary_mode": "bounce"
+          },
+          "spiral": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "initial_radius": 50.0,
+            "expansion_rate": 20.0,
+            "angular_velocity": 1.5,
+            "phase": 0.0
+          },
+          "sinusoidal": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "amplitude_x": 400.0,
+            "amplitude_y": 300.0,
+            "frequency_x": 0.5,
+            "frequency_y": 0.7,
+            "phase_x": 0.0,
+            "phase_y": 0.0
+          }
+        },
+        "disturbance_configuration": {
+          "enabled": true,
+          "salt_pepper": {
+            "enabled": false,
+            "probability": 0.0
+          },
+          "gaussian": {
+            "enabled": true,
+            "sigma": 2.0
+          },
+          "poisson": {
+            "enabled": false,
+            "peak_photons": 50.0
+          },
+          "camera_jitter": {
+            "enabled": true,
+            "max_x_px": 0.5,
+            "max_y_px": 0.5,
+            "distribution": "uniform"
+          },
+          "platform_motion": {
+            "enabled": false,
+            "model": "linear",
+            "max_dx_px_per_frame": 20.0,
+            "max_dy_px_per_frame": 20.0,
+            "velocity_x": 60.0,
+            "velocity_y": 30.0,
+            "boundary_limit_px": 100.0
+          },
+          "atmosphere": {
+            "enabled": false,
+            "condition": "clear",
+            "contrast_factor": null,
+            "brightness_factor": null
+          }
+        },
+        "perception_configuration": {},
+        "estimator_configuration": {},
+        "controller_configuration": {},
+        "software_version": "1.0.0",
+        "git_commit": "a176faea3c887adb2819a23b05f4c97f7fbca6eb",
+        "timestamp": 1788611118.6344507
+      },
+      "software_version": "1.0.0",
+      "timing_summary": {
+        "sim_time_s": 2.0,
+        "wall_time_s": 1.26579380000112
+      },
+      "event_summary": {
+        "target_loss_count": 0,
+        "successful_reacquisition_count": 0
+      },
+      "exception_trace": null
+    },
+    {
+      "experiment_id": "EXP_B1_nominal_42",
+      "trial_id": "TRIAL_B1_nominal_1783220439",
+      "algorithm": "B1",
+      "seed": 1783220439,
+      "scenario_id": "nominal",
+      "status": "EXCESSIVE_ERROR",
+      "success": false,
+      "metrics": {
+        "simulation_duration": 1.9833333333333334,
+        "average_fps": 122.44091562168215,
+        "minimum_fps": 36.13669790314339,
+        "processing_time": 10.539841666680635,
+        "P95_processing_time": 18.02358999993885,
+        "acquisition_start_timestamp": 0.016666666666666666,
+        "acquisition_confirmed_timestamp": 0.06666666666666667,
+        "acquisition_time": 0.05,
+        "reacquisition_time": null,
+        "median_reacquisition_time": null,
+        "mean_tracking_error": 85.56343559507647,
+        "median_tracking_error": 22.786659341749644,
+        "RMSE_tracking_error": 132.08794757064794,
+        "P95_tracking_error": 277.82382185673646,
+        "P99_tracking_error": 298.5550610273279,
+        "maximum_tracking_error": 303.6676437654784,
+        "RMSE_angular_error_rad": 0.014408559920684077,
+        "lock_retention_rate": 0.4701867816091954,
+        "target_loss_count": 0,
+        "successful_reacquisition_count": 0,
+        "failed_reacquisition_count": 0,
+        "false_detection_rate": 0.525,
+        "detection_success_rate": 0.475,
+        "controller_saturation_count": 0,
+        "prediction_only_duration": 1.04125
+      },
+      "failure_reason": "EXCESSIVE_ERROR",
+      "resolved_configuration": {
+        "experiment_id": "EXP_B1_nominal_42",
+        "algorithm": "B1",
+        "master_seed": 42,
+        "trial_seed": 1783220439,
+        "trial_index": 3,
+        "scenario_id": "nominal",
+        "simulation_duration": 2.0,
+        "simulation_frequency": 60.0,
+        "camera_configuration": {
+          "width": 640,
+          "height": 480,
+          "fov_horizontal_deg": 4.0,
+          "fov_vertical_deg": 3.0,
+          "update_rate_hz": 30.0,
+          "rate_limit_deg_s": 5.0
+        },
+        "target_configuration": {
+          "count": 1,
+          "size_px": 10,
+          "intensity": 255,
+          "initial_position": {
+            "x": null,
+            "y": null
+          }
+        },
+        "trajectory_configuration": {
+          "type": "circular",
+          "straight": {
+            "velocity_x": 80.0,
+            "velocity_y": 60.0,
+            "boundary_mode": "bounce"
+          },
+          "circular": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "radius": 300.0,
+            "angular_velocity": 1.0,
+            "phase": 0.0
+          },
+          "figure8": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "amplitude_x": 400.0,
+            "amplitude_y": 300.0,
+            "angular_velocity": 0.8,
+            "phase": 0.0
+          },
+          "random": {
+            "max_speed": 150.0,
+            "max_acceleration": 200.0,
+            "acceleration_change_rate": 5.0,
+            "boundary_mode": "bounce"
+          },
+          "spiral": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "initial_radius": 50.0,
+            "expansion_rate": 20.0,
+            "angular_velocity": 1.5,
+            "phase": 0.0
+          },
+          "sinusoidal": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "amplitude_x": 400.0,
+            "amplitude_y": 300.0,
+            "frequency_x": 0.5,
+            "frequency_y": 0.7,
+            "phase_x": 0.0,
+            "phase_y": 0.0
+          }
+        },
+        "disturbance_configuration": {
+          "enabled": true,
+          "salt_pepper": {
+            "enabled": false,
+            "probability": 0.0
+          },
+          "gaussian": {
+            "enabled": true,
+            "sigma": 2.0
+          },
+          "poisson": {
+            "enabled": false,
+            "peak_photons": 50.0
+          },
+          "camera_jitter": {
+            "enabled": true,
+            "max_x_px": 0.5,
+            "max_y_px": 0.5,
+            "distribution": "uniform"
+          },
+          "platform_motion": {
+            "enabled": false,
+            "model": "linear",
+            "max_dx_px_per_frame": 20.0,
+            "max_dy_px_per_frame": 20.0,
+            "velocity_x": 60.0,
+            "velocity_y": 30.0,
+            "boundary_limit_px": 100.0
+          },
+          "atmosphere": {
+            "enabled": false,
+            "condition": "clear",
+            "contrast_factor": null,
+            "brightness_factor": null
+          }
+        },
+        "perception_configuration": {},
+        "estimator_configuration": {},
+        "controller_configuration": {},
+        "software_version": "1.0.0",
+        "git_commit": "a176faea3c887adb2819a23b05f4c97f7fbca6eb",
+        "timestamp": 1788611118.6835628
+      },
+      "software_version": "1.0.0",
+      "timing_summary": {
+        "sim_time_s": 2.0,
+        "wall_time_s": 1.3426919000012276
+      },
+      "event_summary": {
+        "target_loss_count": 0,
+        "successful_reacquisition_count": 0
+      },
+      "exception_trace": null
+    },
+    {
+      "experiment_id": "EXP_B1_nominal_42",
+      "trial_id": "TRIAL_B1_nominal_445847584",
+      "algorithm": "B1",
+      "seed": 445847584,
+      "scenario_id": "nominal",
+      "status": "EXCESSIVE_ERROR",
+      "success": false,
+      "metrics": {
+        "simulation_duration": 1.9833333333333334,
+        "average_fps": 134.10476412514996,
+        "minimum_fps": 51.83683836001533,
+        "processing_time": 9.500390833485048,
+        "P95_processing_time": 16.488035000293166,
+        "acquisition_start_timestamp": 0.016666666666666666,
+        "acquisition_confirmed_timestamp": 0.06666666666666667,
+        "acquisition_time": 0.05,
+        "reacquisition_time": null,
+        "median_reacquisition_time": null,
+        "mean_tracking_error": 85.48833388898018,
+        "median_tracking_error": 22.563932850238892,
+        "RMSE_tracking_error": 132.03802295992116,
+        "P95_tracking_error": 277.7946732131958,
+        "P99_tracking_error": 298.5408740473276,
+        "maximum_tracking_error": 303.65719534139697,
+        "RMSE_angular_error_rad": 0.014403113990465583,
+        "lock_retention_rate": 0.4701867816091954,
+        "target_loss_count": 0,
+        "successful_reacquisition_count": 0,
+        "failed_reacquisition_count": 0,
+        "false_detection_rate": 0.525,
+        "detection_success_rate": 0.475,
+        "controller_saturation_count": 0,
+        "prediction_only_duration": 1.04125
+      },
+      "failure_reason": "EXCESSIVE_ERROR",
+      "resolved_configuration": {
+        "experiment_id": "EXP_B1_nominal_42",
+        "algorithm": "B1",
+        "master_seed": 42,
+        "trial_seed": 445847584,
+        "trial_index": 4,
+        "scenario_id": "nominal",
+        "simulation_duration": 2.0,
+        "simulation_frequency": 60.0,
+        "camera_configuration": {
+          "width": 640,
+          "height": 480,
+          "fov_horizontal_deg": 4.0,
+          "fov_vertical_deg": 3.0,
+          "update_rate_hz": 30.0,
+          "rate_limit_deg_s": 5.0
+        },
+        "target_configuration": {
+          "count": 1,
+          "size_px": 10,
+          "intensity": 255,
+          "initial_position": {
+            "x": null,
+            "y": null
+          }
+        },
+        "trajectory_configuration": {
+          "type": "circular",
+          "straight": {
+            "velocity_x": 80.0,
+            "velocity_y": 60.0,
+            "boundary_mode": "bounce"
+          },
+          "circular": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "radius": 300.0,
+            "angular_velocity": 1.0,
+            "phase": 0.0
+          },
+          "figure8": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "amplitude_x": 400.0,
+            "amplitude_y": 300.0,
+            "angular_velocity": 0.8,
+            "phase": 0.0
+          },
+          "random": {
+            "max_speed": 150.0,
+            "max_acceleration": 200.0,
+            "acceleration_change_rate": 5.0,
+            "boundary_mode": "bounce"
+          },
+          "spiral": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "initial_radius": 50.0,
+            "expansion_rate": 20.0,
+            "angular_velocity": 1.5,
+            "phase": 0.0
+          },
+          "sinusoidal": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "amplitude_x": 400.0,
+            "amplitude_y": 300.0,
+            "frequency_x": 0.5,
+            "frequency_y": 0.7,
+            "phase_x": 0.0,
+            "phase_y": 0.0
+          }
+        },
+        "disturbance_configuration": {
+          "enabled": true,
+          "salt_pepper": {
+            "enabled": false,
+            "probability": 0.0
+          },
+          "gaussian": {
+            "enabled": true,
+            "sigma": 2.0
+          },
+          "poisson": {
+            "enabled": false,
+            "peak_photons": 50.0
+          },
+          "camera_jitter": {
+            "enabled": true,
+            "max_x_px": 0.5,
+            "max_y_px": 0.5,
+            "distribution": "uniform"
+          },
+          "platform_motion": {
+            "enabled": false,
+            "model": "linear",
+            "max_dx_px_per_frame": 20.0,
+            "max_dy_px_per_frame": 20.0,
+            "velocity_x": 60.0,
+            "velocity_y": 30.0,
+            "boundary_limit_px": 100.0
+          },
+          "atmosphere": {
+            "enabled": false,
+            "condition": "clear",
+            "contrast_factor": null,
+            "brightness_factor": null
+          }
+        },
+        "perception_configuration": {},
+        "estimator_configuration": {},
+        "controller_configuration": {},
+        "software_version": "1.0.0",
+        "git_commit": "a176faea3c887adb2819a23b05f4c97f7fbca6eb",
+        "timestamp": 1788611118.7340817
+      },
+      "software_version": "1.0.0",
+      "timing_summary": {
+        "sim_time_s": 2.0,
+        "wall_time_s": 1.1982196000026306
+      },
+      "event_summary": {
+        "target_loss_count": 0,
+        "successful_reacquisition_count": 0
+      },
+      "exception_trace": null
+    },
+    {
+      "experiment_id": "EXP_B1_nominal_42",
+      "trial_id": "TRIAL_B1_nominal_1359872912",
+      "algorithm": "B1",
+      "seed": 1359872912,
+      "scenario_id": "nominal",
+      "status": "EXCESSIVE_ERROR",
+      "success": false,
+      "metrics": {
+        "simulation_duration": 9.983333333333333,
+        "average_fps": 174.05316483583312,
+        "minimum_fps": 41.84888368345114,
+        "processing_time": 7.376216000011482,
+        "P95_processing_time": 12.238799998158354,
+        "acquisition_start_timestamp": 0.016666666666666666,
+        "acquisition_confirmed_timestamp": 0.06666666666666667,
+        "acquisition_time": 0.05,
+        "reacquisition_time": null,
+        "median_reacquisition_time": null,
+        "mean_tracking_error": 72.29463269061004,
+        "median_tracking_error": 4.411853148554901,
+        "RMSE_tracking_error": 130.97090561825394,
+        "P95_tracking_error": 315.27164628070955,
+        "P99_tracking_error": 348.3016848564719,
+        "maximum_tracking_error": 357.2821195530585,
+        "RMSE_angular_error_rad": 0.014286709545982941,
+        "lock_retention_rate": 0.6097203579418345,
+        "target_loss_count": 0,
+        "successful_reacquisition_count": 0,
+        "failed_reacquisition_count": 0,
+        "false_detection_rate": 0.38,
+        "detection_success_rate": 0.62,
+        "controller_saturation_count": 0,
+        "prediction_only_duration": 3.7936666666666663
+      },
+      "failure_reason": "EXCESSIVE_ERROR",
+      "resolved_configuration": {
+        "experiment_id": "EXP_B1_nominal_42",
+        "algorithm": "B1",
+        "master_seed": 42,
+        "trial_seed": 1359872912,
+        "trial_index": 5,
+        "scenario_id": "nominal",
+        "simulation_duration": 10.0,
+        "simulation_frequency": 60.0,
+        "camera_configuration": {
+          "width": 640,
+          "height": 480,
+          "fov_horizontal_deg": 4.0,
+          "fov_vertical_deg": 3.0,
+          "update_rate_hz": 30.0,
+          "rate_limit_deg_s": 5.0
+        },
+        "target_configuration": {
+          "count": 1,
+          "size_px": 10,
+          "intensity": 255,
+          "initial_position": {
+            "x": null,
+            "y": null
+          }
+        },
+        "trajectory_configuration": {
+          "type": "circular",
+          "straight": {
+            "velocity_x": 80.0,
+            "velocity_y": 60.0,
+            "boundary_mode": "bounce"
+          },
+          "circular": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "radius": 300.0,
+            "angular_velocity": 1.0,
+            "phase": 0.0
+          },
+          "figure8": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "amplitude_x": 400.0,
+            "amplitude_y": 300.0,
+            "angular_velocity": 0.8,
+            "phase": 0.0
+          },
+          "random": {
+            "max_speed": 150.0,
+            "max_acceleration": 200.0,
+            "acceleration_change_rate": 5.0,
+            "boundary_mode": "bounce"
+          },
+          "spiral": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "initial_radius": 50.0,
+            "expansion_rate": 20.0,
+            "angular_velocity": 1.5,
+            "phase": 0.0
+          },
+          "sinusoidal": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "amplitude_x": 400.0,
+            "amplitude_y": 300.0,
+            "frequency_x": 0.5,
+            "frequency_y": 0.7,
+            "phase_x": 0.0,
+            "phase_y": 0.0
+          }
+        },
+        "disturbance_configuration": {
+          "enabled": true,
+          "salt_pepper": {
+            "enabled": false,
+            "probability": 0.0
+          },
+          "gaussian": {
+            "enabled": true,
+            "sigma": 2.0
+          },
+          "poisson": {
+            "enabled": false,
+            "peak_photons": 50.0
+          },
+          "camera_jitter": {
+            "enabled": true,
+            "max_x_px": 0.5,
+            "max_y_px": 0.5,
+            "distribution": "uniform"
+          },
+          "platform_motion": {
+            "enabled": false,
+            "model": "linear",
+            "max_dx_px_per_frame": 20.0,
+            "max_dy_px_per_frame": 20.0,
+            "velocity_x": 60.0,
+            "velocity_y": 30.0,
+            "boundary_limit_px": 100.0
+          },
+          "atmosphere": {
+            "enabled": false,
+            "condition": "clear",
+            "contrast_factor": null,
+            "brightness_factor": null
+          }
+        },
+        "perception_configuration": {},
+        "estimator_configuration": {},
+        "controller_configuration": {},
+        "software_version": "1.0.0",
+        "git_commit": "a176faea3c887adb2819a23b05f4c97f7fbca6eb",
+        "timestamp": 1788611838.452161
+      },
+      "software_version": "1.0.0",
+      "timing_summary": {
+        "sim_time_s": 10.0,
+        "wall_time_s": 4.508167500000127
+      },
+      "event_summary": {
+        "target_loss_count": 0,
+        "successful_reacquisition_count": 0
+      },
+      "exception_trace": null
+    },
+    {
+      "experiment_id": "EXP_B1_nominal_42",
+      "trial_id": "TRIAL_B1_nominal_1080378844",
+      "algorithm": "B1",
+      "seed": 1080378844,
+      "scenario_id": "nominal",
+      "status": "EXCESSIVE_ERROR",
+      "success": false,
+      "metrics": {
+        "simulation_duration": 9.983333333333333,
+        "average_fps": 175.93625320281552,
+        "minimum_fps": 41.525824912276164,
+        "processing_time": 7.249338166633,
+        "P95_processing_time": 11.891045000993472,
+        "acquisition_start_timestamp": 0.016666666666666666,
+        "acquisition_confirmed_timestamp": 0.06666666666666667,
+        "acquisition_time": 0.05,
+        "reacquisition_time": null,
+        "median_reacquisition_time": null,
+        "mean_tracking_error": 72.55079248178416,
+        "median_tracking_error": 4.480942486013314,
+        "RMSE_tracking_error": 131.30507681738706,
+        "P95_tracking_error": 315.99631958041624,
+        "P99_tracking_error": 349.151909456009,
+        "maximum_tracking_error": 357.77428756655996,
+        "RMSE_angular_error_rad": 0.014323161969046757,
+        "lock_retention_rate": 0.6097203579418345,
+        "target_loss_count": 0,
+        "successful_reacquisition_count": 0,
+        "failed_reacquisition_count": 0,
+        "false_detection_rate": 0.38,
+        "detection_success_rate": 0.62,
+        "controller_saturation_count": 0,
+        "prediction_only_duration": 3.7936666666666663
+      },
+      "failure_reason": "EXCESSIVE_ERROR",
+      "resolved_configuration": {
+        "experiment_id": "EXP_B1_nominal_42",
+        "algorithm": "B1",
+        "master_seed": 42,
+        "trial_seed": 1080378844,
+        "trial_index": 6,
+        "scenario_id": "nominal",
+        "simulation_duration": 10.0,
+        "simulation_frequency": 60.0,
+        "camera_configuration": {
+          "width": 640,
+          "height": 480,
+          "fov_horizontal_deg": 4.0,
+          "fov_vertical_deg": 3.0,
+          "update_rate_hz": 30.0,
+          "rate_limit_deg_s": 5.0
+        },
+        "target_configuration": {
+          "count": 1,
+          "size_px": 10,
+          "intensity": 255,
+          "initial_position": {
+            "x": null,
+            "y": null
+          }
+        },
+        "trajectory_configuration": {
+          "type": "circular",
+          "straight": {
+            "velocity_x": 80.0,
+            "velocity_y": 60.0,
+            "boundary_mode": "bounce"
+          },
+          "circular": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "radius": 300.0,
+            "angular_velocity": 1.0,
+            "phase": 0.0
+          },
+          "figure8": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "amplitude_x": 400.0,
+            "amplitude_y": 300.0,
+            "angular_velocity": 0.8,
+            "phase": 0.0
+          },
+          "random": {
+            "max_speed": 150.0,
+            "max_acceleration": 200.0,
+            "acceleration_change_rate": 5.0,
+            "boundary_mode": "bounce"
+          },
+          "spiral": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "initial_radius": 50.0,
+            "expansion_rate": 20.0,
+            "angular_velocity": 1.5,
+            "phase": 0.0
+          },
+          "sinusoidal": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "amplitude_x": 400.0,
+            "amplitude_y": 300.0,
+            "frequency_x": 0.5,
+            "frequency_y": 0.7,
+            "phase_x": 0.0,
+            "phase_y": 0.0
+          }
+        },
+        "disturbance_configuration": {
+          "enabled": true,
+          "salt_pepper": {
+            "enabled": false,
+            "probability": 0.0
+          },
+          "gaussian": {
+            "enabled": true,
+            "sigma": 2.0
+          },
+          "poisson": {
+            "enabled": false,
+            "peak_photons": 50.0
+          },
+          "camera_jitter": {
+            "enabled": true,
+            "max_x_px": 0.5,
+            "max_y_px": 0.5,
+            "distribution": "uniform"
+          },
+          "platform_motion": {
+            "enabled": false,
+            "model": "linear",
+            "max_dx_px_per_frame": 20.0,
+            "max_dy_px_per_frame": 20.0,
+            "velocity_x": 60.0,
+            "velocity_y": 30.0,
+            "boundary_limit_px": 100.0
+          },
+          "atmosphere": {
+            "enabled": false,
+            "condition": "clear",
+            "contrast_factor": null,
+            "brightness_factor": null
+          }
+        },
+        "perception_configuration": {},
+        "estimator_configuration": {},
+        "controller_configuration": {},
+        "software_version": "1.0.0",
+        "git_commit": "a176faea3c887adb2819a23b05f4c97f7fbca6eb",
+        "timestamp": 1788611838.5024655
+      },
+      "software_version": "1.0.0",
+      "timing_summary": {
+        "sim_time_s": 10.0,
+        "wall_time_s": 4.415177999999287
+      },
+      "event_summary": {
+        "target_loss_count": 0,
+        "successful_reacquisition_count": 0
+      },
+      "exception_trace": null
+    },
+    {
+      "experiment_id": "EXP_B1_nominal_42",
+      "trial_id": "TRIAL_B1_nominal_1525431303",
+      "algorithm": "B1",
+      "seed": 1525431303,
+      "scenario_id": "nominal",
+      "status": "EXCESSIVE_ERROR",
+      "success": false,
+      "metrics": {
+        "simulation_duration": 9.983333333333333,
+        "average_fps": 181.3813057763164,
+        "minimum_fps": 40.43115786517215,
+        "processing_time": 7.039335833342193,
+        "P95_processing_time": 11.081589999412241,
+        "acquisition_start_timestamp": 0.016666666666666666,
+        "acquisition_confirmed_timestamp": 0.06666666666666667,
+        "acquisition_time": 0.05,
+        "reacquisition_time": null,
+        "median_reacquisition_time": null,
+        "mean_tracking_error": 72.42532007305752,
+        "median_tracking_error": 4.449016217622719,
+        "RMSE_tracking_error": 131.15502865754962,
+        "P95_tracking_error": 315.62075946419833,
+        "P99_tracking_error": 348.68170856678137,
+        "maximum_tracking_error": 357.47260945122235,
+        "RMSE_angular_error_rad": 0.014306794253885997,
+        "lock_retention_rate": 0.611395413870246,
+        "target_loss_count": 0,
+        "successful_reacquisition_count": 0,
+        "failed_reacquisition_count": 0,
+        "false_detection_rate": 0.3766666666666667,
+        "detection_success_rate": 0.6233333333333333,
+        "controller_saturation_count": 0,
+        "prediction_only_duration": 3.7603888888888886
+      },
+      "failure_reason": "EXCESSIVE_ERROR",
+      "resolved_configuration": {
+        "experiment_id": "EXP_B1_nominal_42",
+        "algorithm": "B1",
+        "master_seed": 42,
+        "trial_seed": 1525431303,
+        "trial_index": 7,
+        "scenario_id": "nominal",
+        "simulation_duration": 10.0,
+        "simulation_frequency": 60.0,
+        "camera_configuration": {
+          "width": 640,
+          "height": 480,
+          "fov_horizontal_deg": 4.0,
+          "fov_vertical_deg": 3.0,
+          "update_rate_hz": 30.0,
+          "rate_limit_deg_s": 5.0
+        },
+        "target_configuration": {
+          "count": 1,
+          "size_px": 10,
+          "intensity": 255,
+          "initial_position": {
+            "x": null,
+            "y": null
+          }
+        },
+        "trajectory_configuration": {
+          "type": "circular",
+          "straight": {
+            "velocity_x": 80.0,
+            "velocity_y": 60.0,
+            "boundary_mode": "bounce"
+          },
+          "circular": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "radius": 300.0,
+            "angular_velocity": 1.0,
+            "phase": 0.0
+          },
+          "figure8": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "amplitude_x": 400.0,
+            "amplitude_y": 300.0,
+            "angular_velocity": 0.8,
+            "phase": 0.0
+          },
+          "random": {
+            "max_speed": 150.0,
+            "max_acceleration": 200.0,
+            "acceleration_change_rate": 5.0,
+            "boundary_mode": "bounce"
+          },
+          "spiral": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "initial_radius": 50.0,
+            "expansion_rate": 20.0,
+            "angular_velocity": 1.5,
+            "phase": 0.0
+          },
+          "sinusoidal": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "amplitude_x": 400.0,
+            "amplitude_y": 300.0,
+            "frequency_x": 0.5,
+            "frequency_y": 0.7,
+            "phase_x": 0.0,
+            "phase_y": 0.0
+          }
+        },
+        "disturbance_configuration": {
+          "enabled": true,
+          "salt_pepper": {
+            "enabled": false,
+            "probability": 0.0
+          },
+          "gaussian": {
+            "enabled": true,
+            "sigma": 2.0
+          },
+          "poisson": {
+            "enabled": false,
+            "peak_photons": 50.0
+          },
+          "camera_jitter": {
+            "enabled": true,
+            "max_x_px": 0.5,
+            "max_y_px": 0.5,
+            "distribution": "uniform"
+          },
+          "platform_motion": {
+            "enabled": false,
+            "model": "linear",
+            "max_dx_px_per_frame": 20.0,
+            "max_dy_px_per_frame": 20.0,
+            "velocity_x": 60.0,
+            "velocity_y": 30.0,
+            "boundary_limit_px": 100.0
+          },
+          "atmosphere": {
+            "enabled": false,
+            "condition": "clear",
+            "contrast_factor": null,
+            "brightness_factor": null
+          }
+        },
+        "perception_configuration": {},
+        "estimator_configuration": {},
+        "controller_configuration": {},
+        "software_version": "1.0.0",
+        "git_commit": "a176faea3c887adb2819a23b05f4c97f7fbca6eb",
+        "timestamp": 1788611838.5438886
+      },
+      "software_version": "1.0.0",
+      "timing_summary": {
+        "sim_time_s": 10.0,
+        "wall_time_s": 4.28965860000244
+      },
+      "event_summary": {
+        "target_loss_count": 0,
+        "successful_reacquisition_count": 0
+      },
+      "exception_trace": null
+    },
+    {
+      "experiment_id": "EXP_B1_nominal_42",
+      "trial_id": "TRIAL_B1_nominal_1183233278",
+      "algorithm": "B1",
+      "seed": 1183233278,
+      "scenario_id": "nominal",
+      "status": "EXCESSIVE_ERROR",
+      "success": false,
+      "metrics": {
+        "simulation_duration": 9.983333333333333,
+        "average_fps": 181.00183656332342,
+        "minimum_fps": 51.74456811617981,
+        "processing_time": 7.030096999963765,
+        "P95_processing_time": 11.185324998587017,
+        "acquisition_start_timestamp": 0.016666666666666666,
+        "acquisition_confirmed_timestamp": 0.06666666666666667,
+        "acquisition_time": 0.05,
+        "reacquisition_time": null,
+        "median_reacquisition_time": null,
+        "mean_tracking_error": 73.40717649417188,
+        "median_tracking_error": 4.456333091451447,
+        "RMSE_tracking_error": 132.53750479226775,
+        "P95_tracking_error": 316.3863727454231,
+        "P99_tracking_error": 349.39304662572795,
+        "maximum_tracking_error": 357.41100229376985,
+        "RMSE_angular_error_rad": 0.014457599006267724,
+        "lock_retention_rate": 0.6080453020134228,
+        "target_loss_count": 0,
+        "successful_reacquisition_count": 0,
+        "failed_reacquisition_count": 0,
+        "false_detection_rate": 0.38,
+        "detection_success_rate": 0.62,
+        "controller_saturation_count": 0,
+        "prediction_only_duration": 3.7936666666666663
+      },
+      "failure_reason": "EXCESSIVE_ERROR",
+      "resolved_configuration": {
+        "experiment_id": "EXP_B1_nominal_42",
+        "algorithm": "B1",
+        "master_seed": 42,
+        "trial_seed": 1183233278,
+        "trial_index": 8,
+        "scenario_id": "nominal",
+        "simulation_duration": 10.0,
+        "simulation_frequency": 60.0,
+        "camera_configuration": {
+          "width": 640,
+          "height": 480,
+          "fov_horizontal_deg": 4.0,
+          "fov_vertical_deg": 3.0,
+          "update_rate_hz": 30.0,
+          "rate_limit_deg_s": 5.0
+        },
+        "target_configuration": {
+          "count": 1,
+          "size_px": 10,
+          "intensity": 255,
+          "initial_position": {
+            "x": null,
+            "y": null
+          }
+        },
+        "trajectory_configuration": {
+          "type": "circular",
+          "straight": {
+            "velocity_x": 80.0,
+            "velocity_y": 60.0,
+            "boundary_mode": "bounce"
+          },
+          "circular": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "radius": 300.0,
+            "angular_velocity": 1.0,
+            "phase": 0.0
+          },
+          "figure8": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "amplitude_x": 400.0,
+            "amplitude_y": 300.0,
+            "angular_velocity": 0.8,
+            "phase": 0.0
+          },
+          "random": {
+            "max_speed": 150.0,
+            "max_acceleration": 200.0,
+            "acceleration_change_rate": 5.0,
+            "boundary_mode": "bounce"
+          },
+          "spiral": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "initial_radius": 50.0,
+            "expansion_rate": 20.0,
+            "angular_velocity": 1.5,
+            "phase": 0.0
+          },
+          "sinusoidal": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "amplitude_x": 400.0,
+            "amplitude_y": 300.0,
+            "frequency_x": 0.5,
+            "frequency_y": 0.7,
+            "phase_x": 0.0,
+            "phase_y": 0.0
+          }
+        },
+        "disturbance_configuration": {
+          "enabled": true,
+          "salt_pepper": {
+            "enabled": false,
+            "probability": 0.0
+          },
+          "gaussian": {
+            "enabled": true,
+            "sigma": 2.0
+          },
+          "poisson": {
+            "enabled": false,
+            "peak_photons": 50.0
+          },
+          "camera_jitter": {
+            "enabled": true,
+            "max_x_px": 0.5,
+            "max_y_px": 0.5,
+            "distribution": "uniform"
+          },
+          "platform_motion": {
+            "enabled": false,
+            "model": "linear",
+            "max_dx_px_per_frame": 20.0,
+            "max_dy_px_per_frame": 20.0,
+            "velocity_x": 60.0,
+            "velocity_y": 30.0,
+            "boundary_limit_px": 100.0
+          },
+          "atmosphere": {
+            "enabled": false,
+            "condition": "clear",
+            "contrast_factor": null,
+            "brightness_factor": null
+          }
+        },
+        "perception_configuration": {},
+        "estimator_configuration": {},
+        "controller_configuration": {},
+        "software_version": "1.0.0",
+        "git_commit": "a176faea3c887adb2819a23b05f4c97f7fbca6eb",
+        "timestamp": 1788611838.6011615
+      },
+      "software_version": "1.0.0",
+      "timing_summary": {
+        "sim_time_s": 10.0,
+        "wall_time_s": 4.263829700001224
+      },
+      "event_summary": {
+        "target_loss_count": 0,
+        "successful_reacquisition_count": 0
+      },
+      "exception_trace": null
+    },
+    {
+      "experiment_id": "EXP_B1_nominal_42",
+      "trial_id": "TRIAL_B1_nominal_696548518",
+      "algorithm": "B1",
+      "seed": 696548518,
+      "scenario_id": "nominal",
+      "status": "EXCESSIVE_ERROR",
+      "success": false,
+      "metrics": {
+        "simulation_duration": 9.983333333333333,
+        "average_fps": 171.29074778986072,
+        "minimum_fps": 37.74140345275591,
+        "processing_time": 7.449795333419995,
+        "P95_processing_time": 12.14975499824504,
+        "acquisition_start_timestamp": 0.016666666666666666,
+        "acquisition_confirmed_timestamp": 0.06666666666666667,
+        "acquisition_time": 0.05,
+        "reacquisition_time": null,
+        "median_reacquisition_time": null,
+        "mean_tracking_error": 72.29372815790165,
+        "median_tracking_error": 4.488117063513825,
+        "RMSE_tracking_error": 130.93203983043082,
+        "P95_tracking_error": 315.34323133039493,
+        "P99_tracking_error": 348.4370087043651,
+        "maximum_tracking_error": 357.35708316614347,
+        "RMSE_angular_error_rad": 0.0142824699462086,
+        "lock_retention_rate": 0.6097203579418345,
+        "target_loss_count": 0,
+        "successful_reacquisition_count": 0,
+        "failed_reacquisition_count": 0,
+        "false_detection_rate": 0.38,
+        "detection_success_rate": 0.62,
+        "controller_saturation_count": 0,
+        "prediction_only_duration": 3.7936666666666663
+      },
+      "failure_reason": "EXCESSIVE_ERROR",
+      "resolved_configuration": {
+        "experiment_id": "EXP_B1_nominal_42",
+        "algorithm": "B1",
+        "master_seed": 42,
+        "trial_seed": 696548518,
+        "trial_index": 9,
+        "scenario_id": "nominal",
+        "simulation_duration": 10.0,
+        "simulation_frequency": 60.0,
+        "camera_configuration": {
+          "width": 640,
+          "height": 480,
+          "fov_horizontal_deg": 4.0,
+          "fov_vertical_deg": 3.0,
+          "update_rate_hz": 30.0,
+          "rate_limit_deg_s": 5.0
+        },
+        "target_configuration": {
+          "count": 1,
+          "size_px": 10,
+          "intensity": 255,
+          "initial_position": {
+            "x": null,
+            "y": null
+          }
+        },
+        "trajectory_configuration": {
+          "type": "circular",
+          "straight": {
+            "velocity_x": 80.0,
+            "velocity_y": 60.0,
+            "boundary_mode": "bounce"
+          },
+          "circular": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "radius": 300.0,
+            "angular_velocity": 1.0,
+            "phase": 0.0
+          },
+          "figure8": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "amplitude_x": 400.0,
+            "amplitude_y": 300.0,
+            "angular_velocity": 0.8,
+            "phase": 0.0
+          },
+          "random": {
+            "max_speed": 150.0,
+            "max_acceleration": 200.0,
+            "acceleration_change_rate": 5.0,
+            "boundary_mode": "bounce"
+          },
+          "spiral": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "initial_radius": 50.0,
+            "expansion_rate": 20.0,
+            "angular_velocity": 1.5,
+            "phase": 0.0
+          },
+          "sinusoidal": {
+            "center_x": 1000.0,
+            "center_y": 1000.0,
+            "amplitude_x": 400.0,
+            "amplitude_y": 300.0,
+            "frequency_x": 0.5,
+            "frequency_y": 0.7,
+            "phase_x": 0.0,
+            "phase_y": 0.0
+          }
+        },
+        "disturbance_configuration": {
+          "enabled": true,
+          "salt_pepper": {
+            "enabled": false,
+            "probability": 0.0
+          },
+          "gaussian": {
+            "enabled": true,
+            "sigma": 2.0
+          },
+          "poisson": {
+            "enabled": false,
+            "peak_photons": 50.0
+          },
+          "camera_jitter": {
+            "enabled": true,
+            "max_x_px": 0.5,
+            "max_y_px": 0.5,
+            "distribution": "uniform"
+          },
+          "platform_motion": {
+            "enabled": false,
+            "model": "linear",
+            "max_dx_px_per_frame": 20.0,
+            "max_dy_px_per_frame": 20.0,
+            "velocity_x": 60.0,
+            "velocity_y": 30.0,
+            "boundary_limit_px": 100.0
+          },
+          "atmosphere": {
+            "enabled": false,
+            "condition": "clear",
+            "contrast_factor": null,
+            "brightness_factor": null
+          }
+        },
+        "perception_configuration": {},
+        "estimator_configuration": {},
+        "controller_configuration": {},
+        "software_version": "1.0.0",
+        "git_commit": "a176faea3c887adb2819a23b05f4c97f7fbca6eb",
+        "timestamp": 1788611838.6696007
+      },
+      "software_version": "1.0.0",
+      "timing_summary": {
+        "sim_time_s": 10.0,
+        "wall_time_s": 4.554355899999791
+      },
+      "event_summary": {
+        "target_loss_count": 0,
+        "successful_reacquisition_count": 0
+      },
+      "exception_trace": null
+    }
+  ]
+}
