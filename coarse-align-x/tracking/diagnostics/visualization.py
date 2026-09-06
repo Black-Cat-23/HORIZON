@@ -63,6 +63,7 @@ def draw_tracking_annotations(
             cv2.line(canvas, (mx - 7, my), (mx + 7, my), (0, 0, 240), 1)
             cv2.line(canvas, (mx, my - 7), (mx, my + 7), (0, 0, 240), 1)
             cv2.circle(canvas, (mx, my), 2, (0, 0, 255), -1)
+            cv2.putText(canvas, "P", (mx + 8, my - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 255), 1, cv2.LINE_AA)
 
     if estimate is None:
         return canvas
@@ -111,6 +112,7 @@ def draw_tracking_annotations(
         cv2.circle(canvas, (ex, ey), 5, (255, 255, 0), 1, lineType=cv2.LINE_AA)
         cv2.line(canvas, (ex - 8, ey), (ex + 8, ey), (255, 255, 0), 1)
         cv2.line(canvas, (ex, ey - 8), (ex, ey + 8), (255, 255, 0), 1)
+        cv2.putText(canvas, "EST", (ex + 8, ey + 12), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 0), 1, cv2.LINE_AA)
 
         # Velocity vector (scaled by 0.2s for visual length)
         if draw_velocity_vector:

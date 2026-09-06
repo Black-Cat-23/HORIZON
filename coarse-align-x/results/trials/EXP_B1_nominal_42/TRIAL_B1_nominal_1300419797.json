@@ -1,0 +1,163 @@
+{
+  "experiment_id": "EXP_B1_nominal_42",
+  "trial_id": "TRIAL_B1_nominal_1300419797",
+  "algorithm": "B1",
+  "seed": 1300419797,
+  "scenario_id": "nominal",
+  "status": "EXCESSIVE_ERROR",
+  "success": false,
+  "metrics": {
+    "simulation_duration": 1.9833333333333334,
+    "average_fps": 132.53473786072507,
+    "minimum_fps": 39.457070710405205,
+    "processing_time": 9.832560833334961,
+    "P95_processing_time": 17.434634999699483,
+    "acquisition_start_timestamp": 0.016666666666666666,
+    "acquisition_confirmed_timestamp": 0.06666666666666667,
+    "acquisition_time": 0.05,
+    "reacquisition_time": null,
+    "median_reacquisition_time": null,
+    "mean_tracking_error": 85.06536296948362,
+    "median_tracking_error": 22.047769930055765,
+    "RMSE_tracking_error": 131.4447518120168,
+    "P95_tracking_error": 276.7597180299107,
+    "P99_tracking_error": 297.4812733378428,
+    "maximum_tracking_error": 302.59170884499684,
+    "RMSE_angular_error_rad": 0.014338398147415474,
+    "lock_retention_rate": 0.4701867816091954,
+    "target_loss_count": 0,
+    "successful_reacquisition_count": 0,
+    "failed_reacquisition_count": 0,
+    "false_detection_rate": 0.525,
+    "detection_success_rate": 0.475,
+    "controller_saturation_count": 0,
+    "prediction_only_duration": 1.04125
+  },
+  "failure_reason": "EXCESSIVE_ERROR",
+  "resolved_configuration": {
+    "experiment_id": "EXP_B1_nominal_42",
+    "algorithm": "B1",
+    "master_seed": 42,
+    "trial_seed": 1300419797,
+    "trial_index": 0,
+    "scenario_id": "nominal",
+    "simulation_duration": 2.0,
+    "simulation_frequency": 60.0,
+    "camera_configuration": {
+      "width": 640,
+      "height": 480,
+      "fov_horizontal_deg": 4.0,
+      "fov_vertical_deg": 3.0,
+      "update_rate_hz": 30.0,
+      "rate_limit_deg_s": 5.0
+    },
+    "target_configuration": {
+      "count": 1,
+      "size_px": 10,
+      "intensity": 255,
+      "initial_position": {
+        "x": null,
+        "y": null
+      }
+    },
+    "trajectory_configuration": {
+      "type": "circular",
+      "straight": {
+        "velocity_x": 80.0,
+        "velocity_y": 60.0,
+        "boundary_mode": "bounce"
+      },
+      "circular": {
+        "center_x": 1000.0,
+        "center_y": 1000.0,
+        "radius": 300.0,
+        "angular_velocity": 1.0,
+        "phase": 0.0
+      },
+      "figure8": {
+        "center_x": 1000.0,
+        "center_y": 1000.0,
+        "amplitude_x": 400.0,
+        "amplitude_y": 300.0,
+        "angular_velocity": 0.8,
+        "phase": 0.0
+      },
+      "random": {
+        "max_speed": 150.0,
+        "max_acceleration": 200.0,
+        "acceleration_change_rate": 5.0,
+        "boundary_mode": "bounce"
+      },
+      "spiral": {
+        "center_x": 1000.0,
+        "center_y": 1000.0,
+        "initial_radius": 50.0,
+        "expansion_rate": 20.0,
+        "angular_velocity": 1.5,
+        "phase": 0.0
+      },
+      "sinusoidal": {
+        "center_x": 1000.0,
+        "center_y": 1000.0,
+        "amplitude_x": 400.0,
+        "amplitude_y": 300.0,
+        "frequency_x": 0.5,
+        "frequency_y": 0.7,
+        "phase_x": 0.0,
+        "phase_y": 0.0
+      }
+    },
+    "disturbance_configuration": {
+      "enabled": true,
+      "salt_pepper": {
+        "enabled": false,
+        "probability": 0.0
+      },
+      "gaussian": {
+        "enabled": true,
+        "sigma": 2.0
+      },
+      "poisson": {
+        "enabled": false,
+        "peak_photons": 50.0
+      },
+      "camera_jitter": {
+        "enabled": true,
+        "max_x_px": 0.5,
+        "max_y_px": 0.5,
+        "distribution": "uniform"
+      },
+      "platform_motion": {
+        "enabled": false,
+        "model": "linear",
+        "max_dx_px_per_frame": 20.0,
+        "max_dy_px_per_frame": 20.0,
+        "velocity_x": 60.0,
+        "velocity_y": 30.0,
+        "boundary_limit_px": 100.0
+      },
+      "atmosphere": {
+        "enabled": false,
+        "condition": "clear",
+        "contrast_factor": null,
+        "brightness_factor": null
+      }
+    },
+    "perception_configuration": {},
+    "estimator_configuration": {},
+    "controller_configuration": {},
+    "software_version": "1.0.0",
+    "git_commit": "a176faea3c887adb2819a23b05f4c97f7fbca6eb",
+    "timestamp": 1788611118.5378497
+  },
+  "software_version": "1.0.0",
+  "timing_summary": {
+    "sim_time_s": 2.0,
+    "wall_time_s": 1.2523679999976594
+  },
+  "event_summary": {
+    "target_loss_count": 0,
+    "successful_reacquisition_count": 0
+  },
+  "exception_trace": null
+}
