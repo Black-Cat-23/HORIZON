@@ -139,6 +139,9 @@ class SimulationEngine:
             size_px=cfg.target.size_px,
             intensity=cfg.target.intensity,
             shape="square",
+            psf_model=cfg.target.psf_model,
+            psf_sigma_px=cfg.target.psf_sigma_px,
+            psf_background_adu=cfg.target.psf_background_adu,
         )
 
         # 5. Trajectory setup
@@ -161,10 +164,11 @@ class SimulationEngine:
             fov_horizontal_deg=cfg.camera.fov_horizontal_deg,
             fov_vertical_deg=cfg.camera.fov_vertical_deg,
         )
+        initial_pan, initial_tilt = self._determine_initial_camera_pointing()
         gimbal = CameraGimbal(
             rate_limit_deg_s=cfg.camera.rate_limit_deg_s,
-            initial_pan_deg=0.0,
-            initial_tilt_deg=0.0,
+            initial_pan_deg=initial_pan,
+            initial_tilt_deg=initial_tilt,
         )
         self._camera = VirtualCamera(
             intrinsics=intrinsics,
@@ -172,6 +176,11 @@ class SimulationEngine:
             update_rate_hz=cfg.camera.update_rate_hz,
             world_width=cfg.world.width,
             world_height=cfg.world.height,
+            pixel_pitch_um=cfg.camera.pixel_pitch_um,
+            exposure_ms=cfg.camera.exposure_ms,
+            gain_db=cfg.camera.gain_db,
+            beam_wander_config=cfg.disturbance.beam_wander,
+            seed_mgr=self._seed_mgr,
         )
 
         # 8. Disturbance Pipeline (Phase 3)
@@ -193,6 +202,39 @@ class SimulationEngine:
             cfg.trajectory.type,
             self._clock.dt,
         )
+
+    def _determine_initial_camera_pointing(self) -> Tuple[float, float]:
+        """Resolve initial camera gimbal pointing (pan_deg, tilt_deg).
+
+        Priority (high → low):
+          1. Explicit ``initial_pan_deg`` / ``initial_tilt_deg`` from CameraConfig.
+          2. Seed-derived uniform random offset within
+             ±``max_initial_offset_deg`` on each axis.
+          3. Default: (0.0, 0.0) — boresight centered.
+
+        Returns:
+            (pan_deg, tilt_deg) in degrees.
+        """
+        cfg = self._config.camera
+        offset = cfg.max_initial_offset_deg
+
+        if offset > 0.0:
+            camera_rng = self._seed_mgr.get_rng("initial_camera_pointing")
+            pan_deg = (
+                float(cfg.initial_pan_deg)
+                if cfg.initial_pan_deg != 0.0
+                else float(camera_rng.uniform(-offset, offset))
+            )
+            tilt_deg = (
+                float(cfg.initial_tilt_deg)
+                if cfg.initial_tilt_deg != 0.0
+                else float(camera_rng.uniform(-offset, offset))
+            )
+        else:
+            pan_deg = float(cfg.initial_pan_deg)
+            tilt_deg = float(cfg.initial_tilt_deg)
+
+        return pan_deg, tilt_deg
 
     def _determine_initial_position(self) -> Tuple[float, float]:
         """Resolve initial position: explicit from config or deterministic from seed."""
@@ -388,6 +430,11 @@ class SimulationEngine:
         """Get the current ground-truth target state."""
         if self._current_state is None:
             raise RuntimeError("Engine not initialized.")
+        return self._current_state
+
+    @property
+    def current_target_state(self) -> Optional[TargetState]:
+        """Property alias for current target ground-truth state."""
         return self._current_state
 
     def get_current_frame(self) -> np.ndarray:

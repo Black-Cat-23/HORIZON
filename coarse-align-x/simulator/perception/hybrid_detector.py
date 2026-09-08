@@ -38,6 +38,8 @@ from simulator.perception.centroid import (
 )
 from simulator.perception.config import DetectorConfig, HybridDetectorConfig
 from simulator.perception.consistency_features import (
+    compute_appearance_agreement,
+    compute_estimator_consistency,
     compute_optical_agreement,
     compute_size_agreement,
     compute_spatial_agreement,
@@ -175,12 +177,17 @@ class HybridBeaconDetector:
             s_optical = compute_optical_agreement(
                 pair.classical.local_contrast, pair.classical.background_estimate
             )
+            s_appearance = compute_appearance_agreement(pair.fused_candidate)
             s_temporal = compute_temporal_agreement(
+                pair.fused_candidate.centroid, estimator_prediction, prediction_covariance
+            )
+            is_valid_est, d2_est, s_est = compute_estimator_consistency(
                 pair.fused_candidate.centroid, estimator_prediction, prediction_covariance
             )
 
             c_class = pair.classical.classical_confidence or 0.0
             c_neur = pair.neural.neural_confidence or 0.0
+            det_conf = float(0.5 * (c_class + c_neur))
 
             # Weight formulation: normalized
             w = self._fusion_cfg
@@ -190,7 +197,6 @@ class HybridBeaconDetector:
                 + w.spatial_weight * s_spatial
                 + w.size_weight * s_size
                 + w.optical_weight * s_optical
-                + w.temporal_weight * s_temporal
             )
             total_weight = (
                 w.classical_weight
@@ -198,9 +204,11 @@ class HybridBeaconDetector:
                 + w.spatial_weight
                 + w.size_weight
                 + w.optical_weight
-                + w.temporal_weight
             )
-            fused_score = float(np.clip(raw_score / max(total_weight, 1e-5), 0.0, 1.0))
+            base_score = raw_score / max(total_weight, 1e-5)
+            # Modulate by temporal consistency when tracking estimate exists
+            t_factor = s_temporal if estimator_prediction is not None else 1.0
+            fused_score = float(np.clip(base_score * t_factor, 0.0, 1.0))
 
             # Agreement state determination
             if s_spatial > 0.70 and s_size > 0.50:
@@ -211,15 +219,51 @@ class HybridBeaconDetector:
                 agr_state = "DISAGREEMENT"
 
             reason = (
-                f"Matched Classical+Neural pair (dist={pair.centroid_distance:.2f}px, IoU={pair.iou:.2f})"
+                f"Candidate selected because matched Classical+Neural agreement (dist={pair.centroid_distance:.2f}px, "
+                f"IoU={pair.iou:.2f}, spatial={s_spatial:.2f}, optical={s_optical:.2f}, temporal={s_temporal:.2f}) "
+                f"strongly supports beacon hypothesis"
             )
-            scored_candidates.append((fused_score, pair.fused_candidate, agr_state, reason))
+
+            enriched_cand = UnifiedCandidate(
+                candidate_id=pair.fused_candidate.candidate_id,
+                centroid_x=pair.fused_candidate.centroid_x,
+                centroid_y=pair.fused_candidate.centroid_y,
+                bbox_x=pair.fused_candidate.bbox_x,
+                bbox_y=pair.fused_candidate.bbox_y,
+                bbox_width=pair.fused_candidate.bbox_width,
+                bbox_height=pair.fused_candidate.bbox_height,
+                area=pair.fused_candidate.area,
+                peak_intensity=pair.fused_candidate.peak_intensity,
+                mean_intensity=pair.fused_candidate.mean_intensity,
+                background_estimate=pair.fused_candidate.background_estimate,
+                local_contrast=pair.fused_candidate.local_contrast,
+                classical_confidence=pair.fused_candidate.classical_confidence,
+                neural_confidence=pair.fused_candidate.neural_confidence,
+                source=pair.fused_candidate.source,
+                valid=pair.fused_candidate.valid and is_valid_est,
+                raw_classical_candidate=pair.fused_candidate.raw_classical_candidate,
+                raw_neural_bbox=pair.fused_candidate.raw_neural_bbox,
+                contour=pair.fused_candidate.contour,
+                spatial_evidence=s_spatial,
+                optical_evidence=s_optical,
+                temporal_evidence=s_temporal,
+                appearance_evidence=s_appearance,
+                detector_confidence=det_conf,
+                estimator_consistency=s_est,
+                decision_reason=reason,
+                rejection_reason="",
+            )
+            scored_candidates.append((fused_score, enriched_cand, agr_state, reason))
 
         # Process Classical-Only Candidates
         for cand in un_c:
             c_class = cand.classical_confidence or 0.0
             s_optical = compute_optical_agreement(cand.local_contrast, cand.background_estimate)
+            s_appearance = compute_appearance_agreement(cand)
             s_temporal = compute_temporal_agreement(
+                cand.centroid, estimator_prediction, prediction_covariance
+            )
+            is_valid_est, d2_est, s_est = compute_estimator_consistency(
                 cand.centroid, estimator_prediction, prediction_covariance
             )
 
@@ -228,23 +272,101 @@ class HybridBeaconDetector:
             # Apply penalty = 0.20 to prevent false-positive detections on background noise specks when target is outside FOV.
             penalty = 0.20 if self._neural_detector.is_model_loaded else 1.0
 
+            t_factor = s_temporal if estimator_prediction is not None else 1.0
             fused_score = float(
-                np.clip((0.60 * c_class + 0.25 * s_optical + 0.15 * s_temporal) * penalty, 0.0, 1.0)
+                np.clip((0.45 * c_class + 0.25 * s_optical + 0.30 * s_appearance) * t_factor * penalty, 0.0, 1.0)
+            )
+            reason = (
+                f"Candidate selected via classical optical detection (contrast={cand.local_contrast:.1f}, "
+                f"confidence={c_class:.2f}, temporal={s_temporal:.2f})"
+            )
+            rej_reason = (
+                f"Unmatched classical optical candidate penalized by absent neural confirmation"
+                if penalty < 1.0 else "Classical candidate score below threshold"
+            )
+
+            enriched_cand = UnifiedCandidate(
+                candidate_id=cand.candidate_id,
+                centroid_x=cand.centroid_x,
+                centroid_y=cand.centroid_y,
+                bbox_x=cand.bbox_x,
+                bbox_y=cand.bbox_y,
+                bbox_width=cand.bbox_width,
+                bbox_height=cand.bbox_height,
+                area=cand.area,
+                peak_intensity=cand.peak_intensity,
+                mean_intensity=cand.mean_intensity,
+                background_estimate=cand.background_estimate,
+                local_contrast=cand.local_contrast,
+                classical_confidence=cand.classical_confidence,
+                neural_confidence=None,
+                source=CandidateSource.CLASSICAL,
+                valid=cand.valid and is_valid_est,
+                raw_classical_candidate=cand.raw_classical_candidate,
+                raw_neural_bbox=None,
+                contour=cand.contour,
+                spatial_evidence=0.0,
+                optical_evidence=s_optical,
+                temporal_evidence=s_temporal,
+                appearance_evidence=s_appearance,
+                detector_confidence=c_class,
+                estimator_consistency=s_est,
+                decision_reason=reason,
+                rejection_reason=rej_reason,
             )
             scored_candidates.append(
-                (fused_score, cand, "CLASSICAL_ONLY", "Unmatched Classical optical candidate")
+                (fused_score, enriched_cand, "SINGLE_SOURCE_CLASSICAL", reason)
             )
 
         # Process Neural-Only Candidates
         for cand in un_n:
             c_neur = cand.neural_confidence or 0.0
+            s_appearance = compute_appearance_agreement(cand)
             s_temporal = compute_temporal_agreement(
+                cand.centroid, estimator_prediction, prediction_covariance
+            )
+            is_valid_est, d2_est, s_est = compute_estimator_consistency(
                 cand.centroid, estimator_prediction, prediction_covariance
             )
 
             fused_score = float(np.clip(0.70 * c_neur + 0.30 * s_temporal, 0.0, 1.0))
+            reason = (
+                f"Candidate selected via neural bounding box detection (confidence={c_neur:.2f}, "
+                f"temporal={s_temporal:.2f})"
+            )
+            rej_reason = "Unmatched neural proposal below threshold"
+
+            enriched_cand = UnifiedCandidate(
+                candidate_id=cand.candidate_id,
+                centroid_x=cand.centroid_x,
+                centroid_y=cand.centroid_y,
+                bbox_x=cand.bbox_x,
+                bbox_y=cand.bbox_y,
+                bbox_width=cand.bbox_width,
+                bbox_height=cand.bbox_height,
+                area=cand.area,
+                peak_intensity=None,
+                mean_intensity=None,
+                background_estimate=None,
+                local_contrast=None,
+                classical_confidence=None,
+                neural_confidence=cand.neural_confidence,
+                source=CandidateSource.NEURAL,
+                valid=cand.valid and is_valid_est,
+                raw_classical_candidate=None,
+                raw_neural_bbox=cand.raw_neural_bbox,
+                contour=None,
+                spatial_evidence=0.0,
+                optical_evidence=0.5,
+                temporal_evidence=s_temporal,
+                appearance_evidence=s_appearance,
+                detector_confidence=c_neur,
+                estimator_consistency=s_est,
+                decision_reason=reason,
+                rejection_reason=rej_reason,
+            )
             scored_candidates.append(
-                (fused_score, cand, "NEURAL_ONLY", "Unmatched Neural bounding box proposal")
+                (fused_score, enriched_cand, "SINGLE_SOURCE_NEURAL", reason)
             )
 
         # Sort scored candidates by fused confidence score descending
@@ -267,7 +389,7 @@ class HybridBeaconDetector:
                 centroid_source="NONE",
                 agreement_state="REJECTED_LOW_CONFIDENCE",
                 fused_confidence=top_score,
-                decision_reason=f"Top candidate confidence {top_score:.3f} below acceptance threshold {self._fusion_cfg.acceptance_threshold:.3f}",
+                decision_reason=f"Candidate rejected because top confidence {top_score:.3f} below acceptance threshold {self._fusion_cfg.acceptance_threshold:.3f}",
             )
 
         # 6. Optical Subpixel Centroid Refinement on Selected ROI
@@ -300,7 +422,7 @@ class HybridBeaconDetector:
 
     def _extract_classical_unified(self, res_c: DetectionResult) -> List[UnifiedCandidate]:
         out = []
-        if not res_c.detected or not res_c.candidates:
+        if not res_c.candidates:
             return out
 
         for i, cand in enumerate(res_c.candidates):
@@ -404,7 +526,7 @@ class HybridBeaconDetector:
         method = self._config.centroid.method
 
         if method == "gaussian_fit":
-            u_c, v_c, success = compute_gaussian_fit(
+            u_c, v_c, _, _, success = compute_gaussian_fit(
                 roi_frame=roi,
                 roi_mask=roi_mask,
                 bg_level=bg_level,
@@ -414,7 +536,7 @@ class HybridBeaconDetector:
             )
             return (u_c, v_c), "GAUSSIAN_FIT" if success else "WEIGHTED_COG"
         elif method == "weighted_cog":
-            u_c, v_c = compute_weighted_cog(
+            u_c, v_c, _, _ = compute_weighted_cog(
                 roi_frame=roi,
                 roi_mask=roi_mask,
                 bg_level=bg_level,
@@ -423,7 +545,7 @@ class HybridBeaconDetector:
             )
             return (u_c, v_c), "WEIGHTED_COG"
         else:
-            u_c, v_c = compute_geometric_centroid(
+            u_c, v_c, _, _ = compute_geometric_centroid(
                 roi_mask=roi_mask,
                 x_offset=x1,
                 y_offset=y1,

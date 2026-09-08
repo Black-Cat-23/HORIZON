@@ -71,8 +71,8 @@ class NeuralBeaconDetector:
             if meta_path.exists():
                 with open(meta_path, "r", encoding="utf-8") as f:
                     self._model_metadata = json.load(f)
-        except Exception as e:
-            logger.error("Failed to load ONNX Runtime session: %s", e)
+        except (Exception, MemoryError, RuntimeError) as e:
+            logger.warning("Failed to load ONNX Runtime session (%s). Neural detector will report no detections until model is available.", e)
             self._session = None
 
     @property
@@ -187,7 +187,8 @@ class NeuralBeaconDetector:
                     else:
                         thresh_val = min_val
                     _, mask_crop = cv2.threshold(roi_crop, int(thresh_val), 255, cv2.THRESH_BINARY)
-                    centroid = compute_weighted_cog(roi_crop, mask_crop, min_val, x1, y1)
+                    centroid_u, centroid_v, _, _ = compute_weighted_cog(roi_crop, mask_crop, min_val, x1, y1)
+                    centroid = (centroid_u, centroid_v)
                 else:
                     # Integer bounding box center
                     centroid = (float(x + w / 2.0), float(y + h / 2.0))

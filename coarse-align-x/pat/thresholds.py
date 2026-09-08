@@ -28,6 +28,6 @@ class PATThresholds:
     max_mahalanobis_gate: float = 16.0        # Outlier gate threshold
 
     # Controller limits
-    max_pan_rate_deg_s: float = 5.0           # Maximum pan slew rate (degrees/sec)
-    max_tilt_rate_deg_s: float = 5.0          # Maximum tilt slew rate (degrees/sec)
+    max_pan_rate_deg_s: float = 20.0          # Maximum pan slew rate (degrees/sec)
+    max_tilt_rate_deg_s: float = 20.0         # Maximum tilt slew rate (degrees/sec)
     degraded_gain_scale: float = 0.5          # Gain scale factor during DEGRADED tracking to avoid chasing noise

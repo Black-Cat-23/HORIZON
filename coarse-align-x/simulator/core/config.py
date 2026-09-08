@@ -43,13 +43,34 @@ class WorldConfig:
 
 @dataclass(frozen=True)
 class CameraConfig:
-    """Virtual camera base parameters and actuator constraints."""
+    """Virtual camera base parameters and actuator constraints.
+
+    Initial Pointing:
+        By default the camera starts at (0°, 0°) — boresight centered.
+        Use ``initial_pan_deg`` / ``initial_tilt_deg`` for an explicit offset.
+        Use ``max_initial_offset_deg > 0`` for a seed-derived random offset
+        within ±max_initial_offset_deg on each axis.
+        Explicit values take precedence over seed-derived values.
+
+    Optical Parameters:
+        pixel_pitch_um: Physical pixel size in micrometres. None = not modeled.
+        exposure_ms: Sensor integration time (>0 ms). Enables motion blur when set.
+        gain_db: Electronic gain in dB. 0.0 = unity. Range [-60, +60] dB.
+    """
     width: int = 640
     height: int = 480
     fov_horizontal_deg: float = 4.0
     fov_vertical_deg: float = 3.0
     update_rate_hz: float = 30.0
     rate_limit_deg_s: float = 5.0
+    # Initial camera pointing (all three default to 0.0 = boresight centered)
+    initial_pan_deg: float = 0.0
+    initial_tilt_deg: float = 0.0
+    max_initial_offset_deg: float = 0.0  # 0 = always start at (0°,0°)
+    # Optical sensor parameters (Phase 2)
+    pixel_pitch_um: Optional[float] = None  # Physical pixel size (µm); None = not modeled
+    exposure_ms: float = 1.0               # Integration time (ms); enables motion blur
+    gain_db: float = 0.0                   # Electronic gain (dB); 0 = unity
 
 
 @dataclass(frozen=True)
@@ -61,13 +82,23 @@ class TargetInitialPosition:
 
 @dataclass(frozen=True)
 class TargetConfig:
-    """Target/beacon configuration."""
+    """Target/beacon configuration.
+
+    PSF Parameters (Phase 2):
+        psf_model: Beacon rendering model: 'box' (default) or 'gaussian'.
+        psf_sigma_px: Gaussian sigma in pixels. Only used with psf_model='gaussian'.
+        psf_background_adu: Constant background ADU added to PSF region.
+    """
     count: int = 1
     size_px: int = 10
     intensity: int = 255
     initial_position: TargetInitialPosition = field(
         default_factory=TargetInitialPosition
     )
+    # PSF rendering model (Phase 2)
+    psf_model: str = "box"              # 'box' (legacy) or 'gaussian'
+    psf_sigma_px: float = 1.5           # Gaussian sigma (px); only used with psf_model='gaussian'
+    psf_background_adu: float = 0.0     # Background pedestal (ADU)
 
 
 @dataclass(frozen=True)
@@ -252,6 +283,23 @@ def validate_config(config: AppConfig) -> None:
             f"camera.rate_limit_deg_s must be > 0, "
             f"got {config.camera.rate_limit_deg_s}"
         )
+    if config.camera.max_initial_offset_deg < 0:
+        errors.append(
+            f"camera.max_initial_offset_deg must be >= 0, "
+            f"got {config.camera.max_initial_offset_deg}"
+        )
+    if config.camera.exposure_ms <= 0:
+        errors.append(
+            f"camera.exposure_ms must be > 0, got {config.camera.exposure_ms}"
+        )
+    if not (-60.0 <= config.camera.gain_db <= 60.0):
+        errors.append(
+            f"camera.gain_db must be in [-60, +60] dB, got {config.camera.gain_db}"
+        )
+    if config.camera.pixel_pitch_um is not None and config.camera.pixel_pitch_um <= 0:
+        errors.append(
+            f"camera.pixel_pitch_um must be > 0 when set, got {config.camera.pixel_pitch_um}"
+        )
 
     # Target
     if config.target.count != 1:
@@ -265,6 +313,18 @@ def validate_config(config: AppConfig) -> None:
     if not (0 <= config.target.intensity <= 255):
         errors.append(
             f"target.intensity must be 0–255, got {config.target.intensity}"
+        )
+    if config.target.psf_model not in ("box", "gaussian"):
+        errors.append(
+            f"target.psf_model must be 'box' or 'gaussian', got '{config.target.psf_model}'"
+        )
+    if config.target.psf_sigma_px < 0:
+        errors.append(
+            f"target.psf_sigma_px must be >= 0, got {config.target.psf_sigma_px}"
+        )
+    if config.target.psf_background_adu < 0:
+        errors.append(
+            f"target.psf_background_adu must be >= 0, got {config.target.psf_background_adu}"
         )
 
     # Simulation

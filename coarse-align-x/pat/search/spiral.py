@@ -22,7 +22,7 @@ class SpiralSearchStrategy(SearchStrategy):
         initial_radius_deg: float = 0.2,
         radius_step_deg: float = 0.4,
         angular_rate_rad_s: float = 1.5,
-        max_radius_deg: float = 4.0,
+        max_radius_deg: float = 12.0,
     ):
         self.initial_radius_deg = initial_radius_deg
         self.radius_step_deg = radius_step_deg
@@ -42,14 +42,13 @@ class SpiralSearchStrategy(SearchStrategy):
         self._completed = False
 
     def is_complete(self) -> bool:
-        return self._completed
+        return False
 
     def _get_radius_deg(self, theta: float) -> float:
-        # r = r0 + (dr / (2*pi)) * theta
         return self.initial_radius_deg + (self.radius_step_deg / (2.0 * math.pi)) * theta
 
     def next_command(self, dt: float, current_pan_deg: float, current_tilt_deg: float) -> Tuple[float, float]:
-        if self._completed or dt <= 0.0:
+        if dt <= 0.0:
             return (0.0, 0.0)
 
         # Advance theta angle
@@ -57,8 +56,8 @@ class SpiralSearchStrategy(SearchStrategy):
         r = self._get_radius_deg(self._theta)
 
         if r > self.max_radius_deg:
-            self._completed = True
-            return (0.0, 0.0)
+            self._theta = 0.0
+            r = self.initial_radius_deg
 
         # Desired position on spiral
         target_pan = self.center_pan_deg + r * math.cos(self._theta)

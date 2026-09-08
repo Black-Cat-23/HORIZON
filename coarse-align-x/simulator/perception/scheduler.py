@@ -90,7 +90,7 @@ class AdaptivePerceptionScheduler:
             needs_full_hybrid = True
         elif consecutive_hits < self._config.min_stable_hits:
             needs_full_hybrid = True
-        elif self._frames_since_full_hybrid >= self._config.recalibration_period_frames:
+        elif self._config.recalibration_period_frames <= 1 or self._frames_since_full_hybrid >= self._config.recalibration_period_frames:
             needs_full_hybrid = True
 
         if needs_full_hybrid:

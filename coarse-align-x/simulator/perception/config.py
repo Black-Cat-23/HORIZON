@@ -25,13 +25,13 @@ class PreprocessingConfig:
 @dataclass(frozen=True)
 class CandidateScoringConfig:
     """Parameters for beacon candidate extraction, filtering, and scoring."""
-    min_area_px: float = 4.0        # Minimum valid beacon area (supporting down to 5×5 subpixel beacon)
-    max_area_px: float = 650.0      # Maximum valid beacon area (supporting up to 20×20 beacon)
-    min_peak_intensity: int = 40    # Minimum peak intensity above noise floor
+    min_area_px: float = 4.0        # Minimum valid beacon area (supporting down to subpixel beacon)
+    max_area_px: float = 1100.0     # Maximum valid beacon area (supporting up to 25×25 beacon)
+    min_peak_intensity: int = 15    # Minimum peak intensity above noise floor (supporting low contrast / fog)
     min_snr: float = 1.2            # Signal-to-noise ratio threshold
     expected_size_px: float = 10.0  # Project nominal beacon size
     size_tolerance_factor: float = 3.0
-    min_circularity: float = 0.25   # Rejects highly elongated noise streaks
+    min_circularity: float = 0.10   # Rejects non-optical artifacts while accepting motion-blurred streaks
 
 
 @dataclass(frozen=True)
@@ -39,8 +39,8 @@ class CentroidConfig:
     """Subpixel centroid calculation configuration."""
     method: Literal["weighted_cog", "geometric", "gaussian_fit"] = "weighted_cog"
     roi_padding_px: int = 4         # Margin around candidate bbox for centroid computation
-    gaussian_fit_max_iter: int = 50
-    gaussian_fit_tol: float = 1e-4
+    gaussian_fit_max_iter: int = 20
+    gaussian_fit_tol: float = 1e-3
 
 
 @dataclass(frozen=True)

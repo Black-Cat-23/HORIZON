@@ -12,6 +12,7 @@ from tracking.estimation.covariance import (
     validate_covariance,
 )
 from tracking.estimation.innovation import Innovation, compute_innovation
+from tracking.estimation.imm_kalman import InteractingMultipleModelFilter
 from tracking.estimation.kalman import KalmanFilterConfig, TargetKalmanFilter
 from tracking.estimation.model import (
     build_measurement_matrix,
@@ -32,6 +33,7 @@ __all__ = [
     "validate_covariance",
     "Innovation",
     "compute_innovation",
+    "InteractingMultipleModelFilter",
     "KalmanFilterConfig",
     "TargetKalmanFilter",
     "build_measurement_matrix",

@@ -66,6 +66,14 @@ class UnifiedCandidate:
     raw_classical_candidate: Optional[Any] = None
     raw_neural_bbox: Optional[Tuple[int, int, int, int]] = None
     contour: Optional[np.ndarray] = None
+    spatial_evidence: float = 0.0
+    optical_evidence: float = 0.0
+    temporal_evidence: float = 0.0
+    appearance_evidence: float = 0.0
+    detector_confidence: float = 0.0
+    estimator_consistency: float = 0.0
+    decision_reason: str = ""
+    rejection_reason: str = ""
 
     @property
     def centroid(self) -> Tuple[float, float]:

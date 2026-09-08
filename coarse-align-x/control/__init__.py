@@ -8,6 +8,7 @@ from .feedforward import VelocityFeedForward
 from .saturation import ControllerSaturation
 from .actuator_interface import ActuatorInterface
 from .gain_scheduler import GainScheduler, ScheduledGains
+from .adrc_controller import ADRCAxisController, DualAxisADRCController
 from .camera_controller import PATCameraController
 
 __all__ = [
@@ -17,5 +18,7 @@ __all__ = [
     "ActuatorInterface",
     "GainScheduler",
     "ScheduledGains",
+    "ADRCAxisController",
+    "DualAxisADRCController",
     "PATCameraController",
 ]

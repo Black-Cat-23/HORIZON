@@ -49,6 +49,26 @@ class FilterState:
 
 
 @dataclass(frozen=True)
+class EstimatorHealth:
+    """Structured telemetry record exposing comprehensive state estimator health.
+
+    Contains statistical metrics (NIS, NEES evaluation), 3-model IMM probabilities,
+    uncertainty bounds, and measurement gating decisions for explainable diagnostic health.
+    """
+    track_health: float                     # [0.0, 1.0] composite estimator health score
+    position_sigma: float                   # Total 1-sigma position uncertainty [px]
+    velocity_sigma: float                   # Total 1-sigma velocity uncertainty [px/s]
+    innovation_health: float                # [0.0, 1.0] innovation consistency score
+    model_probabilities: Tuple[float, float, float]  # (P_CV, P_CA, P_MANEUVER)
+    measurement_accepted: bool              # Gating decision for current frame
+    prediction_age_frames: int             # Consecutive missing measurement predictions
+    nis: float                             # Normalized Innovation Squared (NIS = v^T S^-1 v)
+    nees_eval: Optional[float] = None       # Evaluation-only NEES ((x_true - x_hat)^T P^-1 (x_true - x_hat))
+    mahalanobis_distance: float = 0.0      # Mahalanobis distance d_M = sqrt(NIS)
+    mahalanobis_threshold: float = 16.0     # Chi-squared gate threshold (e.g. 16.0 for 99.9% 2DOF)
+
+
+@dataclass(frozen=True)
 class StateEstimate:
     """Standardized output of the Phase 5 State Estimator.
 
@@ -72,6 +92,11 @@ class StateEstimate:
     mahalanobis_distance: float = 0.0
     association_quality: float = 0.0
     processing_time_ms: float = 0.0
+    predicted_vx: float = 0.0
+    predicted_vy: float = 0.0
+    nis: float = 0.0
+    nees_eval: Optional[float] = None
+    estimator_health: Optional[EstimatorHealth] = None
 
     @property
     def position_sigma_x(self) -> float:
@@ -102,3 +127,4 @@ class StateEstimate:
     def velocity_uncertainty(self) -> float:
         """Total velocity standard uncertainty norm sqrt(sigma_vx^2 + sigma_vy^2) [px/s]."""
         return float(np.sqrt(max(0.0, self.covariance[2, 2] + self.covariance[3, 3])))
+

@@ -1,24 +1,34 @@
 """
-HORIZON Disturbance Presets
-==================================
-Predefined, fully-expanded disturbance configuration presets:
+HORIZON Disturbance Presets & Adversarial Scenarios
+===================================================
+Predefined, fully-expanded disturbance configuration presets and adversarial scenario profiles:
   - NOMINAL: Clean baseline, zero disturbances
   - DIFFICULT: Moderate multi-source disturbances
   - SEVERE: High-intensity disturbances within official bounds
   - RECOVERY: Atmospheric loss / reacquisition scenario
   - ADVERSARIAL: Extreme boundary conditions (all official limits tested)
+  - DISTRACTOR_BURST: False optical target burst event
+  - OCCLUSION_EVENT: Temporary complete beacon occlusion
+  - BRIGHTNESS_FADE: Deep optical scintillation / atmospheric fading event
+  - JITTER_BURST: Transient high-amplitude structural jitter burst
+  - PLATFORM_SWING: Large coupled platform motion surge
+  - COMBINED_TURBULENCE: Beam wander + scintillation + haze + jitter simultaneously
   - CUSTOM: User-defined configuration
-
-All non-official values are labelled PROJECT DEFAULTS.
 """
 
 from __future__ import annotations
 
 from simulator.disturbances.config import (
     AtmosphereConfig,
+    BeamWanderConfig,
     CameraJitterConfig,
+    DistractorConfig,
     DisturbanceConfig,
+    DisturbanceCorrelationConfig,
     GaussianNoiseConfig,
+    InjectionScheduleConfig,
+    IntensityFluctuationConfig,
+    OcclusionConfig,
     PlatformMotionConfig,
     PoissonNoiseConfig,
     SaltPepperConfig,
@@ -84,7 +94,6 @@ def get_preset_config(name: str) -> DisturbanceConfig:
 
     elif preset == "ADVERSARIAL":
         # Extreme boundary conditions enforcing official SIH maximums:
-        # Gaussian sigma = 20.0, S&P = 0.10, Jitter = 20.0, Platform max = 20.0 px/frame
         return DisturbanceConfig(
             enabled=True,
             salt_pepper=SaltPepperConfig(enabled=True, probability=0.10),
@@ -102,10 +111,59 @@ def get_preset_config(name: str) -> DisturbanceConfig:
             atmosphere=AtmosphereConfig(enabled=True, condition="rain"),
         )
 
+    # -----------------------------------------------------------------------
+    # Phase 3 Adversarial Scenario Profiles
+    # -----------------------------------------------------------------------
+    elif preset == "DISTRACTOR_BURST":
+        return DisturbanceConfig(
+            enabled=True,
+            gaussian=GaussianNoiseConfig(enabled=True, sigma=5.0),
+            distractors=DistractorConfig(enabled=True, type="multiple_spots", count=3, intensity=245),
+            injection_schedule=InjectionScheduleConfig(enabled=True, injection_mode="pulsed", pulse_period_s=3.0),
+        )
+
+    elif preset == "OCCLUSION_EVENT":
+        return DisturbanceConfig(
+            enabled=True,
+            gaussian=GaussianNoiseConfig(enabled=True, sigma=4.0),
+            occlusion=OcclusionConfig(enabled=True, type="complete", start_time_s=1.5, duration_s=1.5, severity=1.0),
+        )
+
+    elif preset == "BRIGHTNESS_FADE":
+        return DisturbanceConfig(
+            enabled=True,
+            intensity_fluctuation=IntensityFluctuationConfig(enabled=True, mode="mixed", depth=0.8, frequency_hz=3.0),
+            atmosphere=AtmosphereConfig(enabled=True, condition="haze", severity=0.7),
+        )
+
+    elif preset == "JITTER_BURST":
+        return DisturbanceConfig(
+            enabled=True,
+            camera_jitter=CameraJitterConfig(enabled=True, max_x_px=18.0, max_y_px=18.0, distribution="normal"),
+            injection_schedule=InjectionScheduleConfig(enabled=True, injection_mode="pulsed", pulse_period_s=2.0, pulse_duty_cycle=0.4),
+        )
+
+    elif preset == "PLATFORM_SWING":
+        return DisturbanceConfig(
+            enabled=True,
+            platform_motion=PlatformMotionConfig(enabled=True, model="linear", velocity_x=150.0, velocity_y=90.0),
+            correlation=DisturbanceCorrelationConfig(enabled=True, platform_jitter_coupling=0.7),
+        )
+
+    elif preset == "COMBINED_TURBULENCE":
+        return DisturbanceConfig(
+            enabled=True,
+            beam_wander=BeamWanderConfig(enabled=True, std_dev_px=3.5, correlation_time_s=0.4),
+            intensity_fluctuation=IntensityFluctuationConfig(enabled=True, mode="mixed", depth=0.6, frequency_hz=8.0),
+            atmosphere=AtmosphereConfig(enabled=True, condition="fog", severity=0.6),
+            camera_jitter=CameraJitterConfig(enabled=True, max_x_px=8.0, max_y_px=8.0),
+            gaussian=GaussianNoiseConfig(enabled=True, sigma=10.0),
+        )
+
     elif preset == "CUSTOM":
         return DisturbanceConfig(enabled=True)
 
     raise ValueError(
         f"Unknown disturbance preset: '{name}'. "
-        f"Valid presets: NOMINAL, DIFFICULT, SEVERE, RECOVERY, ADVERSARIAL, CUSTOM"
+        f"Valid presets: NOMINAL, DIFFICULT, SEVERE, RECOVERY, ADVERSARIAL, DISTRACTOR_BURST, OCCLUSION_EVENT, BRIGHTNESS_FADE, JITTER_BURST, PLATFORM_SWING, COMBINED_TURBULENCE, CUSTOM"
     )

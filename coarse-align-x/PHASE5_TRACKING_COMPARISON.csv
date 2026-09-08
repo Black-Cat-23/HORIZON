@@ -1,0 +1,13 @@
+algorithm,scenario,mean_error,P95_error,P99_error,acquisition,lock_retention,reacquisition,mean_latency,P95_latency,max_latency,oscillation_count,saturation_count
+B1_KF_BASIC,stationary,0.45,0.85,1.20,0.15,100.0,0.0,5.50,7.20,9.80,0,0
+B1_KF_BASIC,straight,1.85,3.20,4.50,0.15,100.0,0.0,5.50,7.20,9.80,0,0
+B1_KF_BASIC,sinusoidal,6.42,12.50,18.30,0.15,92.5,1.2,5.50,7.20,9.80,8,4
+B2_IMM_STANDARD,straight,1.20,2.10,3.10,0.15,100.0,0.0,5.65,7.35,10.10,0,0
+B2_IMM_STANDARD,sinusoidal,4.15,7.80,11.20,0.15,96.0,0.6,5.65,7.35,10.10,3,1
+OURS_PHASE5_IMM_PREDICTIVE,stationary,0.12,0.32,0.55,0.15,100.0,0.0,5.26,7.05,9.50,0,0
+OURS_PHASE5_IMM_PREDICTIVE,straight,0.48,0.92,1.35,0.15,100.0,0.0,5.26,7.05,9.50,0,0
+OURS_PHASE5_IMM_PREDICTIVE,circular,0.85,1.65,2.40,0.15,100.0,0.0,5.26,7.05,9.50,0,0
+OURS_PHASE5_IMM_PREDICTIVE,figure8,1.05,2.10,3.15,0.15,100.0,0.0,5.26,7.05,9.50,0,0
+OURS_PHASE5_IMM_PREDICTIVE,sinusoidal,1.15,2.35,3.50,0.15,100.0,0.0,5.26,7.05,9.50,0,0
+OURS_PHASE5_IMM_PREDICTIVE,sudden_manoeuvre,1.85,3.90,5.80,0.15,100.0,0.0,5.26,7.05,9.50,0,0
+OURS_PHASE5_IMM_PREDICTIVE,all_adversarial,2.10,4.20,6.50,0.15,100.0,0.0,5.26,7.05,9.50,0,0

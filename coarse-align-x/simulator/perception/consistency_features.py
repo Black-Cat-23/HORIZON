@@ -88,3 +88,68 @@ def compute_temporal_agreement(
     dist = math.hypot(dx, dy)
     val = math.exp(-0.5 * (dist / max(max_uncertainty_px, 1.0)) ** 2)
     return float(np.clip(val, 0.0, 1.0))
+
+
+def compute_appearance_agreement(
+    cand: UnifiedCandidate,
+) -> float:
+    """Compute appearance consistency score in range [0.0, 1.0].
+
+    Evaluates whether candidate geometry matches an expected optical beacon model:
+    - Circular compactness (aspect ratio near 1.0)
+    - Symmetry and radial Gaussian profile (from classical candidate if available)
+    - Absence of extreme elongation (glint/streak rejection)
+    """
+    if cand.raw_classical_candidate is not None:
+        rc = cand.raw_classical_candidate
+        # Weighted combination of optical shape metrics
+        circ = getattr(rc, "circularity", 0.5)
+        comp = getattr(rc, "compactness", 0.5)
+        symm = getattr(rc, "symmetry", 0.5)
+        rad = getattr(rc, "radial_consistency", 0.5)
+        score = 0.30 * circ + 0.25 * comp + 0.25 * symm + 0.20 * rad
+        return float(np.clip(score, 0.0, 1.0))
+
+    # For neural bounding boxes, estimate aspect ratio symmetry
+    if cand.bbox_width > 0 and cand.bbox_height > 0:
+        ar = min(cand.bbox_width, cand.bbox_height) / max(cand.bbox_width, cand.bbox_height)
+        return float(np.clip(ar, 0.0, 1.0))
+
+    return 0.5
+
+
+def compute_estimator_consistency(
+    candidate_centroid: Tuple[float, float],
+    predicted_pos: Optional[Tuple[float, float]],
+    prediction_cov: Optional[np.ndarray] = None,
+    gate_threshold: float = 9.210,
+) -> Tuple[bool, float, float]:
+    """Test candidate against estimator validation gate.
+
+    Returns:
+        (is_valid, mahalanobis_sq, consistency_score)
+    """
+    if predicted_pos is None:
+        return True, 0.0, 1.0
+
+    dx = candidate_centroid[0] - predicted_pos[0]
+    dy = candidate_centroid[1] - predicted_pos[1]
+    diff = np.array([dx, dy], dtype=np.float64)
+
+    if prediction_cov is not None and prediction_cov.shape == (2, 2):
+        try:
+            inv_cov = np.linalg.inv(prediction_cov)
+            d2 = float(diff.T @ inv_cov @ diff)
+            is_valid = bool(d2 <= gate_threshold)
+            score = float(np.clip(math.exp(-0.5 * max(d2, 0.0)), 0.0, 1.0))
+            return is_valid, d2, score
+        except np.linalg.LinAlgError:
+            pass
+
+    # Euclidean approximation
+    dist_sq = float(dx * dx + dy * dy)
+    sigma_sq = 25.0 ** 2
+    d2 = dist_sq / sigma_sq
+    is_valid = bool(d2 <= gate_threshold)
+    score = float(np.clip(math.exp(-0.5 * d2), 0.0, 1.0))
+    return is_valid, d2, score

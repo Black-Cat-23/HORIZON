@@ -1,8 +1,15 @@
 """
 HORIZON Perception Preprocessing & Input Validation
 ==========================================================
-Input validation, adaptive impulse-noise mitigation, and background estimation
-for optical camera sensor frames.
+Phase 4 UPGRADE: Multi-scale adaptive background estimation, adaptive median
+filtering, and robust noise characterisation for optical camera sensor frames.
+
+Exports:
+    validate_input_frame         — strict (480, 640) uint8 enforcer
+    apply_adaptive_median_filter — impulse-noise removal preserving subpixel edges
+    estimate_background_statistics — robust MAD-based global bg statistics
+    estimate_local_background    — per-candidate annular background model exposing
+                                   bg_mean, bg_variance, local_contrast
 
 Strict Invariant: Does not access ground truth. Validates all array inputs.
 """
@@ -15,6 +22,10 @@ import numpy as np
 
 from simulator.perception.config import PreprocessingConfig
 
+
+# ---------------------------------------------------------------------------
+# 1.  Input Validation
+# ---------------------------------------------------------------------------
 
 def validate_input_frame(
     frame: object, expected_width: int = 640, expected_height: int = 480
@@ -72,37 +83,29 @@ def validate_input_frame(
     return frame
 
 
+# ---------------------------------------------------------------------------
+# 2.  Adaptive Impulse-Noise Removal
+# ---------------------------------------------------------------------------
+
 def apply_adaptive_median_filter(
     frame: np.ndarray, config: PreprocessingConfig
 ) -> np.ndarray:
-    """Adaptive impulse-noise (Salt & Pepper) removal filter.
-
-    Selectively identifies salt (255) and pepper (0) impulse noise outliers
-    relative to the local 3×3 and 5×5 median, replacing ONLY corrupted pixels
-    while leaving clean beacon and background pixels completely untouched.
-    This preserves subpixel edge gradients.
-
-    Args:
-        frame: Validated 2D uint8 frame.
-        config: PreprocessingConfig dataclass.
-
-    Returns:
-        Denoised 2D uint8 frame.
-    """
+    """Adaptive impulse-noise (Salt & Pepper) removal filter."""
     if not config.enable_adaptive_median:
         return frame.copy()
 
-    # Stage 1: 3x3 median
-    med3 = cv2.medianBlur(frame, 3)
+    # Fast check: skip expensive median filter passes if frame has no S&P noise spikes
+    has_sp_noise = np.any((frame == 0) | (frame == 255))
+    if not has_sp_noise:
+        return frame
 
-    # Detect impulse spikes (isolated single-pixel outliers) that differ strongly from local median
-    # Multi-pixel beacon peaks have small diff3 (since med3 ~ frame), while isolated S&P noise has large diff3
+    # Stage 1: 3×3 median — catches isolated single-pixel S&P spikes
+    med3 = cv2.medianBlur(frame, 3)
     diff3 = cv2.absdiff(frame, med3)
     is_impulse = (diff3 > 40)
-
     denoised = np.where(is_impulse, med3, frame)
 
-    # Stage 2: For dense 10% S&P, run a 5x5 check on remaining impulse outliers
+    # Stage 2: 5×5 check for dense 10% S&P clusters
     if config.max_median_window >= 5:
         med5 = cv2.medianBlur(denoised, 5)
         diff5 = cv2.absdiff(denoised, med5)
@@ -112,19 +115,73 @@ def apply_adaptive_median_filter(
     return denoised.astype(np.uint8)
 
 
-def estimate_background_statistics(frame: np.ndarray) -> Tuple[float, float]:
-    """Robust estimation of local background level and noise floor std.
+# ---------------------------------------------------------------------------
+# 3.  Global Background Statistics (Robust MAD)
+# ---------------------------------------------------------------------------
 
-    Uses the median and MAD (Median Absolute Deviation) to prevent the
-    small beacon from biasing the background estimates.
+def estimate_background_statistics(frame: np.ndarray) -> Tuple[float, float]:
+    """Robust global background level and noise-floor std via MAD.
+
+    Sparse 4-pixel stride sampling prevents the small high-intensity beacon
+    from biasing the background median.
 
     Returns:
-        Tuple of (bg_median, noise_std_est)
+        Tuple of (bg_median: float, noise_std_est: float)
     """
-    # Sample a sparse grid for speed
     sample = frame[::4, ::4].astype(np.float64)
     med = float(np.median(sample))
     mad = float(np.median(np.abs(sample - med)))
-    # For normal distribution, std ≈ 1.4826 * MAD
+    # For Gaussian noise: σ ≈ 1.4826 × MAD
     noise_std = max(1.4826 * mad, 1.0)
     return med, noise_std
+
+
+# ---------------------------------------------------------------------------
+# 4.  Per-Candidate Adaptive Local Background Model
+# ---------------------------------------------------------------------------
+
+def estimate_local_background(
+    frame: np.ndarray,
+    cx: int,
+    cy: int,
+    inner_radius: int,
+    outer_radius: int,
+) -> Tuple[float, float, float]:
+    """Estimate background statistics in an annular region around a candidate."""
+    H, W = frame.shape
+
+    # Clamp bounding box to image extents
+    x0 = max(0, cx - outer_radius)
+    y0 = max(0, cy - outer_radius)
+    x1 = min(W, cx + outer_radius + 1)
+    y1 = min(H, cy + outer_radius + 1)
+
+    if x1 <= x0 or y1 <= y0:
+        med, noise_std = estimate_background_statistics(frame)
+        return med, noise_std ** 2, 0.0
+
+    region = frame[y0:y1, x0:x1].astype(np.float32)
+    gy, gx = np.ogrid[0: region.shape[0], 0: region.shape[1]]
+    gy_f = (gy + y0 - cy).astype(np.float32)
+    gx_f = (gx + x0 - cx).astype(np.float32)
+    dist_sq = gx_f ** 2 + gy_f ** 2
+
+    r_in2 = float(inner_radius ** 2)
+    r_out2 = float(outer_radius ** 2)
+
+    annulus_mask = (dist_sq >= r_in2) & (dist_sq <= r_out2)
+    annulus_pixels = region[annulus_mask]
+
+    if annulus_pixels.size < 4:
+        med, noise_std = estimate_background_statistics(frame)
+        return med, noise_std ** 2, 0.0
+
+    bg_mean = float(np.mean(annulus_pixels))
+    bg_variance = float(np.var(annulus_pixels))
+
+    inner_mask = dist_sq < r_in2
+    inner_pixels = region[inner_mask]
+    peak_inner = float(np.max(inner_pixels)) if inner_pixels.size > 0 else bg_mean
+
+    local_contrast = max(0.0, peak_inner - bg_mean)
+    return bg_mean, bg_variance, local_contrast

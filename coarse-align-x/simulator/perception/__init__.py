@@ -15,11 +15,12 @@ from simulator.perception.config import (
     NeuralDetectorConfig,
     PreprocessingConfig,
 )
-from simulator.perception.detector import ClassicalBeaconDetector, DetectionResult
+from simulator.perception.detector import ClassicalBeaconDetector, DetectionResult, DetectionQuality
 from simulator.perception.diagnostics import DetectionDiagnostics
 from simulator.perception.hybrid_candidate import CandidateSource, UnifiedCandidate
 from simulator.perception.hybrid_detector import HybridBeaconDetector
 from simulator.perception.neural_detector import NeuralBeaconDetector
+from simulator.perception.sota_detector import SOTABeaconDetector
 
 __all__ = [
     "DetectorConfig",
@@ -32,7 +33,9 @@ __all__ = [
     "ClassicalBeaconDetector",
     "NeuralBeaconDetector",
     "HybridBeaconDetector",
+    "SOTABeaconDetector",
     "DetectionResult",
+    "DetectionQuality",
     "BeaconCandidate",
     "UnifiedCandidate",
     "CandidateSource",
