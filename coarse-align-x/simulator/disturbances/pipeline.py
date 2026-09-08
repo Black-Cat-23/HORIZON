@@ -56,6 +56,16 @@ class DisturbanceTelemetry:
     atmosphere_condition: str
     contrast_factor: float
     brightness_factor: float
+    # Link‑budget telemetry (observer only)
+    link_budget_enabled: bool
+    pointing_loss_dB: float
+    geometric_loss_dB: float
+    atm_loss_dB: float
+    received_power_W: float
+    snr_linear: float
+    ber: float
+    link_margin_dB: float
+    link_status: str
 
 
 class DisturbancePipeline:
@@ -131,7 +141,22 @@ class DisturbancePipeline:
                 atmosphere_condition=self._config.atmosphere.condition,
                 contrast_factor=1.0,
                 brightness_factor=0.0,
+                # Link‑budget defaults (will be overwritten if enabled)
+                link_budget_enabled=self._config.link_budget.enabled,
+                pointing_loss_dB=0.0,
+                geometric_loss_dB=0.0,
+                atm_loss_dB=0.0,
+                received_power_W=0.0,
+                snr_linear=0.0,
+                ber=0.0,
+                link_margin_dB=0.0,
+                link_status="DISABLED",
             )
+            if self._config.link_budget.enabled:
+                # Lazy import to avoid overhead when disabled
+                from link_budget.link_model import compute_link_budget
+                lb = compute_link_budget(telemetry, self._config.link_budget)
+                telemetry = DisturbanceTelemetry(**{**vars(telemetry), **vars(lb)})
             return clean_frame.copy(), telemetry
 
         # Working copy for pipeline transformations
