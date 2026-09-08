@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Literal, Optional
+from disturbance.turbulence import TurbulenceConfig
 
 
 # =============================================================================
@@ -147,6 +148,7 @@ class DisturbanceConfig:
     camera_jitter: CameraJitterConfig = field(default_factory=CameraJitterConfig)
     platform_motion: PlatformMotionConfig = field(default_factory=PlatformMotionConfig)
     atmosphere: AtmosphereConfig = field(default_factory=AtmosphereConfig)
+    turbulence: TurbulenceConfig = field(default_factory=TurbulenceConfig)
 
 
 # =============================================================================
