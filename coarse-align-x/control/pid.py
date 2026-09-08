@@ -40,14 +40,25 @@ class PIDController:
         self.filtered_derivative = 0.0
         self.initialized = False
 
-    def compute(self, error: float, dt: float, gain_scale: float = 1.0) -> float:
+    def compute(
+        self,
+        error: float,
+        dt: float,
+        gain_scale: float = 1.0,
+        kp: Optional[float] = None,
+        ki: Optional[float] = None,
+        kd: Optional[float] = None,
+    ) -> float:
         """
         Computes control output u for a given error and timestep dt.
         
         Args:
             error: Pointing error in degrees.
             dt: Timestep in seconds.
-            gain_scale: Scale factor for gains (used in DEGRADED tracking).
+            gain_scale: Scale factor for default gains (backward compatibility).
+            kp: Explicit proportional gain override (from GainScheduler).
+            ki: Explicit integral gain override (from GainScheduler).
+            kd: Explicit derivative gain override (from GainScheduler).
             
         Returns:
             Commanded angular velocity rate in deg/s.
@@ -55,17 +66,18 @@ class PIDController:
         if dt <= 0.0:
             return 0.0
 
-        kp = self.kp * gain_scale
-        ki = self.ki * gain_scale
-        kd = self.kd * gain_scale
+        active_kp = self.kp * gain_scale if kp is None else float(kp)
+        active_ki = self.ki * gain_scale if ki is None else float(ki)
+        active_kd = self.kd * gain_scale if kd is None else float(kd)
 
         # Proportional term
-        p_term = kp * error
+        p_term = active_kp * error
 
-        # Integral term with anti-windup clamping
-        self.integral += error * dt
-        self.integral = float(np.clip(self.integral, -self.max_integral, self.max_integral))
-        i_term = ki * self.integral
+        # Integral term with anti-windup clamping (only accumulate when active_ki > 0 to prevent noise windup)
+        if active_ki > 0.0:
+            self.integral += error * dt
+            self.integral = float(np.clip(self.integral, -self.max_integral, self.max_integral))
+        i_term = active_ki * self.integral
 
         # Derivative term with first-order low-pass filter
         if not self.initialized:
@@ -76,7 +88,7 @@ class PIDController:
 
         alpha = dt / (dt + self.derivative_filter_tau)
         self.filtered_derivative = (1.0 - alpha) * self.filtered_derivative + alpha * raw_derivative
-        d_term = kd * self.filtered_derivative
+        d_term = active_kd * self.filtered_derivative
 
         self.prev_error = error
 

@@ -7,17 +7,19 @@ from typing import Dict, Tuple, List, Optional
 from .base import SearchStrategy
 from .raster import RasterSearchStrategy
 from .spiral import SpiralSearchStrategy
+from .belief_map import BeliefMapSearchStrategy
 
 
 class SearchManager:
     """
-    Manages active search strategies (SPIRAL vs RASTER) and coordinates pattern resets.
+    Manages active search strategies (SPIRAL, RASTER, BELIEF_MAP) and coordinates pattern resets.
     """
 
     def __init__(self):
         self.strategies: Dict[str, SearchStrategy] = {
             "SPIRAL": SpiralSearchStrategy(),
             "RASTER": RasterSearchStrategy(),
+            "BELIEF_MAP": BeliefMapSearchStrategy(),
         }
         self.active_strategy_name: str = "SPIRAL"
 
@@ -32,6 +34,18 @@ class SearchManager:
 
     def get_active_strategy(self) -> Optional[SearchStrategy]:
         return self.strategies.get(self.active_strategy_name)
+
+    def update_belief(
+        self,
+        candidate_pan_deg: float,
+        candidate_tilt_deg: float,
+        confidence: float,
+        uncertainty_deg: float = 0.5,
+    ) -> None:
+        """Forwards evidence updates to the currently active search strategy."""
+        strategy = self.get_active_strategy()
+        if strategy:
+            strategy.update_belief(candidate_pan_deg, candidate_tilt_deg, confidence, uncertainty_deg)
 
     def get_command(self, dt: float, current_pan_deg: float, current_tilt_deg: float) -> Tuple[float, float]:
         strategy = self.get_active_strategy()

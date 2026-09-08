@@ -1,0 +1,175 @@
+{
+  "timestamp": "2026-09-05T18:10:00.642564+00:00",
+  "totalTrials": 30,
+  "trialDurationSeconds": 6.0,
+  "evaluatedAlgorithms": [
+    "B0",
+    "B1",
+    "B2",
+    "OURS"
+  ],
+  "tier1_and_tier2_metrics": {
+    "B0": {
+      "acquisition_success_pct": 66.66666666666666,
+      "median_time_to_lock_s": 0.256,
+      "p95_time_to_lock_s": 1.0512000000000006,
+      "worst_time_to_lock_s": 1.872,
+      "mean_tracking_error_deg": 1.2753695421137283,
+      "p95_tracking_error_deg": 3.726656820267132,
+      "p99_tracking_error_deg": 4.898509932991082,
+      "max_tracking_error_deg": 5.4197748401352515,
+      "lock_retention_pct": 53.67111111111116,
+      "reacquisition_time_s": 0.16538753138464182,
+      "false_lock_rate_pct": 23.333333333333332,
+      "lock_break_frequency_per_1000s": 2277.777777777778,
+      "mean_processing_time_us": 68.29394666710868,
+      "achieved_fps": 14642.586185191343
+    },
+    "B1": {
+      "acquisition_success_pct": 66.66666666666666,
+      "median_time_to_lock_s": 0.28,
+      "p95_time_to_lock_s": 0.42640000000000017,
+      "worst_time_to_lock_s": 0.624,
+      "mean_tracking_error_deg": 1.2521532737019216,
+      "p95_tracking_error_deg": 3.717677308298232,
+      "p99_tracking_error_deg": 4.854911160956082,
+      "max_tracking_error_deg": 5.380866221321275,
+      "lock_retention_pct": 50.080000000000034,
+      "reacquisition_time_s": 0.17506069715724887,
+      "false_lock_rate_pct": 30.0,
+      "lock_break_frequency_per_1000s": 2261.111111111111,
+      "mean_processing_time_us": 67.67816889332607,
+      "achieved_fps": 14775.813476516985
+    },
+    "B2": {
+      "acquisition_success_pct": 66.66666666666666,
+      "median_time_to_lock_s": 0.112,
+      "p95_time_to_lock_s": 0.12960000000000002,
+      "worst_time_to_lock_s": 0.16,
+      "mean_tracking_error_deg": 0.47960600726235997,
+      "p95_tracking_error_deg": 1.0083557891396708,
+      "p99_tracking_error_deg": 1.3489825478304338,
+      "max_tracking_error_deg": 4.292550586888268,
+      "lock_retention_pct": 54.24888888888893,
+      "reacquisition_time_s": 0.6280144574426186,
+      "false_lock_rate_pct": 30.0,
+      "lock_break_frequency_per_1000s": 350.0,
+      "mean_processing_time_us": 68.62630222199691,
+      "achieved_fps": 14571.672487396068
+    },
+    "OURS": {
+      "acquisition_success_pct": 96.66666666666667,
+      "median_time_to_lock_s": 0.112,
+      "p95_time_to_lock_s": 0.15679999999999988,
+      "worst_time_to_lock_s": 0.432,
+      "mean_tracking_error_deg": 0.4142317185990601,
+      "p95_tracking_error_deg": 0.7995372563710408,
+      "p99_tracking_error_deg": 1.1355223962884304,
+      "max_tracking_error_deg": 1.4371080112251975,
+      "lock_retention_pct": 86.51555555555562,
+      "reacquisition_time_s": 0.6204137931034484,
+      "false_lock_rate_pct": 0.0,
+      "lock_break_frequency_per_1000s": 166.66666666666666,
+      "mean_processing_time_us": 535.7374488867612,
+      "achieved_fps": 1866.5859593686348
+    }
+  },
+  "tier3_robustness_envelopes": {
+    "B0": {
+      "speeds_deg_s": [
+        0.5,
+        1.0,
+        1.5,
+        2.0,
+        3.0
+      ],
+      "disturbance_levels": [
+        0.2,
+        0.5,
+        0.8,
+        1.2,
+        1.6
+      ],
+      "boundary_envelope": {
+        "0.5": 0.8,
+        "1.0": 0.8,
+        "1.5": 0.8,
+        "2.0": 0.8,
+        "3.0": 0.5
+      },
+      "operable_area_score": 0.56
+    },
+    "B1": {
+      "speeds_deg_s": [
+        0.5,
+        1.0,
+        1.5,
+        2.0,
+        3.0
+      ],
+      "disturbance_levels": [
+        0.2,
+        0.5,
+        0.8,
+        1.2,
+        1.6
+      ],
+      "boundary_envelope": {
+        "0.5": 0.8,
+        "1.0": 0.8,
+        "1.5": 0.8,
+        "2.0": 0.8,
+        "3.0": 0.8
+      },
+      "operable_area_score": 0.6
+    },
+    "B2": {
+      "speeds_deg_s": [
+        0.5,
+        1.0,
+        1.5,
+        2.0,
+        3.0
+      ],
+      "disturbance_levels": [
+        0.2,
+        0.5,
+        0.8,
+        1.2,
+        1.6
+      ],
+      "boundary_envelope": {
+        "0.5": 1.6,
+        "1.0": 1.6,
+        "1.5": 0.8,
+        "2.0": 0.8,
+        "3.0": 1.2
+      },
+      "operable_area_score": 0.8
+    },
+    "OURS": {
+      "speeds_deg_s": [
+        0.5,
+        1.0,
+        1.5,
+        2.0,
+        3.0
+      ],
+      "disturbance_levels": [
+        0.2,
+        0.5,
+        0.8,
+        1.2,
+        1.6
+      ],
+      "boundary_envelope": {
+        "0.5": 1.6,
+        "1.0": 1.6,
+        "1.5": 1.6,
+        "2.0": 1.6,
+        "3.0": 1.6
+      },
+      "operable_area_score": 1.0
+    }
+  }
+}

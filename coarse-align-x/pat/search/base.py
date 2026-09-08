@@ -48,3 +48,16 @@ class SearchStrategy(ABC):
         Returns the planned trajectory points in angular coordinate space (pan_deg, tilt_deg) for visualization.
         """
         pass
+
+    def update_belief(
+        self,
+        candidate_pan_deg: float,
+        candidate_tilt_deg: float,
+        confidence: float,
+        uncertainty_deg: float = 0.5,
+    ) -> None:
+        """
+        Optional Bayesian / evidence update for strategies that support belief accumulation.
+        Default implementation is a no-op for fixed geometric strategies (Raster, Spiral).
+        """
+        pass
