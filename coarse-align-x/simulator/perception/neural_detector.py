@@ -158,10 +158,11 @@ class NeuralBeaconDetector:
                         # Check if crop has real optical intensity contrast above background noise
                         crop = valid_frame[y1 : y1 + bh, x1 : x1 + bw]
                         if crop.size > 0:
-                            min_val = float(np.min(crop))
+                            bg_est = float(np.median(valid_frame))
                             max_val = float(np.max(crop))
-                            # Reject dark empty bounding boxes without optical contrast peak
-                            if max_val >= min_val + 8.0 or conf >= 0.50:
+                            net_flux = float(np.sum(np.maximum(crop.astype(float) - bg_est, 0.0)))
+                            # Reject dark/empty bounding boxes without real optical beacon signal
+                            if net_flux >= 35.0 and (max_val - bg_est) >= 25.0:
                                 best_cand_bbox = (x1, y1, bw, bh)
                                 best_conf = conf
                                 break

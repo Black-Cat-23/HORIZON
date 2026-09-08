@@ -43,8 +43,8 @@ class KalmanFilterConfig:
     All numerical parameters are PROJECT ENGINEERING PARAMETERS.
     """
     # Unmodeled target acceleration standard deviation [px/s^2]
-    # Accommodates dynamic flight maneuvers, platform motion, and camera jitter (up to ~350 px/s^2)
-    accel_noise_sigma: float = 350.0
+    # Accommodates dynamic flight maneuvers, platform motion, and camera jitter (up to ~600 px/s^2)
+    accel_noise_sigma: float = 600.0
 
     # Nominal perception centroid measurement noise at confidence=1.0 [px]
     base_measurement_sigma_px: float = 0.5

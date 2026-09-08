@@ -52,3 +52,5 @@ runs/
 .vscode/
 .idea/
 *.swp
+scratch/
+

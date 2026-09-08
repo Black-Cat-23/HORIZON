@@ -52,10 +52,11 @@ from simulator.core.config import (
 )
 from simulator.core.simulation import SimulationEngine
 from simulator.disturbances.presets import get_preset_config
-# Phase 4 & Phase 7 Perception Imports
+# Phase 4, Phase 7 & Phase 8 Perception Imports
 from simulator.perception.config import CentroidConfig, DetectorConfig
 from simulator.perception.detector import ClassicalBeaconDetector, DetectionResult
 from simulator.perception.neural_detector import NeuralBeaconDetector
+from simulator.perception.hybrid_detector import HybridBeaconDetector
 from tracking.association.track import Track
 from tracking.estimation.kalman import TargetKalmanFilter, EstimatorStatus
 from tracking.diagnostics.visualization import draw_tracking_annotations
@@ -87,16 +88,19 @@ class SimulationDebugViewer(QMainWindow):
         self._engine = SimulationEngine(self._config)
         self._engine.initialize()
 
-        # Phase 4 & Phase 7 Perception Detectors
+        # Phase 4, Phase 7 & Phase 8 Perception Detectors
         self._centroid_method = "weighted_cog"
-        self._perception_mode = "CLASSICAL"
+        self._perception_mode = "HYBRID"
         self._classical_detector = ClassicalBeaconDetector(
             DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="CLASSICAL")
         )
         self._neural_detector = NeuralBeaconDetector(
             DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="NEURAL")
         )
-        self._detector = self._classical_detector
+        self._hybrid_detector = HybridBeaconDetector(
+            DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="HYBRID")
+        )
+        self._detector = self._hybrid_detector
         self._last_detection: Optional[DetectionResult] = None
 
         # Phase 5 Optical Target Tracker & State Estimator
@@ -274,9 +278,9 @@ class SimulationDebugViewer(QMainWindow):
         # 4. Controls & Configuration
         controls_box = QGroupBox("Configuration & Presets", self)
         form_layout = QFormLayout(controls_box)
-        # Perception Mode selector (CLASSICAL vs NEURAL)
+        # Perception Mode selector (CLASSICAL vs NEURAL vs HYBRID)
         self._combo_perc_mode = QComboBox(self)
-        self._combo_perc_mode.addItems(["CLASSICAL", "NEURAL"])
+        self._combo_perc_mode.addItems(["CLASSICAL", "NEURAL", "HYBRID"])
         self._combo_perc_mode.setCurrentText(self._perception_mode)
         self._combo_perc_mode.currentTextChanged.connect(self._on_perc_mode_changed)
         form_layout.addRow("Perception Engine:", self._combo_perc_mode)
@@ -299,17 +303,20 @@ class SimulationDebugViewer(QMainWindow):
         self._combo_traj = QComboBox(self)
         self._combo_traj.addItems(["figure8", "circular", "straight", "random", "spiral", "sinusoidal"])
         self._combo_traj.setCurrentText("figure8")
+        self._combo_traj.currentTextChanged.connect(lambda _: self._reset_sim())
         form_layout.addRow("Trajectory:", self._combo_traj)
 
         self._spin_seed = QSpinBox(self)
         self._spin_seed.setRange(0, 999999)
         self._spin_seed.setValue(self._config.simulation.seed)
+        self._spin_seed.valueChanged.connect(lambda _: self._reset_sim())
         form_layout.addRow("Random Seed:", self._spin_seed)
 
         self._spin_duration = QDoubleSpinBox(self)
         self._spin_duration.setRange(1.0, 3600.0)
         self._spin_duration.setValue(self._config.simulation.duration_seconds)
         self._spin_duration.setSuffix(" s")
+        self._spin_duration.valueChanged.connect(lambda _: self._reset_sim())
         form_layout.addRow("Duration:", self._spin_duration)
 
         ctrl_panel_layout.addWidget(controls_box)
@@ -340,6 +347,11 @@ class SimulationDebugViewer(QMainWindow):
         self._btn_export.clicked.connect(self._export_data)
         ctrl_panel_layout.addWidget(self._btn_export)
 
+        self._btn_gen_report = QPushButton("📊 Export Statistical Engineering Report", self)
+        self._btn_gen_report.setStyleSheet("background-color: #1e3a5f; color: #00d4ff; font-weight: bold;")
+        self._btn_gen_report.clicked.connect(self._generate_engineering_report)
+        ctrl_panel_layout.addWidget(self._btn_gen_report)
+
         self._btn_test_blackout = QPushButton("⚡ Suppress Detection (Test Loss)", self)
         self._btn_test_blackout.setCheckable(True)
         self._btn_test_blackout.setStyleSheet("background-color: #3a2020; color: #ff3b30; font-weight: bold;")
@@ -358,6 +370,8 @@ class SimulationDebugViewer(QMainWindow):
         self._perception_mode = mode_str
         if mode_str == "NEURAL":
             self._detector = self._neural_detector
+        elif mode_str == "HYBRID":
+            self._detector = self._hybrid_detector
         else:
             self._detector = self._classical_detector
         self._lbl_status.setText(f"Perception Mode: {mode_str}")
@@ -371,7 +385,15 @@ class SimulationDebugViewer(QMainWindow):
         self._neural_detector = NeuralBeaconDetector(
             DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="NEURAL")
         )
-        self._detector = self._neural_detector if self._perception_mode == "NEURAL" else self._classical_detector
+        self._hybrid_detector = HybridBeaconDetector(
+            DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="HYBRID")
+        )
+        if self._perception_mode == "NEURAL":
+            self._detector = self._neural_detector
+        elif self._perception_mode == "HYBRID":
+            self._detector = self._hybrid_detector
+        else:
+            self._detector = self._classical_detector
         self._update_display()
 
     def _on_preset_changed(self, preset_name: str) -> None:
@@ -409,6 +431,35 @@ class SimulationDebugViewer(QMainWindow):
         else:
             self._btn_test_blackout.setText("⚡ Suppress Detection (Test Loss)")
             self._btn_test_blackout.setStyleSheet("background-color: #3a2020; color: #ff3b30; font-weight: bold;")
+
+    def _generate_engineering_report(self) -> None:
+        try:
+            from pathlib import Path
+            from PySide6.QtWidgets import QMessageBox
+            from analysis.report_generator import EngineeringReportGenerator
+
+            out_path = Path("AUTOMATED_ENGINEERING_REPORT.md").resolve()
+            generator = EngineeringReportGenerator()
+            generator.generate_report(str(out_path))
+
+            self._lbl_status.setText(f"Exported: {out_path.name}")
+
+            QMessageBox.information(
+                self,
+                "Report Export Successful",
+                f"Statistical Engineering Validation Report exported successfully!\n\n"
+                f"Saved to File Path:\n{out_path}\n\n"
+                f"File Size: {out_path.stat().st_size} bytes\n\n"
+                f"You can view this Markdown report directly in your IDE or text editor.",
+            )
+        except Exception as e:
+            from PySide6.QtWidgets import QMessageBox
+            self._lbl_status.setText(f"Report Error: {str(e)}")
+            QMessageBox.critical(
+                self,
+                "Report Export Failed",
+                f"Failed to generate statistical report:\n{str(e)}",
+            )
 
     def _reset_sim(self) -> None:
         self._timer.stop()
@@ -696,7 +747,7 @@ class SimulationDebugViewer(QMainWindow):
         )
 
         # 8. Render Phase 4 & Phase 5 Perception + State Tracking Feed
-        if detection_res.diagnostics is not None and detection_res.diagnostics.annotated_frame is not None:
+        if self._perception_mode == "CLASSICAL" and detection_res.diagnostics is not None and detection_res.diagnostics.annotated_frame is not None:
             disp_annotated = detection_res.diagnostics.annotated_frame.copy()
         else:
             disp_annotated = cv2.cvtColor(dist_cam_frame, cv2.COLOR_GRAY2BGR)
@@ -705,9 +756,9 @@ class SimulationDebugViewer(QMainWindow):
         # White = GT [Eval], Red = Measurement, Cyan = Estimate + Ellipse, Yellow = Prediction
         disp_annotated = draw_tracking_annotations(
             frame=disp_annotated,
-            estimate=self._last_estimate,
+            estimate=self._last_estimate if in_fov else None,
             ground_truth_pos=(effective_u, effective_v) if in_fov else None,
-            measurement_pos=detection_res.centroid if detection_res.detected else None,
+            measurement_pos=detection_res.centroid if (detection_res.detected and in_fov) else None,
             draw_ellipse=True,
             draw_velocity_vector=True,
         )

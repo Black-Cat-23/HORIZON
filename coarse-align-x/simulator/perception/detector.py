@@ -53,6 +53,12 @@ class DetectionResult:
     diagnostics: Optional[DetectionDiagnostics] = None
     timestamp: float = 0.0
     candidates: Optional[Tuple[BeaconCandidate, ...]] = None
+    detector_source: str = "CLASSICAL"
+    centroid_source: str = "WEIGHTED_COG"
+    agreement_state: str = "AGREEMENT"
+    fused_confidence: float = 0.0
+    decision_reason: str = ""
+    unified_candidates: Optional[Tuple[Any, ...]] = None
 
 
 class ClassicalBeaconDetector:
