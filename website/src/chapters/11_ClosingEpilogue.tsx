@@ -1,5 +1,5 @@
-import React from 'react';
 import { SplitText } from '../components/SplitText';
+import { EnterEnvironmentButton } from '../components/EnterEnvironmentButton';
 
 interface ClosingEpilogueProps {
   isActive: boolean;
@@ -44,11 +44,14 @@ export const ClosingEpilogue: React.FC<ClosingEpilogueProps> = ({ isActive }) =>
             color: 'var(--text-secondary)',
             fontSize: '1.25rem',
             lineHeight: 1.7,
-            marginBottom: '3rem',
+            marginBottom: '1.5rem',
           }}
         >
           HORIZON bridges high-speed computer vision perception with sub-milliradian kinematic tracking, establishing reliable optical communication links for next-generation aerospace and mobile terminals.
         </p>
+
+        {/* Enter Environment Interactive Simulation Button */}
+        <EnterEnvironmentButton />
 
         {/* Footer Credit & Link Cards */}
         <div

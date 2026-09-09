@@ -102,8 +102,8 @@ export const App: React.FC = () => {
 
 
 
-      {/* 7. Bottom-Left Giant Cormorant Garamond 01 / 09 Numerals */}
-      <IVRESSChapterDisplay activeChapter={activeChapter} totalChapters="09" />
+      {/* 7. Bottom-Left Giant Cormorant Garamond 01 / 11 Numerals */}
+      <IVRESSChapterDisplay activeChapter={activeChapter} totalChapters="11" />
 
       {/* 8. Right-hand Vertical Chapter Rail */}
       <ChapterRail activeChapterId={activeChapter.id} />
