@@ -1,0 +1,47 @@
+/* HORIZON Design Tokens — IVRESS & Hubtown Ethereal Luxury Direction */
+:root {
+  /* Spatial & Surface Palette */
+  --bg-void: #02060C;
+  --bg-deep: #050B14;
+  --bg-field: #0A1322;
+  --bg-surface: rgba(213, 224, 255, 0.035);
+  --bg-surface-elevated: rgba(213, 224, 255, 0.07);
+  
+  /* Hubtown / IVRESS Architectural Borders */
+  --border-subtle: rgba(213, 224, 255, 0.09);
+  --border-active: rgba(169, 216, 232, 0.45);
+  --border-strong: rgba(213, 224, 255, 0.22);
+  --border-glow: rgba(213, 224, 255, 0.65);
+
+  /* Typography Colors */
+  --text-primary: #F0F4FA;
+  --text-secondary: #9DB0C6;
+  --text-muted: #576B82;
+  --text-dim: #2A384B;
+  --text-ice: #D5E0FF;
+
+  /* State Colors */
+  --state-signal: #A9D8E8;      /* Optical information */
+  --state-signal-dim: rgba(169, 216, 232, 0.18);
+  --state-lock: #6FE8A8;        /* Confirmed optical lock */
+  --state-lock-dim: rgba(111, 232, 168, 0.18);
+  --state-disturbance: #E8A15C; /* Warning / degraded */
+  --state-disturbance-dim: rgba(232, 161, 92, 0.18);
+  --state-loss: #E86F7F;        /* Target lost */
+  --state-loss-dim: rgba(232, 111, 127, 0.18);
+
+  /* Typography Font Families */
+  --font-editorial: 'Syne', -apple-system, sans-serif;
+  --font-display: 'Space Grotesk', -apple-system, sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  --font-mono: 'Space Mono', 'JetBrains Mono', monospace;
+
+  /* Transitions & Easings */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-expo: cubic-bezier(0.87, 0, 0.13, 1);
+  --ease-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);
+
+  /* Layout */
+  --header-height: 84px;
+  --max-content-width: 1380px;
+}

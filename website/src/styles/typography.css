@@ -1,0 +1,85 @@
+/* Typography styling — IVRESS Editorial Luxury */
+
+.font-editorial {
+  font-family: var(--font-editorial);
+  letter-spacing: -0.02em;
+  font-feature-settings: "ss01" on, "ss02" on;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+.font-body {
+  font-family: var(--font-body);
+  letter-spacing: 0.01em;
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  font-feature-settings: "tnum" on, "zero" on;
+}
+
+/* Staggered Character Reveal */
+.split-char-wrap {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+}
+
+.split-char {
+  display: inline-block;
+  transform: translateY(115%);
+  opacity: 0;
+  transition: transform 1.1s var(--ease-out-expo), opacity 0.8s ease;
+  transition-delay: calc(var(--char-index, 0) * 24ms + var(--base-delay, 0ms));
+  will-change: transform, opacity;
+}
+
+.is-visible .split-char {
+  transform: translateY(0%);
+  opacity: 1;
+}
+
+.split-char.split-space {
+  width: 0.35em;
+}
+
+/* Luxury Editorial Title Scales */
+.title-hero {
+  font-family: var(--font-editorial);
+  font-size: clamp(3.2rem, 7.5vw, 8.2rem);
+  line-height: 0.94;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.title-sub {
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 1.8vw, 1.6rem);
+  line-height: 1.4;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+}
+
+.label-caps {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.label-vertical {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.25em;
+  color: var(--text-muted);
+}
