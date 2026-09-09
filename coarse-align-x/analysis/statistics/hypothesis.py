@@ -10,9 +10,12 @@ import numpy as np
 
 from benchmark.statistics import (
     benjamini_hochberg_correction,
+    check_normality,
     cliffs_delta,
     cohens_d,
     paired_bootstrap_test,
+    paired_wilcoxon_test,
+    vargha_delaney_a12,
 )
 
 
@@ -35,15 +38,25 @@ class HypothesisTestingEngine:
         delta_mean = mean_a - mean_b
         pct_improvement = ((mean_b - mean_a) / mean_b) * 100.0 if mean_b > 0 else 0.0
 
+        # Check normality for both samples
+        norm_a = check_normality(arr_a)
+        norm_b = check_normality(arr_b)
+        is_normal = norm_a["is_normal"] and norm_b["is_normal"]
+
         d_val = cohens_d(arr_a, arr_b)
-        delta_val = cliffs_delta(arr_a, arr_b)
+        c_delta = cliffs_delta(arr_a, arr_b)
+        a12_val = vargha_delaney_a12(arr_a, arr_b)
 
         if len(arr_a) == len(arr_b) and len(arr_a) > 0:
             boot_res = paired_bootstrap_test(arr_a, arr_b, seed=seed)
-            p_val = boot_res["p_value"]
+            wilc_res = paired_wilcoxon_test(arr_a, arr_b)
+            p_val = boot_res["p_value"] if is_normal else wilc_res["p_value"]
+            test_method = "Paired Bootstrap (Parametric)" if is_normal else "Paired Wilcoxon Signed-Rank (Non-Parametric)"
         else:
             boot_res = {"p_value": 1.0, "ci_lower": 0.0, "ci_upper": 0.0}
+            wilc_res = {"p_value": 1.0}
             p_val = 1.0
+            test_method = "Insufficient Samples"
 
         abs_d = abs(d_val)
         if abs_d >= 0.8:
@@ -62,8 +75,11 @@ class HypothesisTestingEngine:
             "delta_mean": delta_mean,
             "percentage_improvement": pct_improvement,
             "p_value": p_val,
+            "test_method": test_method,
+            "is_normally_distributed": is_normal,
             "cohens_d": d_val,
-            "cliffs_delta": delta_val,
+            "cliffs_delta": c_delta,
+            "vargha_delaney_a12": a12_val,
             "effect_size_label": effect_label,
             "bootstrap_ci95": [boot_res.get("ci_lower", 0.0), boot_res.get("ci_upper", 0.0)],
         }

@@ -8,24 +8,18 @@ Six real-time telemetry graphs plotting filter and control performance:
   5. Tilt Error vs Time (deg)
   6. Detector Confidence vs Time (%)
 
-Each graph renders labeled axes, units, grid lines, and live telemetry lines using semantic color tokens sparingly.
+Each graph renders labeled axes, units, grid lines, and live telemetry lines using PySide QPainter vector rendering.
 """
 
 from __future__ import annotations
-from typing import List, Tuple
-import cv2
-import numpy as np
+from typing import List, Tuple, Optional
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QImage, QPixmap
-from PySide6.QtWidgets import QGridLayout, QGroupBox, QLabel, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt, QPointF
+from PySide6.QtGui import QBrush, QColor, QFont, QLinearGradient, QPainter, QPainterPath, QPen
+from PySide6.QtWidgets import QGridLayout, QVBoxLayout, QWidget
 
 from simulator.ui.foundation.tokens import (
-    COLOR_CONFIRM_GREEN,
-    COLOR_DISTURBANCE_AMBER,
-    COLOR_FIELD,
     COLOR_HAIRLINE_BORDER_HEX,
-    COLOR_LOCK_CYAN,
     COLOR_TEXT_PRIMARY,
     COLOR_TEXT_SECONDARY,
     COLOR_VOID,
@@ -33,87 +27,158 @@ from simulator.ui.foundation.tokens import (
     FONT_TELEMETRY,
     SPACING_8,
     SPACING_12,
-    SPACING_16,
 )
 from simulator.ui.foundation.primitives import PanelSurface, PanelVariant, SectionHeaderLabel
 
 
-class MiniTimeSeriesGraph(QLabel):
-    """Clean 2D time-series plot canvas widget with axis labels and units."""
+class MiniTimeSeriesGraph(QWidget):
+    """Clean 2D time-series plot widget using native PySide QPainter vector rendering."""
 
-    def __init__(self, title: str, unit: str, color_bgr: Tuple[int, int, int], parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        title: str,
+        unit: str,
+        color_rgb: Tuple[int, int, int],
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self.plot_title = title
         self.unit = unit
-        self.line_color = color_bgr
+        self.line_color = QColor(*color_rgb)
 
-        self.setMinimumSize(220, 100)
-        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setStyleSheet(f"background-color: {COLOR_VOID}; border: 1px solid {COLOR_HAIRLINE_BORDER_HEX}; border-radius: 4px;")
-        self._current_pixmap: Optional[QPixmap] = None
+        self.setMinimumSize(240, 155)
 
-    def render_plot(self, time_data: List[float], val_data: List[float], y_min: float = 0.0, y_max: float = 100.0) -> None:
-        w = max(220, self.width()) if self.width() > 50 else 220
-        h = max(100, self.height()) if self.height() > 30 else 100
-        canvas = np.zeros((h, w, 3), dtype=np.uint8)
+        self._time_data: List[float] = []
+        self._val_data: List[float] = []
+        self._y_min: float = 0.0
+        self._y_max: float = 100.0
 
-        margin_left = 32
-        margin_right = 10
-        margin_top = 22
-        margin_bottom = 15
+    def render_plot(
+        self,
+        time_data: List[float],
+        val_data: List[float],
+        y_min: float = 0.0,
+        y_max: float = 100.0,
+    ) -> None:
+        """Update telemetry data and trigger QPainter repaint."""
+        self._time_data = list(time_data)
+        self._val_data = list(val_data)
+        self._y_min = y_min
+        self._y_max = y_max
+        self.update()
+
+    def paintEvent(self, event) -> None:
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+
+        w = self.width()
+        h = self.height()
+
+        # 1. Background Surface Card
+        bg_color = QColor(13, 17, 23)
+        border_color = QColor(40, 45, 55)
+        painter.setBrush(QBrush(bg_color))
+        painter.setPen(QPen(border_color, 1))
+        painter.drawRoundedRect(0, 0, w - 1, h - 1, 4, 4)
+
+        margin_left = 38
+        margin_right = 14
+        margin_top = 26
+        margin_bottom = 20
+
         plot_w = max(10, w - margin_left - margin_right)
         plot_h = max(10, h - margin_top - margin_bottom)
 
-        # Draw grid lines
-        y_grid1 = int(margin_top + plot_h * 0.25)
-        y_grid2 = int(margin_top + plot_h * 0.50)
-        y_grid3 = int(margin_top + plot_h * 0.75)
-        cv2.line(canvas, (margin_left, y_grid1), (w - margin_right, y_grid1), (35, 35, 40), 1)
-        cv2.line(canvas, (margin_left, y_grid2), (w - margin_right, y_grid2), (35, 35, 40), 1)
-        cv2.line(canvas, (margin_left, y_grid3), (w - margin_right, y_grid3), (35, 35, 40), 1)
+        # 2. Grid lines
+        grid_pen = QPen(QColor(32, 38, 48), 1, Qt.PenStyle.DashLine)
+        painter.setPen(grid_pen)
+        for ratio in (0.25, 0.50, 0.75):
+            gy = margin_top + plot_h * ratio
+            painter.drawLine(QPointF(margin_left, gy), QPointF(w - margin_right, gy))
 
-        # Axes
-        cv2.line(canvas, (margin_left, 10), (margin_left, h - margin_bottom), (80, 80, 85), 1)
-        cv2.line(canvas, (margin_left, h - margin_bottom), (w - margin_right, h - margin_bottom), (80, 80, 85), 1)
+        # 3. Axes
+        axis_pen = QPen(QColor(65, 72, 85), 1)
+        painter.setPen(axis_pen)
+        painter.drawLine(QPointF(margin_left, margin_top - 4), QPointF(margin_left, h - margin_bottom))
+        painter.drawLine(QPointF(margin_left, h - margin_bottom), QPointF(w - margin_right, h - margin_bottom))
 
-        # Title Label
-        cv2.putText(canvas, f"{self.plot_title} ({self.unit})", (margin_left + 4, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (220, 220, 220), 1, cv2.LINE_AA)
+        # 4. Title Header Label
+        painter.setFont(QFont("Inter", 8, QFont.Weight.Bold))
+        painter.setPen(QPen(QColor(210, 215, 225)))
+        title_str = f"{self.plot_title} ({self.unit})"
+        painter.drawText(margin_left, margin_top - 8, title_str)
 
-        if len(val_data) > 0 and len(time_data) == len(val_data):
-            curr_max = max(y_max, max(val_data) * 1.1)
-            curr_min = min(y_min, min(val_data))
+        # 5. Data Plotting & Dynamic Y-Scale Ticks
+        if len(self._val_data) > 0 and len(self._time_data) == len(self._val_data):
+            curr_max = max(self._y_max, max(self._val_data) * 1.05)
+            curr_min = min(self._y_min, min(self._val_data))
             val_range = max(1e-5, curr_max - curr_min)
 
-            n_pts = len(val_data)
+            # Draw Y-Scale Tick Readouts on Left Margin
+            painter.setFont(QFont("Consolas", 7))
+            painter.setPen(QPen(QColor(110, 115, 125)))
+            painter.drawText(2, int(margin_top + 4), f"{curr_max:.0f}")
+            painter.drawText(2, int(margin_top + plot_h * 0.5 + 3), f"{(curr_max + curr_min) * 0.5:.0f}")
+            painter.drawText(2, int(h - margin_bottom), f"{curr_min:.0f}")
+
+            n_pts = len(self._val_data)
             if n_pts == 1:
-                px = margin_left + plot_w // 2
-                norm_val = (val_data[0] - curr_min) / val_range
-                py = int(round((h - margin_bottom) - norm_val * plot_h))
-                cv2.circle(canvas, (px, py), 3, self.line_color, -1)
+                px = margin_left + plot_w / 2.0
+                norm_val = (self._val_data[0] - curr_min) / val_range
+                py = (h - margin_bottom) - norm_val * plot_h
+                painter.setBrush(QBrush(self.line_color))
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.drawEllipse(QPointF(px, py), 3.5, 3.5)
             else:
-                pts: List[Tuple[int, int]] = []
+                path = QPainterPath()
+                pts_list = []
                 for i in range(n_pts):
-                    px = int(round(margin_left + (i / (n_pts - 1)) * plot_w))
-                    norm_val = (val_data[i] - curr_min) / val_range
-                    py = int(round((h - margin_bottom) - norm_val * plot_h))
-                    py = max(margin_top, min(h - margin_bottom, py))
-                    pts.append((px, py))
+                    px = margin_left + (i / (n_pts - 1)) * plot_w
+                    norm_val = (self._val_data[i] - curr_min) / val_range
+                    py = (h - margin_bottom) - norm_val * plot_h
+                    py = max(float(margin_top), min(float(h - margin_bottom), py))
+                    pts_list.append((px, py))
 
-                pts_arr = np.array(pts, dtype=np.int32).reshape((-1, 1, 2))
-                cv2.polylines(canvas, [pts_arr], isClosed=False, color=self.line_color, thickness=1, lineType=cv2.LINE_AA)
+                    if i == 0:
+                        path.moveTo(px, py)
+                    else:
+                        path.lineTo(px, py)
 
-            # Latest value readout
-            latest_val = val_data[-1]
+                # Gradient Fill Area Under Curve
+                fill_path = QPainterPath(path)
+                fill_path.lineTo(pts_list[-1][0], h - margin_bottom)
+                fill_path.lineTo(pts_list[0][0], h - margin_bottom)
+                fill_path.closeSubpath()
+
+                grad = QLinearGradient(0, margin_top, 0, h - margin_bottom)
+                grad.setColorAt(0.0, QColor(self.line_color.red(), self.line_color.green(), self.line_color.blue(), 45))
+                grad.setColorAt(1.0, QColor(self.line_color.red(), self.line_color.green(), self.line_color.blue(), 5))
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.setBrush(QBrush(grad))
+                painter.drawPath(fill_path)
+
+                # Solid Curve Line
+                line_pen = QPen(self.line_color, 1.6)
+                painter.setPen(line_pen)
+                painter.setBrush(Qt.BrushStyle.NoBrush)
+                painter.drawPath(path)
+
+            # Latest Value Readout in top right
+            latest_val = self._val_data[-1]
             readout_str = f"{latest_val:.1f}"
-            cv2.putText(canvas, readout_str, (w - margin_right - 45, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.35, self.line_color, 1, cv2.LINE_AA)
+            painter.setFont(QFont("Consolas", 10, QFont.Weight.Bold))
+            painter.setPen(QPen(self.line_color))
+            painter.drawText(int(w - margin_right - 50), int(margin_top - 8), readout_str)
         else:
-            cv2.putText(canvas, "N/A", (margin_left + plot_w // 2 - 10, margin_top + plot_h // 2), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (120, 120, 120), 1, cv2.LINE_AA)
+            # Y-Scale Empty Ticks
+            painter.setFont(QFont("Consolas", 7))
+            painter.setPen(QPen(QColor(110, 115, 125)))
+            painter.drawText(2, int(margin_top + 4), f"{self._y_max:.0f}")
+            painter.drawText(2, int(h - margin_bottom), f"{self._y_min:.0f}")
 
-        # Convert OpenCV BGR to RGB and create QImage with .copy() memory ownership
-        canvas_rgb = cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB)
-        qimg = QImage(canvas_rgb.data, w, h, w * 3, QImage.Format.Format_RGB888).copy()
-        self._current_pixmap = QPixmap.fromImage(qimg)
-        self.setPixmap(self._current_pixmap)
+            painter.setFont(QFont("Inter", 8))
+            painter.setPen(QPen(QColor(110, 115, 125)))
+            painter.drawText(int(margin_left + plot_w / 2.0 - 10), int(margin_top + plot_h / 2.0 + 4), "N/A")
 
 
 class TimeSeriesAnalyticsWidget(PanelSurface):
@@ -135,13 +200,13 @@ class TimeSeriesAnalyticsWidget(PanelSurface):
         grid.setHorizontalSpacing(SPACING_8)
         grid.setVerticalSpacing(SPACING_8)
 
-        # 6 Graphs (Cyan=(232,212,127), Green=(168,232,111), Amber=(92,161,232) in BGR)
-        self.graph_error = MiniTimeSeriesGraph("Tracking error", "px", (232, 212, 127), self)
-        self.graph_quality = MiniTimeSeriesGraph("Track quality", "%", (168, 232, 111), self)
-        self.graph_innov = MiniTimeSeriesGraph("Innovation residual", "px", (92, 161, 232), self)
-        self.graph_pan_err = MiniTimeSeriesGraph("Pan error", "°", (232, 212, 127), self)
-        self.graph_tilt_err = MiniTimeSeriesGraph("Tilt error", "°", (92, 161, 232), self)
-        self.graph_conf = MiniTimeSeriesGraph("Detector confidence", "%", (168, 232, 111), self)
+        # 6 Graphs (RGB tuples: Cyan=(127,212,232), Green=(111,232,168), Amber=(232,161,92))
+        self.graph_error = MiniTimeSeriesGraph("Tracking error", "px", (127, 212, 232), self)
+        self.graph_quality = MiniTimeSeriesGraph("Track quality", "%", (111, 232, 168), self)
+        self.graph_innov = MiniTimeSeriesGraph("Innovation residual", "px", (232, 161, 92), self)
+        self.graph_pan_err = MiniTimeSeriesGraph("Pan error", "°", (127, 212, 232), self)
+        self.graph_tilt_err = MiniTimeSeriesGraph("Tilt error", "°", (232, 161, 92), self)
+        self.graph_conf = MiniTimeSeriesGraph("Detector confidence", "%", (111, 232, 168), self)
 
         grid.addWidget(self.graph_error, 0, 0)
         grid.addWidget(self.graph_quality, 0, 1)

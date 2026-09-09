@@ -149,8 +149,8 @@ def main() -> None:
 
     # 4. Launch GUI or execute headless simulation
     if args.gui:
-        from simulator.visualization.debug_view import launch_viewer
-        launch_viewer(config)
+        from simulator.visualization.app_shell_view import main as launch_app_shell
+        launch_app_shell()
     else:
         engine = SimulationEngine(config)
         engine.initialize()

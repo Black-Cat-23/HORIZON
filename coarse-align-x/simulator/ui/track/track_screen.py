@@ -21,6 +21,7 @@ import numpy as np
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QHBoxLayout,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -28,6 +29,8 @@ from PySide6.QtWidgets import (
 from simulator.perception.detector import DetectionResult
 from tracking.estimation.state import StateEstimate
 from pat.state import PATMode, PATState
+
+from simulator.ui.foundation.tokens import COLOR_VOID
 
 # UI Subcomponents
 from simulator.ui.track.analytics_graphs import TimeSeriesAnalyticsWidget
@@ -67,13 +70,22 @@ class TrackScreenView(QWidget):
         left_column = QVBoxLayout()
         left_column.setSpacing(12)
 
-        # Primary Geometry View
+        # Primary Geometry View (compact camera observation feed)
         self.geometry_view = TrackGeometryView(self)
-        left_column.addWidget(self.geometry_view, stretch=3)
+        left_column.addWidget(self.geometry_view, stretch=1)
 
-        # Time-Series Analytics Panel (6 graphs)
-        self.analytics_panel = TimeSeriesAnalyticsWidget(self)
-        left_column.addWidget(self.analytics_panel, stretch=2)
+        # Time-Series Analytics Panel (6 large detailed graphs in smooth scroll area)
+        self.analytics_scroll = QScrollArea(self)
+        self.analytics_scroll.setWidgetResizable(True)
+        self.analytics_scroll.setStyleSheet(
+            f"QScrollArea {{ background-color: transparent; border: none; }} "
+            f"QScrollBar:vertical {{ background-color: {COLOR_VOID}; width: 8px; margin: 0px; border-radius: 4px; }} "
+            f"QScrollBar::handle:vertical {{ background-color: #2D3342; min-height: 20px; border-radius: 4px; }} "
+            f"QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0px; }}"
+        )
+        self.analytics_panel = TimeSeriesAnalyticsWidget(self.analytics_scroll)
+        self.analytics_scroll.setWidget(self.analytics_panel)
+        left_column.addWidget(self.analytics_scroll, stretch=3)
 
         main_layout.addLayout(left_column, stretch=3)
 
@@ -146,7 +158,7 @@ class TrackScreenView(QWidget):
             if pat_state is not None and estimate is not None:
                 err_px = float(np.hypot(pat_state.pan_error_deg, pat_state.tilt_error_deg) * 60.0)
                 quality = float(pat_state.track_quality * 100.0)
-                innov = float(np.hypot(estimate.innovation_x, estimate.innovation_y))
+                innov = float(np.linalg.norm(estimate.innovation)) if estimate.innovation is not None else 0.0
                 conf = float(detection_res.confidence * 100.0) if (detection_res and detection_res.detected) else 0.0
 
                 self._history_times.append(sim_time)

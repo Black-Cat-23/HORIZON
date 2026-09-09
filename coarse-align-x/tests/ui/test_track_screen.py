@@ -137,12 +137,14 @@ def test_time_series_analytics_widget(qapp):
         tilt_errors=[0.3, 0.1, 0.05],
         confidences=[85.0, 95.0, 99.0],
     )
-    assert widget.graph_error.pixmap() is not None
+    assert widget.graph_error._val_data == [5.2, 3.1, 1.4]
 
 
 def test_track_screen_view_integration(qapp):
     """Verify TrackScreenView composite widget initialization."""
     screen = TrackScreenView()
-    assert screen._engine is not None
-    assert screen._detector is not None
     assert screen.geometry_view is not None
+    assert screen.cov_panel is not None
+    assert screen.estimate_panel is not None
+    assert screen.perception_panel is not None
+    assert screen.analytics_panel is not None

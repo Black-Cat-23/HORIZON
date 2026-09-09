@@ -59,7 +59,7 @@ class GeometryCanvasWidget(QLabel):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setMinimumSize(480, 360)
+        self.setMinimumSize(320, 240)
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setStyleSheet(f"background-color: {COLOR_VOID}; border: 1px solid {COLOR_HAIRLINE_BORDER_HEX}; border-radius: 4px;")
         self._current_pixmap: Optional[QPixmap] = None

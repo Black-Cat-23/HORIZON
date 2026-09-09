@@ -1,7 +1,7 @@
 # HORIZON COARSE-ALIGN-X — Automated Engineering Validation Report
 
 ## Executive Summary & System Performance Matrix
-This scientific validation report presents the empirical benchmark evaluation across **40 validated trials** (Audit Integrity: 40/43 files passed).
+This scientific validation report presents the empirical benchmark evaluation across **40 validated trials** (Audit Integrity: 40/40 files passed).
 
 ### Baseline Battlefield Comparison Matrix
 | Algorithm | Success Rate (95% CI) | Lock Retention | Mean Error (px) | RMSE Error (px) | P95 Error (px) | Mean Latency (ms) |

@@ -87,6 +87,7 @@ class CovarianceDiagnosticPanel(PanelSurface):
         grid.addRow(self.telem_orient)
 
         main_layout.addLayout(grid)
+        self._last_estimate: Optional[StateEstimate] = None
         self.select_sigma(2.0)
 
     def select_sigma(self, sigma: float) -> None:
@@ -101,9 +102,13 @@ class CovarianceDiagnosticPanel(PanelSurface):
                     f"background-color: transparent; color: {COLOR_TEXT_SECONDARY}; border: 1px solid {COLOR_HAIRLINE_BORDER_HEX}; border-radius: 3px; padding: 4px 8px; font-size: 11px;"
                 )
 
+        if hasattr(self, "_last_estimate") and self._last_estimate is not None:
+            self.update_covariance(self._last_estimate)
+
         self.sigma_changed.emit(sigma)
 
     def update_covariance(self, estimate: Optional[StateEstimate]) -> None:
+        self._last_estimate = estimate
         if estimate is None or estimate.covariance is None:
             self.telem_pxx.set_value(None)
             self.telem_pyy.set_value(None)
@@ -124,6 +129,11 @@ class CovarianceDiagnosticPanel(PanelSurface):
                 center_y=estimate.estimated_y,
                 confidence_level=conf_level,
             )
+            sig_str = "1-σ" if self.selected_sigma == 1.0 else ("2-σ" if self.selected_sigma == 2.0 else "3-σ")
+            if hasattr(self.telem_major, "_desc_label"):
+                self.telem_major._desc_label.setText(f"Semi-Major Axis ({sig_str}):")
+            if hasattr(self.telem_minor, "_desc_label"):
+                self.telem_minor._desc_label.setText(f"Semi-Minor Axis ({sig_str}):")
             self.telem_major.set_value(ellipse_data.semi_major_axis, "px")
             self.telem_minor.set_value(ellipse_data.semi_minor_axis, "px")
             self.telem_orient.set_value(ellipse_data.orientation_deg, "°")

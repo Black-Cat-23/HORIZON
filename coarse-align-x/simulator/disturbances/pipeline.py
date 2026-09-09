@@ -73,15 +73,15 @@ class DisturbanceTelemetry:
     distractor_count: int = 0
     ablated_module: Optional[str] = None
     # Link‑budget telemetry (observer only)
-    link_budget_enabled: bool
-    pointing_loss_dB: float
-    geometric_loss_dB: float
-    atm_loss_dB: float
-    received_power_W: float
-    snr_linear: float
-    ber: float
-    link_margin_dB: float
-    link_status: str
+    link_budget_enabled: bool = False
+    pointing_loss_dB: float = 0.0
+    geometric_loss_dB: float = 0.0
+    atm_loss_dB: float = 0.0
+    received_power_W: float = 0.0
+    snr_linear: float = 0.0
+    ber: float = 0.0
+    link_margin_dB: float = 0.0
+    link_status: str = "N/A"
 
 
 class DisturbancePipeline:

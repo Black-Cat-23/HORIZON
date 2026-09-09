@@ -27,7 +27,7 @@ def test_live_screen_view_initialization(qapp):
     assert screen._clean_cam_label is not None
     assert screen._dist_cam_label is not None
     assert screen._combo_perc_mode.currentText() == "SOTA_FOURIER_GMM"
-    assert screen._combo_preset.currentText() == "DIFFICULT"
+    assert screen._combo_preset.currentText() == "NOMINAL"
 
 
 def test_live_screen_view_stepping(qapp):

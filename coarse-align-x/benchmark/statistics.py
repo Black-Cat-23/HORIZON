@@ -92,6 +92,84 @@ def paired_bootstrap_test(
     }
 
 
+def check_normality(sample: List[float] | np.ndarray) -> Dict[str, Any]:
+    """Test normality assumption using skewness and excess kurtosis."""
+    arr = np.asarray(sample, dtype=float)
+    n = len(arr)
+    if n < 3:
+        return {"is_normal": True, "skewness": 0.0, "excess_kurtosis": 0.0}
+
+    mean = float(np.mean(arr))
+    std = float(np.std(arr, ddof=1))
+    if std == 0.0:
+        return {"is_normal": True, "skewness": 0.0, "excess_kurtosis": 0.0}
+
+    skewness = float(np.mean(((arr - mean) / std) ** 3))
+    kurtosis = float(np.mean(((arr - mean) / std) ** 4))
+    excess_kurtosis = kurtosis - 3.0
+
+    # Non-normality threshold: |skewness| > 0.8 or |excess_kurtosis| > 1.5
+    is_normal = abs(skewness) <= 0.8 and abs(excess_kurtosis) <= 1.5
+    return {
+        "is_normal": is_normal,
+        "skewness": skewness,
+        "excess_kurtosis": excess_kurtosis,
+    }
+
+
+def vargha_delaney_a12(x: List[float] | np.ndarray, y: List[float] | np.ndarray) -> float:
+    """Compute Vargha-Delaney A12 effect size statistic."""
+    x_arr = np.asarray(x, dtype=float)
+    y_arr = np.asarray(y, dtype=float)
+    m, n = len(x_arr), len(y_arr)
+    if m == 0 or n == 0:
+        return 0.5
+
+    r1 = 0.0
+    for val_x in x_arr:
+        for val_y in y_arr:
+            if val_x > val_y:
+                r1 += 1.0
+            elif val_x == val_y:
+                r1 += 0.5
+
+    return float(r1 / (m * n))
+
+
+def paired_wilcoxon_test(x: List[float] | np.ndarray, y: List[float] | np.ndarray) -> Dict[str, Any]:
+    """Paired Wilcoxon signed-rank test for paired samples."""
+    x_arr = np.asarray(x, dtype=float)
+    y_arr = np.asarray(y, dtype=float)
+    if len(x_arr) != len(y_arr):
+        raise ValueError("Paired Wilcoxon test requires equal sample lengths.")
+
+    diffs = x_arr - y_arr
+    nonzero_diffs = diffs[diffs != 0]
+    n = len(nonzero_diffs)
+    if n == 0:
+        return {"w_statistic": 0.0, "p_value": 1.0, "z_score": 0.0}
+
+    abs_diffs = np.abs(nonzero_diffs)
+    ranks = np.argsort(np.argsort(abs_diffs)) + 1
+
+    pos_mask = nonzero_diffs > 0
+    w_pos = float(np.sum(ranks[pos_mask]))
+    w_neg = float(np.sum(ranks[~pos_mask]))
+    w_stat = min(w_pos, w_neg)
+
+    # Asymptotic normal approximation
+    mean_w = n * (n + 1) / 4.0
+    var_w = n * (n + 1) * (2 * n + 1) / 24.0
+    std_w = math.sqrt(var_w) if var_w > 0 else 1.0
+    z_score = (w_stat - mean_w) / std_w
+
+    # Two-sided approximate p-value using erf
+    p_val = 2.0 * (0.5 * (1.0 + math.erf(z_score / math.sqrt(2.0))))
+    p_val = min(1.0, max(0.0, float(p_val)))
+
+    return {"w_statistic": w_stat, "p_value": p_val, "z_score": float(z_score)}
+
+
 def benjamini_hochberg_correction(
     p_values: List[float], fdr_rate: float = 0.05
 ) -> List[Tuple[float, bool]]:
@@ -122,3 +200,4 @@ def benjamini_hochberg_correction(
         results[i] = adjusted[i] <= fdr_rate
 
     return list(zip(adjusted, results))
+

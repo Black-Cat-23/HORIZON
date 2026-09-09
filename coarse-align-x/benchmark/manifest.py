@@ -47,6 +47,12 @@ class DeterministicSeedSystem:
         return trial_seed
 
 
+def compute_config_hash(config_dict: Dict[str, Any]) -> str:
+    """Compute SHA-256 hash of a configuration dictionary to freeze parameters."""
+    json_str = json.dumps(config_dict, sort_keys=True, default=str)
+    return hashlib.sha256(json_str.encode("utf-8")).hexdigest()[:16]
+
+
 @dataclass(frozen=True)
 class ExperimentManifest:
     """Immutable manifest for a single experiment or Monte Carlo trial."""
@@ -69,6 +75,7 @@ class ExperimentManifest:
     estimator_configuration: Dict[str, Any]
     controller_configuration: Dict[str, Any]
 
+    algorithm_config_hash: str = "FROZEN_DEFAULT"
     software_version: str = "1.0.0"
     git_commit: str = field(default_factory=get_git_commit_hash)
     timestamp: float = field(default_factory=time.time)
