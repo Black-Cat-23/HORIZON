@@ -203,6 +203,20 @@ export const RealisticSatellite: React.FC<RealisticSatelliteProps> = ({ progress
     });
   }, []);
 
+  const orbitLineObjects = useMemo(() => {
+    return SATELLITE_ORBITS.map((orbit, idx) => {
+      const material = new THREE.LineBasicMaterial({
+        color: orbit.color,
+        transparent: true,
+        opacity: 0.22,
+        blending: THREE.NormalBlending,
+        depthTest: true,
+        depthWrite: false,
+      });
+      return new THREE.Line(orbitLineGeometries[idx], material);
+    });
+  }, [orbitLineGeometries]);
+
   useFrame(({ clock }, delta) => {
     const t = clock.getElapsedTime();
 
@@ -232,18 +246,8 @@ export const RealisticSatellite: React.FC<RealisticSatelliteProps> = ({ progress
   return (
     <group visible={isVisible}>
       {/* 1. Visible Glowing 3D Orbital Trajectory Rings encircling 40% Earth horizon */}
-      {SATELLITE_ORBITS.map((orbit, idx) => (
-        <line key={`orbit-ring-${idx}`} geometry={orbitLineGeometries[idx]}>
-          <lineBasicMaterial
-            color={orbit.color}
-            transparent={true}
-            opacity={0.22}
-            blending={THREE.NormalBlending}
-            depthTest={true}
-            depthWrite={false}
-            linewidth={1}
-          />
-        </line>
+      {orbitLineObjects.map((lineObj, idx) => (
+        <primitive key={`orbit-ring-${idx}`} object={lineObj} />
       ))}
 
       {/* 2. 5 Revolving 3D Satellites in Synchronized Constellation Relay */}

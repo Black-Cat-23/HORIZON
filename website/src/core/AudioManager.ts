@@ -108,6 +108,10 @@ class AudioManager {
     osc.stop(this.ctx.currentTime + 0.85);
   }
 
+  public playBeaconLock() {
+    this.playAcquirePing();
+  }
+
   /**
    * Disturbance Warning / Jitter Texture
    */
