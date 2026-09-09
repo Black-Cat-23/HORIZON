@@ -255,3 +255,7 @@ class BeliefMapSearchStrategy(SearchStrategy):
     def get_belief_grid(self) -> np.ndarray:
         """Returns a copy of the 2D angular belief probability array."""
         return np.copy(self.belief_grid)
+<<<<<<< HEAD
+=======
+
+>>>>>>> 92e2bd53912221253438c9725805b613c2bd2b21

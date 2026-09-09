@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 import numpy as np
 
 from tracking.association.gate import MahalanobisGate
@@ -36,6 +36,7 @@ class MeasurementCandidate:
     confidence: float
     bbox: Optional[Tuple[int, int, int, int]] = None
     score: float = 0.0
+    reason: str = ""
 
     @property
     def centroid(self) -> Tuple[float, float]:
@@ -52,6 +53,8 @@ class AssociationResult:
     cost: float = 0.0
     mahalanobis_sq: float = 0.0
     mahalanobis_distance: float = 0.0
+    decision_reason: str = ""
+    rejection_reasons: Optional[Dict[int, str]] = None
 
 
 class TrackAssociator:
@@ -112,10 +115,13 @@ class TrackAssociator:
                 selected_candidate=None,
                 rejected_candidates=[],
                 all_candidates_count=0,
+                decision_reason="No candidate measurements available for association",
+                rejection_reasons={},
             )
 
         valid_gated: List[Tuple[float, float, float, MeasurementCandidate]] = []
         rejected: List[MeasurementCandidate] = []
+        rejection_reasons: Dict[int, str] = {}
 
         for cand in candidates:
             z = np.array([[cand.centroid_x], [cand.centroid_y]], dtype=np.float64)
@@ -128,6 +134,9 @@ class TrackAssociator:
 
             if not is_valid:
                 rejected.append(cand)
+                rejection_reasons[cand.candidate_id] = (
+                    f"Candidate rejected because Mahalanobis distance d²={d2:.2f} exceeded validation gate {self._gate.threshold:.2f}"
+                )
             else:
                 # Cost function: Lower is better.
                 # Penalize large statistical distance d^2; reward high detector confidence and score
@@ -140,6 +149,8 @@ class TrackAssociator:
                 selected_candidate=None,
                 rejected_candidates=rejected,
                 all_candidates_count=len(candidates),
+                decision_reason=f"All {len(candidates)} candidate(s) rejected by Mahalanobis validation gate (threshold={self._gate.threshold:.2f})",
+                rejection_reasons=rejection_reasons,
             )
 
         # Sort valid candidates by minimum cost
@@ -147,8 +158,17 @@ class TrackAssociator:
         best_cost, best_d2, best_d, best_cand = valid_gated[0]
 
         # Remaining non-selected gated candidates also tracked
+        for item in valid_gated[1:]:
+            rejection_reasons[item[3].candidate_id] = (
+                f"Candidate rejected because cost J={item[0]:.2f} (d²={item[1]:.2f}) was higher than optimal candidate J={best_cost:.2f}"
+            )
         other_candidates = [item[3] for item in valid_gated[1:]]
         all_rejected = rejected + other_candidates
+
+        decision_reason = (
+            f"Candidate #{best_cand.candidate_id} selected because minimal ranking cost J={best_cost:.2f} "
+            f"(d²={best_d2:.2f} <= {self._gate.threshold:.2f}, conf={best_cand.confidence:.2f}, score={best_cand.score:.2f})"
+        )
 
         return AssociationResult(
             associated=True,
@@ -158,4 +178,6 @@ class TrackAssociator:
             cost=best_cost,
             mahalanobis_sq=best_d2,
             mahalanobis_distance=best_d,
+            decision_reason=decision_reason,
+            rejection_reasons=rejection_reasons,
         )

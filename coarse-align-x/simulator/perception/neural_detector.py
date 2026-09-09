@@ -71,8 +71,8 @@ class NeuralBeaconDetector:
             if meta_path.exists():
                 with open(meta_path, "r", encoding="utf-8") as f:
                     self._model_metadata = json.load(f)
-        except Exception as e:
-            logger.error("Failed to load ONNX Runtime session: %s", e)
+        except (Exception, MemoryError, RuntimeError) as e:
+            logger.warning("Failed to load ONNX Runtime session (%s). Neural detector will report no detections until model is available.", e)
             self._session = None
 
     @property
@@ -158,10 +158,11 @@ class NeuralBeaconDetector:
                         # Check if crop has real optical intensity contrast above background noise
                         crop = valid_frame[y1 : y1 + bh, x1 : x1 + bw]
                         if crop.size > 0:
-                            min_val = float(np.min(crop))
+                            bg_est = float(np.median(valid_frame))
                             max_val = float(np.max(crop))
-                            # Reject dark empty bounding boxes without optical contrast peak
-                            if max_val >= min_val + 8.0 or conf >= 0.50:
+                            net_flux = float(np.sum(np.maximum(crop.astype(float) - bg_est, 0.0)))
+                            # Reject dark/empty bounding boxes without real optical beacon signal
+                            if net_flux >= 35.0 and (max_val - bg_est) >= 25.0:
                                 best_cand_bbox = (x1, y1, bw, bh)
                                 best_conf = conf
                                 break
@@ -186,7 +187,8 @@ class NeuralBeaconDetector:
                     else:
                         thresh_val = min_val
                     _, mask_crop = cv2.threshold(roi_crop, int(thresh_val), 255, cv2.THRESH_BINARY)
-                    centroid = compute_weighted_cog(roi_crop, mask_crop, min_val, x1, y1)
+                    centroid_u, centroid_v, _, _ = compute_weighted_cog(roi_crop, mask_crop, min_val, x1, y1)
+                    centroid = (centroid_u, centroid_v)
                 else:
                     # Integer bounding box center
                     centroid = (float(x + w / 2.0), float(y + h / 2.0))

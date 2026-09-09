@@ -1,0 +1,63 @@
+{
+  "scenario": "nominal",
+  "master_seed": 42,
+  "trials_count": 10,
+  "summary": {
+    "B0": {
+      "success_rate": 0.0,
+      "success_count": 0,
+      "total_trials": 10,
+      "mean_tracking_error": 299.9999999996097,
+      "mean_tracking_error_ci95": [
+        299.9999999981293,
+        300.0000000025707
+      ],
+      "RMSE_tracking_error": 299.99999999960977,
+      "P95_tracking_error": 300.0000000062718,
+      "lock_retention_rate": 0.0,
+      "processing_time_ms": 10.027018994434709
+    },
+    "B1": {
+      "success_rate": 0.0,
+      "success_count": 0,
+      "total_trials": 10,
+      "mean_tracking_error": 78.94645280382449,
+      "mean_tracking_error_ci95": [
+        75.06232068209674,
+        82.81325357394532
+      ],
+      "RMSE_tracking_error": 79.20237101565849,
+      "P95_tracking_error": 85.5296502837815,
+      "lock_retention_rate": 0.539953569775515,
+      "processing_time_ms": 8.59111381664722
+    },
+    "B2": {
+      "success_rate": 0.0,
+      "success_count": 0,
+      "total_trials": 10,
+      "mean_tracking_error": 86.7080736750049,
+      "mean_tracking_error_ci95": [
+        81.80890196939475,
+        91.61235450555507
+      ],
+      "RMSE_tracking_error": 87.0784136753227,
+      "P95_tracking_error": 94.82657138239792,
+      "lock_retention_rate": 0.5143130833911903,
+      "processing_time_ms": 39.195480483342784
+    },
+    "OURS": {
+      "success_rate": 0.0,
+      "success_count": 0,
+      "total_trials": 10,
+      "mean_tracking_error": 86.77196692505785,
+      "mean_tracking_error_ci95": [
+        81.85185037989545,
+        91.67732266405217
+      ],
+      "RMSE_tracking_error": 87.14247663933138,
+      "P95_tracking_error": 94.95964623193083,
+      "lock_retention_rate": 0.5143130833911903,
+      "processing_time_ms": 41.90486058332196
+    }
+  }
+}

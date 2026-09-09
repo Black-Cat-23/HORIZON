@@ -52,10 +52,12 @@ from simulator.core.config import (
 )
 from simulator.core.simulation import SimulationEngine
 from simulator.disturbances.presets import get_preset_config
-# Phase 4 & Phase 7 Perception Imports
+# Phase 4, Phase 7 & Phase 8 Perception Imports
 from simulator.perception.config import CentroidConfig, DetectorConfig
 from simulator.perception.detector import ClassicalBeaconDetector, DetectionResult
 from simulator.perception.neural_detector import NeuralBeaconDetector
+from simulator.perception.hybrid_detector import HybridBeaconDetector
+from simulator.perception.sota_detector import SOTABeaconDetector
 from tracking.association.track import Track
 from tracking.estimation.kalman import TargetKalmanFilter, EstimatorStatus
 from tracking.diagnostics.visualization import draw_tracking_annotations
@@ -87,25 +89,31 @@ class SimulationDebugViewer(QMainWindow):
         self._engine = SimulationEngine(self._config)
         self._engine.initialize()
 
-        # Phase 4 & Phase 7 Perception Detectors
+        # Phase 4, Phase 7, Phase 8 & Phase 12 Perception Detectors
         self._centroid_method = "weighted_cog"
-        self._perception_mode = "CLASSICAL"
+        self._perception_mode = "SOTA_FOURIER_GMM"
+        self._sota_detector = SOTABeaconDetector(
+            DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="SOTA_FOURIER_GMM")
+        )
         self._classical_detector = ClassicalBeaconDetector(
             DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="CLASSICAL")
         )
         self._neural_detector = NeuralBeaconDetector(
             DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="NEURAL")
         )
-        self._detector = self._classical_detector
+        self._hybrid_detector = HybridBeaconDetector(
+            DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="HYBRID")
+        )
+        self._detector = self._sota_detector
         self._last_detection: Optional[DetectionResult] = None
 
-        # Phase 5 Optical Target Tracker & State Estimator
-        self._track = Track(track_id=1)
+        # Phase 5 & Phase 12 Optical Target Tracker & State Estimator
+        self._track = Track(track_id=1, filter_type="IMM_ADAPTIVE_EKF")
         self._last_estimate: Optional[StateEstimate] = None
 
-        # Phase 6 PAT Mode Manager & Closed-Loop Camera Controller
+        # Phase 6 & Phase 12 PAT Mode Manager & Closed-Loop Camera Controller
         self._pat_mgr = PATModeManager()
-        self._pat_ctrl = PATCameraController()
+        self._pat_ctrl = PATCameraController(controller_type="ADRC")
         self._suppress_detection_test = False
 
         # Playback timer
@@ -274,9 +282,9 @@ class SimulationDebugViewer(QMainWindow):
         # 4. Controls & Configuration
         controls_box = QGroupBox("Configuration & Presets", self)
         form_layout = QFormLayout(controls_box)
-        # Perception Mode selector (CLASSICAL vs NEURAL)
+        # Perception Mode selector (CLASSICAL vs NEURAL vs HYBRID)
         self._combo_perc_mode = QComboBox(self)
-        self._combo_perc_mode.addItems(["CLASSICAL", "NEURAL"])
+        self._combo_perc_mode.addItems(["SOTA_FOURIER_GMM", "HYBRID", "NEURAL", "CLASSICAL"])
         self._combo_perc_mode.setCurrentText(self._perception_mode)
         self._combo_perc_mode.currentTextChanged.connect(self._on_perc_mode_changed)
         form_layout.addRow("Perception Engine:", self._combo_perc_mode)
@@ -299,17 +307,20 @@ class SimulationDebugViewer(QMainWindow):
         self._combo_traj = QComboBox(self)
         self._combo_traj.addItems(["figure8", "circular", "straight", "random", "spiral", "sinusoidal"])
         self._combo_traj.setCurrentText("figure8")
+        self._combo_traj.currentTextChanged.connect(lambda _: self._reset_sim())
         form_layout.addRow("Trajectory:", self._combo_traj)
 
         self._spin_seed = QSpinBox(self)
         self._spin_seed.setRange(0, 999999)
         self._spin_seed.setValue(self._config.simulation.seed)
+        self._spin_seed.valueChanged.connect(lambda _: self._reset_sim())
         form_layout.addRow("Random Seed:", self._spin_seed)
 
         self._spin_duration = QDoubleSpinBox(self)
         self._spin_duration.setRange(1.0, 3600.0)
         self._spin_duration.setValue(self._config.simulation.duration_seconds)
         self._spin_duration.setSuffix(" s")
+        self._spin_duration.valueChanged.connect(lambda _: self._reset_sim())
         form_layout.addRow("Duration:", self._spin_duration)
 
         ctrl_panel_layout.addWidget(controls_box)
@@ -340,6 +351,11 @@ class SimulationDebugViewer(QMainWindow):
         self._btn_export.clicked.connect(self._export_data)
         ctrl_panel_layout.addWidget(self._btn_export)
 
+        self._btn_gen_report = QPushButton("📊 Export Statistical Engineering Report", self)
+        self._btn_gen_report.setStyleSheet("background-color: #1e3a5f; color: #00d4ff; font-weight: bold;")
+        self._btn_gen_report.clicked.connect(self._generate_engineering_report)
+        ctrl_panel_layout.addWidget(self._btn_gen_report)
+
         self._btn_test_blackout = QPushButton("⚡ Suppress Detection (Test Loss)", self)
         self._btn_test_blackout.setCheckable(True)
         self._btn_test_blackout.setStyleSheet("background-color: #3a2020; color: #ff3b30; font-weight: bold;")
@@ -356,8 +372,12 @@ class SimulationDebugViewer(QMainWindow):
 
     def _on_perc_mode_changed(self, mode_str: str) -> None:
         self._perception_mode = mode_str
-        if mode_str == "NEURAL":
+        if mode_str == "SOTA_FOURIER_GMM":
+            self._detector = self._sota_detector
+        elif mode_str == "NEURAL":
             self._detector = self._neural_detector
+        elif mode_str == "HYBRID":
+            self._detector = self._hybrid_detector
         else:
             self._detector = self._classical_detector
         self._lbl_status.setText(f"Perception Mode: {mode_str}")
@@ -371,7 +391,15 @@ class SimulationDebugViewer(QMainWindow):
         self._neural_detector = NeuralBeaconDetector(
             DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="NEURAL")
         )
-        self._detector = self._neural_detector if self._perception_mode == "NEURAL" else self._classical_detector
+        self._hybrid_detector = HybridBeaconDetector(
+            DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="HYBRID")
+        )
+        if self._perception_mode == "NEURAL":
+            self._detector = self._neural_detector
+        elif self._perception_mode == "HYBRID":
+            self._detector = self._hybrid_detector
+        else:
+            self._detector = self._classical_detector
         self._update_display()
 
     def _on_preset_changed(self, preset_name: str) -> None:
@@ -409,6 +437,35 @@ class SimulationDebugViewer(QMainWindow):
         else:
             self._btn_test_blackout.setText("⚡ Suppress Detection (Test Loss)")
             self._btn_test_blackout.setStyleSheet("background-color: #3a2020; color: #ff3b30; font-weight: bold;")
+
+    def _generate_engineering_report(self) -> None:
+        try:
+            from pathlib import Path
+            from PySide6.QtWidgets import QMessageBox
+            from analysis.report_generator import EngineeringReportGenerator
+
+            out_path = Path("AUTOMATED_ENGINEERING_REPORT.md").resolve()
+            generator = EngineeringReportGenerator()
+            generator.generate_report(str(out_path))
+
+            self._lbl_status.setText(f"Exported: {out_path.name}")
+
+            QMessageBox.information(
+                self,
+                "Report Export Successful",
+                f"Statistical Engineering Validation Report exported successfully!\n\n"
+                f"Saved to File Path:\n{out_path}\n\n"
+                f"File Size: {out_path.stat().st_size} bytes\n\n"
+                f"You can view this Markdown report directly in your IDE or text editor.",
+            )
+        except Exception as e:
+            from PySide6.QtWidgets import QMessageBox
+            self._lbl_status.setText(f"Report Error: {str(e)}")
+            QMessageBox.critical(
+                self,
+                "Report Export Failed",
+                f"Failed to generate statistical report:\n{str(e)}",
+            )
 
     def _reset_sim(self) -> None:
         self._timer.stop()
@@ -459,7 +516,6 @@ class SimulationDebugViewer(QMainWindow):
             self._lbl_status.setText("Status: Complete (Reached Duration)")
             return
 
-        self._engine.step()
         self._update_display()
 
     def _update_display(self) -> None:
@@ -497,7 +553,6 @@ class SimulationDebugViewer(QMainWindow):
             dt_step, camera.gimbal.pan_deg, camera.gimbal.tilt_deg
         )
 
-        # Valid detection ONLY if Phase 4 detected AND Phase 5 estimator accepted it (not an outlier)
         is_measurement_accepted = (
             detection_res.detected 
             and not self._suppress_detection_test 
@@ -533,8 +588,8 @@ class SimulationDebugViewer(QMainWindow):
             gimbal=camera.gimbal,
         )
 
-        # Apply controller command to camera gimbal actuator
-        camera.gimbal.step(dt_step)
+        # Advance simulation step (steps target trajectory AND camera gimbal ONCE per dt)
+        self._engine.step()
 
         # Update Phase 6 PAT Telemetry Readouts
         m_str = pat_state.mode.value
@@ -655,20 +710,37 @@ class SimulationDebugViewer(QMainWindow):
             self._lbl_platform.setText("OFF")
             self._lbl_atmos.setText("CLEAR")
 
-        # 6. Render World with FOV Footprint
-        display_world = world_frame.copy()
+        # 6. Render World with Clean Target Marker & FOV Footprint
+        display_world = cv2.cvtColor(world_frame, cv2.COLOR_GRAY2BGR)
+
+        # Draw trajectory path history
+        path_history = self._engine._path_history if self._engine else []
+        if path_history and len(path_history) > 1:
+            pts = np.array(path_history, dtype=np.int32).reshape((-1, 1, 2))
+            cv2.polylines(display_world, [pts], isClosed=False, color=(200, 150, 0), thickness=2, lineType=cv2.LINE_AA)
+
+        # Draw Target Position Marker (Clean Amber Dot)
+        if state is not None:
+            tx, ty = int(round(state.x)), int(round(state.y))
+            h_w, w_w = display_world.shape[:2]
+            if 0 <= tx < w_w and 0 <= ty < h_w:
+                cv2.circle(display_world, (tx, ty), 6, (0, 165, 255), -1, cv2.LINE_AA)
+                cv2.circle(display_world, (tx, ty), 10, (0, 165, 255), 1, cv2.LINE_AA)
+
+        # Draw FOV footprint and boresight crosshair
         bx, by = camera.get_boresight_world_pos()
         w_cam, h_cam = camera.intrinsics.width, camera.intrinsics.height
         c1 = (int(round(bx - w_cam / 2.0)), int(round(by - h_cam / 2.0)))
         c2 = (int(round(bx + w_cam / 2.0)), int(round(by + h_cam / 2.0)))
-        cv2.rectangle(display_world, c1, c2, color=120, thickness=2)
+        cv2.rectangle(display_world, c1, c2, color=(232, 212, 127), thickness=2, lineType=cv2.LINE_AA)
 
         ibx, iby = int(round(bx)), int(round(by))
-        cv2.line(display_world, (ibx - 15, iby), (ibx + 15, iby), color=180, thickness=1)
-        cv2.line(display_world, (ibx, iby - 15), (ibx, iby + 15), color=180, thickness=1)
+        cv2.line(display_world, (ibx - 15, iby), (ibx + 15, iby), color=(232, 212, 127), thickness=2)
+        cv2.line(display_world, (ibx, iby - 15), (ibx, iby + 15), color=(232, 212, 127), thickness=2)
 
-        h_w, w_w = display_world.shape
-        q_world = QImage(display_world.data, w_w, h_w, w_w, QImage.Format_Grayscale8)
+        rgb_world = cv2.cvtColor(display_world, cv2.COLOR_BGR2RGB)
+        h_w, w_w, ch_w = rgb_world.shape
+        q_world = QImage(rgb_world.data, w_w, h_w, ch_w * w_w, QImage.Format_RGB888)
         self._world_label.setPixmap(
             QPixmap.fromImage(q_world).scaled(
                 self._world_label.width() - 10,
@@ -678,14 +750,15 @@ class SimulationDebugViewer(QMainWindow):
             )
         )
 
-        # 7. Render Clean Camera Feed
-        disp_clean = clean_cam_frame.copy()
+        # 7. Render Clean Camera Feed (Pure Optical Frame)
+        disp_clean = cv2.cvtColor(clean_cam_frame, cv2.COLOR_GRAY2BGR)
         cx_i, cy_i = int(camera.intrinsics.cx), int(camera.intrinsics.cy)
-        cv2.line(disp_clean, (cx_i - 15, cy_i), (cx_i + 15, cy_i), color=80, thickness=1)
-        cv2.line(disp_clean, (cx_i, cy_i - 15), (cx_i, cy_i + 15), color=80, thickness=1)
+        cv2.line(disp_clean, (cx_i - 15, cy_i), (cx_i + 15, cy_i), color=(180, 160, 100), thickness=1)
+        cv2.line(disp_clean, (cx_i, cy_i - 15), (cx_i, cy_i + 15), color=(180, 160, 100), thickness=1)
 
-        hc, wc = disp_clean.shape
-        q_clean = QImage(disp_clean.data, wc, hc, wc, QImage.Format_Grayscale8)
+        rgb_clean = cv2.cvtColor(disp_clean, cv2.COLOR_BGR2RGB)
+        hc, wc, ch_c = rgb_clean.shape
+        q_clean = QImage(rgb_clean.data, wc, hc, ch_c * wc, QImage.Format_RGB888)
         self._clean_cam_label.setPixmap(
             QPixmap.fromImage(q_clean).scaled(
                 self._clean_cam_label.width() - 10,
@@ -696,7 +769,7 @@ class SimulationDebugViewer(QMainWindow):
         )
 
         # 8. Render Phase 4 & Phase 5 Perception + State Tracking Feed
-        if detection_res.diagnostics is not None and detection_res.diagnostics.annotated_frame is not None:
+        if self._perception_mode == "CLASSICAL" and detection_res.diagnostics is not None and detection_res.diagnostics.annotated_frame is not None:
             disp_annotated = detection_res.diagnostics.annotated_frame.copy()
         else:
             disp_annotated = cv2.cvtColor(dist_cam_frame, cv2.COLOR_GRAY2BGR)
@@ -705,9 +778,10 @@ class SimulationDebugViewer(QMainWindow):
         # White = GT [Eval], Red = Measurement, Cyan = Estimate + Ellipse, Yellow = Prediction
         disp_annotated = draw_tracking_annotations(
             frame=disp_annotated,
-            estimate=self._last_estimate,
+            estimate=self._last_estimate if in_fov else None,
             ground_truth_pos=(effective_u, effective_v) if in_fov else None,
-            measurement_pos=detection_res.centroid if detection_res.detected else None,
+            measurement_pos=detection_res.centroid if (detection_res.detected and in_fov) else None,
+            detection_result=detection_res if in_fov else None,
             draw_ellipse=True,
             draw_velocity_vector=True,
         )

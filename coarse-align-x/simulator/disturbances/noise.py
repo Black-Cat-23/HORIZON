@@ -83,8 +83,8 @@ def apply_gaussian_noise(
     if sigma == 0.0:
         return frame.copy()
 
-    noise = rng.normal(loc=0.0, scale=float(sigma), size=frame.shape)
-    noisy_float = frame.astype(np.float64) + noise
+    noise = rng.normal(loc=0.0, scale=float(sigma), size=frame.shape).astype(np.float32)
+    noisy_float = frame.astype(np.float32) + noise
     clipped = np.clip(noisy_float, 0.0, 255.0)
     return np.rint(clipped).astype(np.uint8)
 

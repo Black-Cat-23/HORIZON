@@ -18,6 +18,7 @@ from tracking.association.association import (
     MeasurementCandidate,
     TrackAssociator,
 )
+from tracking.estimation.imm_kalman import InteractingMultipleModelFilter
 from tracking.estimation.kalman import KalmanFilterConfig, TargetKalmanFilter
 from tracking.estimation.state import EstimatorStatus, StateEstimate
 
@@ -32,12 +33,18 @@ class Track:
         track_id: int = 1,
         kalman_config: Optional[KalmanFilterConfig] = None,
         associator: Optional[TrackAssociator] = None,
+        filter_type: str = "IMM_ADAPTIVE_EKF",
     ) -> None:
         self._track_id = int(track_id)
-        self._filter = TargetKalmanFilter(config=kalman_config)
+        self._filter_type = filter_type
+        if filter_type == "IMM_ADAPTIVE_EKF":
+            self._filter = InteractingMultipleModelFilter(config=kalman_config)
+        else:
+            self._filter = TargetKalmanFilter(config=kalman_config)
+
         self._associator = associator or TrackAssociator(
-            gate_threshold=self._filter.config.gate_chi2_threshold,
-            base_sigma_px=self._filter.config.base_measurement_sigma_px,
+            gate_threshold=getattr(self._filter, "config", KalmanFilterConfig()).gate_chi2_threshold,
+            base_sigma_px=getattr(self._filter, "config", KalmanFilterConfig()).base_measurement_sigma_px,
         )
         self._last_estimate: Optional[StateEstimate] = None
         self._last_association: Optional[AssociationResult] = None

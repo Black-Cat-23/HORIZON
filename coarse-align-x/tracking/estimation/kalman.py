@@ -30,7 +30,7 @@ from tracking.estimation.model import (
     build_process_noise_matrix,
     build_transition_matrix,
 )
-from tracking.estimation.state import EstimatorStatus, StateEstimate
+from tracking.estimation.state import EstimatorHealth, EstimatorStatus, StateEstimate
 from tracking.quality.track_quality import TrackQuality, evaluate_track_quality
 
 logger = logging.getLogger(__name__)
@@ -43,8 +43,8 @@ class KalmanFilterConfig:
     All numerical parameters are PROJECT ENGINEERING PARAMETERS.
     """
     # Unmodeled target acceleration standard deviation [px/s^2]
-    # Accommodates dynamic flight maneuvers, platform motion, and camera jitter (up to ~350 px/s^2)
-    accel_noise_sigma: float = 350.0
+    # Accommodates dynamic flight maneuvers, platform motion, and camera jitter (up to ~600 px/s^2)
+    accel_noise_sigma: float = 600.0
 
     # Nominal perception centroid measurement noise at confidence=1.0 [px]
     base_measurement_sigma_px: float = 0.5
@@ -372,14 +372,14 @@ class TargetKalmanFilter:
             self._status = EstimatorStatus.UNINITIALIZED
             t_end = time.perf_counter()
             return StateEstimate(
-                estimated_x=0.0,
-                estimated_y=0.0,
+                estimated_x=320.0,
+                estimated_y=240.0,
                 estimated_vx=0.0,
                 estimated_vy=0.0,
                 covariance=np.zeros((4, 4), dtype=np.float64),
                 innovation=None,
-                predicted_x=0.0,
-                predicted_y=0.0,
+                predicted_x=320.0,
+                predicted_y=240.0,
                 filter_status=EstimatorStatus.UNINITIALIZED,
                 timestamp=timestamp if timestamp is not None else 0.0,
                 measurement_available=False,
@@ -427,6 +427,12 @@ class TargetKalmanFilter:
         self._consecutive_misses = 0
         self._last_innovation = None
 
+    def compute_nees(self, x_true: np.ndarray) -> float:
+        """Compute Normalized Estimation Error Squared (NEES) against ground truth x_true for offline evaluation ONLY."""
+        if self._x is None or self._P is None:
+            return 0.0
+        return compute_nees_evaluation(x_true, self._x, self._P)
+
     def _build_estimate(
         self,
         innovation: Optional[np.ndarray],
@@ -434,10 +440,36 @@ class TargetKalmanFilter:
         mahalanobis_dist: float,
         proc_ms: float,
     ) -> StateEstimate:
-        """Helper to assemble immutable StateEstimate."""
+        """Helper to assemble immutable StateEstimate with EstimatorHealth."""
         assert self._x is not None and self._P is not None
         pred_x = float(self._x_pred[0, 0]) if self._x_pred is not None else float(self._x[0, 0])
         pred_y = float(self._x_pred[1, 0]) if self._x_pred is not None else float(self._x[1, 0])
+        pred_vx = float(self._x_pred[2, 0]) if self._x_pred is not None else float(self._x[2, 0])
+        pred_vy = float(self._x_pred[3, 0]) if self._x_pred is not None else float(self._x[3, 0])
+
+        nis = float(mahalanobis_dist ** 2)
+        pos_sigma = float(np.sqrt(max(0.0, self._P[0, 0] + self._P[1, 1])))
+        vel_sigma = float(np.sqrt(max(0.0, self._P[2, 2] + self._P[3, 3])))
+
+        # Compute composite estimator health score [0.0, 1.0]
+        gate_thresh = self._config.gate_chi2_threshold
+        inno_health = float(np.clip(math.exp(-0.5 * min(nis, 50.0) / gate_thresh), 0.0, 1.0)) if measurement_available else 0.5
+        pos_health = float(np.clip(1.0 / (1.0 + pos_sigma / 20.0), 0.0, 1.0))
+        track_health = float(0.5 * inno_health + 0.5 * pos_health)
+
+        health = EstimatorHealth(
+            track_health=track_health,
+            position_sigma=pos_sigma,
+            velocity_sigma=vel_sigma,
+            innovation_health=inno_health,
+            model_probabilities=(1.0, 0.0, 0.0),
+            measurement_accepted=measurement_available,
+            prediction_age_frames=self._consecutive_misses,
+            nis=nis,
+            nees_eval=None,
+            mahalanobis_distance=float(mahalanobis_dist),
+            mahalanobis_threshold=float(gate_thresh),
+        )
 
         return StateEstimate(
             estimated_x=float(self._x[0, 0]),
@@ -455,6 +487,27 @@ class TargetKalmanFilter:
             consecutive_measurements=self._consecutive_hits,
             consecutive_misses=self._consecutive_misses,
             mahalanobis_distance=float(mahalanobis_dist),
-            association_quality=math.exp(-0.5 * min(mahalanobis_dist**2, 50.0) / self._config.gate_chi2_threshold) if measurement_available else 0.0,
+            association_quality=inno_health if measurement_available else 0.0,
             processing_time_ms=float(proc_ms),
+            predicted_vx=pred_vx,
+            predicted_vy=pred_vy,
+            nis=nis,
+            nees_eval=None,
+            estimator_health=health,
         )
+
+
+def compute_nees_evaluation(x_true: np.ndarray, x_est: np.ndarray, P_est: np.ndarray) -> float:
+    """Compute Normalized Estimation Error Squared (NEES) for offline evaluation ONLY.
+
+    NEES = (x_true - x_est)^T * P_est^-1 * (x_true - x_est)
+    STRICT INVARIANT: Evaluation-only metric. Does NOT influence filter updates or control laws.
+    """
+    err = (x_true.ravel() - x_est.ravel()).reshape(-1, 1)
+    try:
+        inv_P = np.linalg.inv(P_est)
+        nees = float((err.T @ inv_P @ err)[0, 0])
+    except np.linalg.LinAlgError:
+        inv_P = np.linalg.pinv(P_est)
+        nees = float((err.T @ inv_P @ err)[0, 0])
+    return max(0.0, nees)

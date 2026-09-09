@@ -42,6 +42,9 @@ class PATTrackManager:
         Returns:
             Tuple[pan_error_deg, tilt_error_deg]
         """
+        if (estimated_u_px == 0.0 and estimated_v_px == 0.0) or not (np.isfinite(estimated_u_px) and np.isfinite(estimated_v_px)):
+            return (0.0, 0.0)
+
         # Error in pixels (target relative to camera center)
         error_u_px = estimated_u_px - self.cx_px
         error_v_px = estimated_v_px - self.cy_px

@@ -12,7 +12,7 @@ class VelocityFeedForward:
     Disabled by default until explicitly enabled/validated.
     """
 
-    def __init__(self, kff_pan: float = 0.5, kff_tilt: float = 0.5, enabled: bool = False):
+    def __init__(self, kff_pan: float = 1.0, kff_tilt: float = 1.0, enabled: bool = True):
         self.kff_pan = kff_pan
         self.kff_tilt = kff_tilt
         self.enabled = enabled

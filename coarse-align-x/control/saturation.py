@@ -13,7 +13,7 @@ class ControllerSaturation:
     Default max rates: max pan = 5.0 deg/s, max tilt = 5.0 deg/s.
     """
 
-    def __init__(self, max_pan_rate_deg_s: float = 5.0, max_tilt_rate_deg_s: float = 5.0):
+    def __init__(self, max_pan_rate_deg_s: float = 20.0, max_tilt_rate_deg_s: float = 20.0):
         self.max_pan_rate = max_pan_rate_deg_s
         self.max_tilt_rate = max_tilt_rate_deg_s
         self.saturation_count = 0
