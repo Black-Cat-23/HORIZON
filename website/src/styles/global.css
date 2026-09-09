@@ -1,0 +1,186 @@
+@import './tokens.css';
+@import './typography.css';
+
+/* CSS Reset & Global Layout */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  background: #020408;
+  background-image: radial-gradient(ellipse at 50% 25%, #0a172a 0%, #050b14 55%, #020408 100%);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-dim) #020408;
+}
+
+body {
+  background: #020408;
+  background-image: radial-gradient(ellipse at 50% 25%, #0a172a 0%, #050b14 55%, #020408 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  color: var(--text-primary);
+}
+
+#root {
+  background: #020408;
+  background-image: radial-gradient(ellipse at 50% 25%, #0a172a 0%, #050b14 55%, #020408 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* 3D Canvas Fixed Container */
+#webgl-canvas-container {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  background: transparent;
+}
+
+/* Subtle Oval Vignette Border Overlay (Dim glow lights only in borders in an oval effect) */
+.vignette-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    rgba(2, 4, 8, 0) 65%,
+    rgba(6, 14, 28, 0.35) 85%,
+    rgba(2, 4, 8, 0.85) 100%
+  );
+}
+
+/* Hubtown 45° Chamfered Beveled Glass Cards */
+.beveled-glass-card {
+  position: relative;
+  background: rgba(10, 19, 34, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-subtle);
+  padding: 1.75rem 2rem;
+  clip-path: polygon(
+    0 14px,
+    14px 0,
+    calc(100% - 14px) 0,
+    100% 14px,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    14px 100%,
+    0 calc(100% - 14px)
+  );
+  transition: all 0.4s var(--ease-out-expo);
+  pointer-events: auto;
+}
+
+.beveled-glass-card:hover {
+  border-color: var(--border-active);
+  background: rgba(15, 27, 46, 0.75);
+  box-shadow: 0 0 30px rgba(169, 216, 232, 0.12);
+}
+
+/* IVRESS Exact Circular Breathing Aura Start Button */
+.ivress-start-gate {
+  position: relative;
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 10, 18, 0.45);
+  backdrop-filter: blur(12px);
+  border: none;
+  cursor: pointer;
+  outline: none;
+  transition: transform 0.5s var(--ease-out-expo);
+  pointer-events: auto;
+}
+
+.ivress-start-gate:hover {
+  transform: scale(1.06);
+}
+
+.ivress-outer-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px dashed rgba(213, 224, 255, 0.45);
+  animation: rotateClockwise 24s linear infinite;
+}
+
+.ivress-inner-aura {
+  position: absolute;
+  inset: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(169, 216, 232, 0.65);
+  box-shadow: 0 0 24px rgba(169, 216, 232, 0.35), inset 0 0 16px rgba(169, 216, 232, 0.2);
+  animation: breatheAura 3.2s ease-in-out infinite alternate;
+}
+
+.ivress-start-txt {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  line-height: 1.4;
+  color: var(--text-ice);
+  text-transform: uppercase;
+  z-index: 2;
+  text-align: center;
+}
+
+@keyframes rotateClockwise {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes breatheAura {
+  0% {
+    transform: scale(0.96);
+    box-shadow: 0 0 16px rgba(169, 216, 232, 0.2), inset 0 0 8px rgba(169, 216, 232, 0.1);
+  }
+  100% {
+    transform: scale(1.04);
+    box-shadow: 0 0 36px rgba(169, 216, 232, 0.5), inset 0 0 20px rgba(169, 216, 232, 0.3);
+  }
+}
+
+/* Scrollytelling DOM Container */
+#scrolly-container {
+  position: relative;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Chapter Layout (Completely transparent backdrops over 3D & gradient) */
+.chapter-section {
+  position: relative;
+  min-height: 140vh;
+  padding: 12vh 6vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: transparent;
+  pointer-events: none;
+}
+
+.chapter-content-inner {
+  max-width: var(--max-content-width);
+  margin: 0 auto;
+  width: 100%;
+  pointer-events: none;
+}
