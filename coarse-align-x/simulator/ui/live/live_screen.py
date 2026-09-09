@@ -100,6 +100,10 @@ from simulator.ui.live.event_timeline import EventTimelineWidget
 class LiveScreenView(QWidget):
     """Phase 11.2 Live Tracking Workstation Screen (Screenshot 2 Replica)."""
 
+    # Signal emitted after every simulation step — carries live data for Track screen
+    track_data_ready = Signal(object, object, object, object, object, float)
+    # (dist_frame: np.ndarray, detection_res, estimate, pat_state, ground_truth_pos, sim_time)
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
@@ -393,8 +397,8 @@ class LiveScreenView(QWidget):
         cfg_form.addRow("Centroid Method:", self._combo_method)
 
         self._combo_preset = QComboBox(self)
-        self._combo_preset.addItems(["ADVERSARIAL", "NOMINAL", "DIFFICULT", "SEVERE", "RECOVERY"])
-        self._combo_preset.setCurrentText("DIFFICULT")
+        self._combo_preset.addItems(["NOMINAL", "DIFFICULT", "SEVERE", "ADVERSARIAL", "RECOVERY"])
+        self._combo_preset.setCurrentText("NOMINAL")
         self._combo_preset.setStyleSheet(combo_style)
         self._combo_preset.currentTextChanged.connect(self._on_preset_changed)
         cfg_form.addRow("Disturbance Preset:", self._combo_preset)
@@ -728,7 +732,23 @@ class LiveScreenView(QWidget):
 
         latency_ms = (time.perf_counter() - step_start_t) * 1000.0
 
-        # Update Displays & Readouts
+        # Emit live data signal so Track screen can update without a separate engine
+        camera_state = self._engine.camera if self._engine else None
+        if camera_state is not None and state is not None:
+            _, _, u_true, v_true, in_fov = camera_state.project_target(state.x, state.y)
+            gt_pos = (u_true, v_true) if in_fov else None
+        else:
+            gt_pos = None
+        self.track_data_ready.emit(
+            dist_cam_frame,
+            detection_res,
+            estimate,
+            pat_state,
+            gt_pos,
+            state.timestamp if state is not None else 0.0,
+        )
+
+        # Update Displays & Readouts (skip heavy render if step ran over budget)
         self._update_ui_displays(
             pat_state=pat_state,
             detection_res=detection_res,
@@ -861,16 +881,22 @@ class LiveScreenView(QWidget):
             self._lbl_atmos.setText("CLEAR")
 
     def _render_opencv_to_label(self, frame_bgr: np.ndarray, label: QLabel) -> None:
-        """Render BGR or Grayscale numpy image array into PySide6 QLabel pixmap cleanly."""
+        """Render BGR or Grayscale numpy image array into PySide6 QLabel pixmap.
+        Uses FastTransformation to keep real-time rendering smooth and lag-free.
+        """
         if len(frame_bgr.shape) == 2:
             h, w = frame_bgr.shape
-            qimg = QImage(frame_bgr.data, w, h, w, QImage.Format_Grayscale8)
+            # Ensure contiguous memory for QImage
+            contiguous = np.ascontiguousarray(frame_bgr)
+            qimg = QImage(contiguous.data, w, h, w, QImage.Format_Grayscale8)
         else:
             h, w, ch = frame_bgr.shape
             rgb_frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-            qimg = QImage(rgb_frame.data, w, h, ch * w, QImage.Format_RGB888)
+            contiguous = np.ascontiguousarray(rgb_frame)
+            qimg = QImage(contiguous.data, w, h, ch * w, QImage.Format_RGB888)
         pix = QPixmap.fromImage(qimg)
-        scaled_pix = pix.scaled(label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        # FastTransformation avoids bilinear interpolation overhead for live feeds
+        scaled_pix = pix.scaled(label.size(), Qt.KeepAspectRatio, Qt.FastTransformation)
         label.setPixmap(scaled_pix)
 
     # --------------------------------------------------------------------------

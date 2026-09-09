@@ -78,6 +78,12 @@ class ApplicationShell(QMainWindow):
             self.stack.addWidget(view)
             self.mode_views.append(view)
 
+        # Wire Live screen → Track screen: push live simulation data on every step
+        live_view = self.mode_views[1]
+        track_view = self.mode_views[2]
+        if hasattr(live_view, "track_data_ready") and hasattr(track_view, "update_track_displays"):
+            live_view.track_data_ready.connect(track_view.update_track_displays)
+
         self._current_mode_index = 0
         self._anim_group: QParallelAnimationGroup | None = None
 

@@ -25,18 +25,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from simulator.core.config import AppConfig
-from simulator.core.simulation import SimulationEngine
-from simulator.perception.config import CentroidConfig, DetectorConfig
-from simulator.perception.hybrid_detector import HybridBeaconDetector
-from tracking.association.track import Track
-from tracking.estimation.kalman import EstimatorStatus
+from simulator.perception.detector import DetectionResult
 from tracking.estimation.state import StateEstimate
-
-# PAT Subsystems
-from pat.mode_manager import PATModeManager
 from pat.state import PATMode, PATState
-from control.camera_controller import PATCameraController
 
 # UI Subcomponents
 from simulator.ui.track.analytics_graphs import TimeSeriesAnalyticsWidget
@@ -47,22 +38,15 @@ from simulator.ui.track.state_estimate_panel import StateEstimatePanel
 
 
 class TrackScreenView(QWidget):
-    """Phase 11.4 Track Diagnostics & Precision Analysis Workstation Screen."""
+    """Phase 11.4 Track Diagnostics & Precision Analysis Workstation Screen.
+
+    This screen is a passive consumer: it receives live simulation data pushed
+    from LiveScreenView.track_data_ready signal and renders it. It does NOT
+    run its own simulation engine.
+    """
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-
-        # Initialize Real Backend Engine & Subsystems
-        self._config = AppConfig()
-        self._engine = SimulationEngine(self._config)
-        self._engine.initialize()
-
-        self._detector = HybridBeaconDetector(
-            DetectorConfig(centroid=CentroidConfig(method="weighted_cog"), perception_mode="HYBRID")
-        )
-        self._track = Track(track_id=1)
-        self._pat_mgr = PATModeManager()
-        self._pat_ctrl = PATCameraController()
 
         # Telemetry Time-Series Buffers (up to 200 data points)
         self._history_times: List[float] = []
@@ -125,7 +109,7 @@ class TrackScreenView(QWidget):
         ground_truth_pos: Optional[Tuple[float, float]] = None,
         sim_time: float = 0.0,
     ) -> None:
-        """Update all Track screen components from real backend data."""
+        """Update all Track screen components from real backend data pushed via signal."""
 
         # 1. Update Geometry View
         if dist_frame is not None:
