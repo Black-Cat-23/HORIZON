@@ -69,7 +69,8 @@ class GeometryCanvasWidget(QLabel):
             return
         h, w, ch = frame_bgr.shape
         rgb_frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-        qimg = QImage(rgb_frame.data, w, h, ch * w, QImage.Format.Format_RGB888)
+        rgb_frame = np.ascontiguousarray(rgb_frame)
+        qimg = QImage(rgb_frame.data, w, h, ch * w, QImage.Format.Format_RGB888).copy()
         self._current_pixmap = QPixmap.fromImage(qimg)
         self._repaint_canvas()
 

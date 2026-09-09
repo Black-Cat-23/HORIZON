@@ -53,45 +53,65 @@ class MiniTimeSeriesGraph(QLabel):
         self._current_pixmap: Optional[QPixmap] = None
 
     def render_plot(self, time_data: List[float], val_data: List[float], y_min: float = 0.0, y_max: float = 100.0) -> None:
-        canvas = np.zeros((100, 220, 3), dtype=np.uint8)
+        w = max(220, self.width()) if self.width() > 50 else 220
+        h = max(100, self.height()) if self.height() > 30 else 100
+        canvas = np.zeros((h, w, 3), dtype=np.uint8)
+
+        margin_left = 32
+        margin_right = 10
+        margin_top = 22
+        margin_bottom = 15
+        plot_w = max(10, w - margin_left - margin_right)
+        plot_h = max(10, h - margin_top - margin_bottom)
 
         # Draw grid lines
-        cv2.line(canvas, (30, 20), (210, 20), (35, 35, 40), 1)
-        cv2.line(canvas, (30, 50), (210, 50), (35, 35, 40), 1)
-        cv2.line(canvas, (30, 80), (210, 80), (35, 35, 40), 1)
+        y_grid1 = int(margin_top + plot_h * 0.25)
+        y_grid2 = int(margin_top + plot_h * 0.50)
+        y_grid3 = int(margin_top + plot_h * 0.75)
+        cv2.line(canvas, (margin_left, y_grid1), (w - margin_right, y_grid1), (35, 35, 40), 1)
+        cv2.line(canvas, (margin_left, y_grid2), (w - margin_right, y_grid2), (35, 35, 40), 1)
+        cv2.line(canvas, (margin_left, y_grid3), (w - margin_right, y_grid3), (35, 35, 40), 1)
 
         # Axes
-        cv2.line(canvas, (30, 10), (30, 85), (80, 80, 85), 1)
-        cv2.line(canvas, (30, 85), (210, 85), (80, 80, 85), 1)
+        cv2.line(canvas, (margin_left, 10), (margin_left, h - margin_bottom), (80, 80, 85), 1)
+        cv2.line(canvas, (margin_left, h - margin_bottom), (w - margin_right, h - margin_bottom), (80, 80, 85), 1)
 
-        # Title & Y-Max Label
-        cv2.putText(canvas, f"{self.plot_title} ({self.unit})", (35, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (220, 220, 220), 1, cv2.LINE_AA)
+        # Title Label
+        cv2.putText(canvas, f"{self.plot_title} ({self.unit})", (margin_left + 4, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (220, 220, 220), 1, cv2.LINE_AA)
 
-        if len(val_data) > 1 and len(time_data) == len(val_data):
-            # Scale data to plot area [30..210] x [85..20]
+        if len(val_data) > 0 and len(time_data) == len(val_data):
             curr_max = max(y_max, max(val_data) * 1.1)
             curr_min = min(y_min, min(val_data))
             val_range = max(1e-5, curr_max - curr_min)
 
-            pts: List[Tuple[int, int]] = []
             n_pts = len(val_data)
-            for i in range(n_pts):
-                px = int(round(30 + (i / max(1, n_pts - 1)) * 180))
-                norm_val = (val_data[i] - curr_min) / val_range
-                py = int(round(85 - norm_val * 65))
-                py = max(12, min(85, py))
-                pts.append((px, py))
+            if n_pts == 1:
+                px = margin_left + plot_w // 2
+                norm_val = (val_data[0] - curr_min) / val_range
+                py = int(round((h - margin_bottom) - norm_val * plot_h))
+                cv2.circle(canvas, (px, py), 3, self.line_color, -1)
+            else:
+                pts: List[Tuple[int, int]] = []
+                for i in range(n_pts):
+                    px = int(round(margin_left + (i / (n_pts - 1)) * plot_w))
+                    norm_val = (val_data[i] - curr_min) / val_range
+                    py = int(round((h - margin_bottom) - norm_val * plot_h))
+                    py = max(margin_top, min(h - margin_bottom, py))
+                    pts.append((px, py))
 
-            pts_arr = np.array(pts, dtype=np.int32).reshape((-1, 1, 2))
-            cv2.polylines(canvas, [pts_arr], isClosed=False, color=self.line_color, thickness=1, lineType=cv2.LINE_AA)
+                pts_arr = np.array(pts, dtype=np.int32).reshape((-1, 1, 2))
+                cv2.polylines(canvas, [pts_arr], isClosed=False, color=self.line_color, thickness=1, lineType=cv2.LINE_AA)
 
             # Latest value readout
             latest_val = val_data[-1]
-            cv2.putText(canvas, f"{latest_val:.1f}", (170, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.35, self.line_color, 1, cv2.LINE_AA)
+            readout_str = f"{latest_val:.1f}"
+            cv2.putText(canvas, readout_str, (w - margin_right - 45, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.35, self.line_color, 1, cv2.LINE_AA)
         else:
-            cv2.putText(canvas, "N/A", (100, 52), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (120, 120, 120), 1, cv2.LINE_AA)
+            cv2.putText(canvas, "N/A", (margin_left + plot_w // 2 - 10, margin_top + plot_h // 2), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (120, 120, 120), 1, cv2.LINE_AA)
 
-        qimg = QImage(canvas.data, 220, 100, 220 * 3, QImage.Format.Format_RGB888)
+        # Convert OpenCV BGR to RGB and create QImage with .copy() memory ownership
+        canvas_rgb = cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB)
+        qimg = QImage(canvas_rgb.data, w, h, w * 3, QImage.Format.Format_RGB888).copy()
         self._current_pixmap = QPixmap.fromImage(qimg)
         self.setPixmap(self._current_pixmap)
 

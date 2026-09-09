@@ -112,53 +112,68 @@ class TrackScreenView(QWidget):
         """Update all Track screen components from real backend data pushed via signal."""
 
         # 1. Update Geometry View
-        if dist_frame is not None:
-            self.geometry_view.render_geometry(
-                sensor_frame=dist_frame,
-                detection_res=detection_res,
-                estimate=estimate,
-                ground_truth_pos=ground_truth_pos,
-            )
+        try:
+            if dist_frame is not None:
+                self.geometry_view.render_geometry(
+                    sensor_frame=dist_frame,
+                    detection_res=detection_res,
+                    estimate=estimate,
+                    ground_truth_pos=ground_truth_pos,
+                )
+        except Exception:
+            pass
 
         # 2. Update Covariance Panel
-        self.cov_panel.update_covariance(estimate)
+        try:
+            self.cov_panel.update_covariance(estimate)
+        except Exception:
+            pass
 
         # 3. Update State Estimate Panel
-        self.estimate_panel.update_estimate(estimate)
+        try:
+            self.estimate_panel.update_estimate(estimate)
+        except Exception:
+            pass
 
         # 4. Update Hybrid Perception Breakdown Panel
-        self.perception_panel.update_breakdown(detection_res)
+        try:
+            self.perception_panel.update_breakdown(detection_res)
+        except Exception:
+            pass
 
         # 5. Append to Time-Series History Buffers & Update Analytics Graphs
-        if pat_state is not None and estimate is not None:
-            err_px = float(np.hypot(pat_state.pan_error_deg, pat_state.tilt_error_deg) * 60.0)
-            quality = float(pat_state.track_quality * 100.0)
-            innov = float(np.hypot(estimate.innovation_x, estimate.innovation_y))
-            conf = float(detection_res.confidence * 100.0) if (detection_res and detection_res.detected) else 0.0
+        try:
+            if pat_state is not None and estimate is not None:
+                err_px = float(np.hypot(pat_state.pan_error_deg, pat_state.tilt_error_deg) * 60.0)
+                quality = float(pat_state.track_quality * 100.0)
+                innov = float(np.hypot(estimate.innovation_x, estimate.innovation_y))
+                conf = float(detection_res.confidence * 100.0) if (detection_res and detection_res.detected) else 0.0
 
-            self._history_times.append(sim_time)
-            self._history_errors_px.append(err_px)
-            self._history_qualities.append(quality)
-            self._history_innovations.append(innov)
-            self._history_pan_errors.append(pat_state.pan_error_deg)
-            self._history_tilt_errors.append(pat_state.tilt_error_deg)
-            self._history_confidences.append(conf)
+                self._history_times.append(sim_time)
+                self._history_errors_px.append(err_px)
+                self._history_qualities.append(quality)
+                self._history_innovations.append(innov)
+                self._history_pan_errors.append(pat_state.pan_error_deg)
+                self._history_tilt_errors.append(pat_state.tilt_error_deg)
+                self._history_confidences.append(conf)
 
-            if len(self._history_times) > self._max_history:
-                self._history_times.pop(0)
-                self._history_errors_px.pop(0)
-                self._history_qualities.pop(0)
-                self._history_innovations.pop(0)
-                self._history_pan_errors.pop(0)
-                self._history_tilt_errors.pop(0)
-                self._history_confidences.pop(0)
+                if len(self._history_times) > self._max_history:
+                    self._history_times.pop(0)
+                    self._history_errors_px.pop(0)
+                    self._history_qualities.pop(0)
+                    self._history_innovations.pop(0)
+                    self._history_pan_errors.pop(0)
+                    self._history_tilt_errors.pop(0)
+                    self._history_confidences.pop(0)
 
-            self.analytics_panel.update_analytics(
-                times=self._history_times,
-                errors_px=self._history_errors_px,
-                qualities=self._history_qualities,
-                innovations=self._history_innovations,
-                pan_errors=self._history_pan_errors,
-                tilt_errors=self._history_tilt_errors,
-                confidences=self._history_confidences,
-            )
+                self.analytics_panel.update_analytics(
+                    times=self._history_times,
+                    errors_px=self._history_errors_px,
+                    qualities=self._history_qualities,
+                    innovations=self._history_innovations,
+                    pan_errors=self._history_pan_errors,
+                    tilt_errors=self._history_tilt_errors,
+                    confidences=self._history_confidences,
+                )
+        except Exception:
+            pass

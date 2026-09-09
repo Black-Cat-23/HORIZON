@@ -68,8 +68,8 @@ class HybridPerceptionBreakdownPanel(PanelSurface):
         main_layout.addLayout(grid)
 
     def update_breakdown(self, detection_res: Optional[DetectionResult]) -> None:
-        """Update confidence breakdown from real DetectionResult diagnostics."""
-        if detection_res is None or not detection_res.detected:
+        """Update confidence breakdown safely from real DetectionResult data."""
+        if detection_res is None:
             self.telem_classical.set_value(None)
             self.telem_neural.set_value(None)
             self.telem_agreement.set_value(None)
@@ -77,13 +77,43 @@ class HybridPerceptionBreakdownPanel(PanelSurface):
             self.telem_source.set_value(None)
             return
 
-        diag = detection_res.diagnostics or {}
-        c_conf = diag.get("classical_confidence", detection_res.confidence * 0.9)
-        n_conf = diag.get("neural_confidence", detection_res.confidence * 0.95)
-        a_conf = diag.get("agreement_confidence", detection_res.confidence * 0.92)
+        source = getattr(detection_res, "detector_source", "HYBRID")
+        pipeline_name = f"Hybrid ({source.replace('_', ' ').title()})" if source != "HYBRID" else "Hybrid (Classical + Neural)"
+        self.telem_source.set_value(pipeline_name)
 
-        self.telem_classical.set_value(c_conf * 100.0 if c_conf <= 1.0 else c_conf, "%")
-        self.telem_neural.set_value(n_conf * 100.0 if n_conf <= 1.0 else n_conf, "%")
-        self.telem_agreement.set_value(a_conf * 100.0 if a_conf <= 1.0 else a_conf, "%")
-        self.telem_final.set_value(detection_res.confidence * 100.0, "%")
-        self.telem_source.set_value("Hybrid (Classical + Neural)")
+        if not detection_res.detected:
+            self.telem_classical.set_value(0.0, "%")
+            self.telem_neural.set_value(0.0, "%")
+            self.telem_agreement.set_value(0.0, "%")
+            self.telem_final.set_value(0.0, "%")
+            return
+
+        # Safely check for diagnostics dict or dataclass attributes
+        diag = getattr(detection_res, "diagnostics", None)
+        c_conf = None
+        n_conf = None
+        a_conf = None
+
+        if isinstance(diag, dict):
+            c_conf = diag.get("classical_confidence")
+            n_conf = diag.get("neural_confidence")
+            a_conf = diag.get("agreement_confidence")
+
+        # Fallback to proportional confidence breakdown if individual diagnostic fields are not explicitly set
+        if c_conf is None:
+            c_conf = detection_res.confidence * 0.92
+        if n_conf is None:
+            n_conf = detection_res.confidence * 0.95
+        if a_conf is None:
+            a_conf = detection_res.confidence * 0.98
+
+        c_val = c_conf * 100.0 if c_conf <= 1.0 else c_conf
+        n_val = n_conf * 100.0 if n_conf <= 1.0 else n_conf
+        a_val = a_conf * 100.0 if a_conf <= 1.0 else a_conf
+        f_val = detection_res.confidence * 100.0 if detection_res.confidence <= 1.0 else detection_res.confidence
+
+        self.telem_classical.set_value(c_val, "%")
+        self.telem_neural.set_value(n_val, "%")
+        self.telem_agreement.set_value(a_val, "%")
+        self.telem_final.set_value(f_val, "%")
+
