@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Literal, Optional, Tuple
+from typing import Literal, Optional
+from disturbance.turbulence import TurbulenceConfig
 
 
 # =============================================================================
@@ -239,6 +241,45 @@ class InjectionScheduleConfig:
     pulse_period_s: float = 2.0
     pulse_duty_cycle: float = 0.5
 
+@dataclass(frozen=True)
+class LinkBudgetConfig:
+    """Configuration for the real‑time link‑budget module (observer only)."""
+    enabled: bool = False
+    # Transmitter parameters
+    tx_power_W: float = 1.0  # 1 W → 30 dBm
+    tx_aperture_m: float = 0.10
+    wavelength_m: float = 1.55e-6
+    divergence_half_angle_urad: float = 100.0  # µrad
+    tx_optical_efficiency: float = 0.8
+    # Receiver parameters
+    rx_aperture_m: float = 0.20
+    rx_optical_efficiency: float = 0.6
+    responsivity_A_per_W: float = 0.9
+    dark_current_A: float = 1e-9
+    bandwidth_Hz: float = 1e9
+    load_resistance_ohm: float = 50.0
+    temperature_K: float = 300.0
+    sensitivity_dBm: float = -40.0
+    nep_dBm_per_Hz: float = -140.0
+    # Link geometry
+    range_m: float = 10_000.0
+    modulation: Literal["OOK", "PPM"] = "OOK"
+    ppm_order: int = 4
+    target_ber: float = 1e-9
+    # SNR model selection
+    snr_model: Literal["simplified", "full"] = "simplified"
+    # Status thresholds (margin dB)
+    up_margin_dB: float = 6.0
+    degraded_margin_dB: float = 0.0
+    # Atmospheric loss mapping (dB per mode)
+    atmospheric_loss_map: dict = field(default_factory=lambda: {
+        "clear": 0.5,
+        "haze": 3.0,
+        "fog": 15.0,
+        "rain": 6.0,
+        "low_light": 1.0,
+    })
+
 
 # =============================================================================
 # Aggregate Disturbance Configuration
@@ -261,6 +302,8 @@ class DisturbanceConfig:
     distractors: DistractorConfig = field(default_factory=DistractorConfig)
     correlation: DisturbanceCorrelationConfig = field(default_factory=DisturbanceCorrelationConfig)
     injection_schedule: InjectionScheduleConfig = field(default_factory=InjectionScheduleConfig)
+    link_budget: LinkBudgetConfig = field(default_factory=LinkBudgetConfig)
+    turbulence: TurbulenceConfig = field(default_factory=TurbulenceConfig)
 
 
 # =============================================================================

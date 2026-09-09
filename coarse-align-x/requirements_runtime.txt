@@ -1,0 +1,13 @@
+numpy
+opencv-python-headless
+PySide6
+onnxruntime
+scipy
+pandas
+pyqtgraph
+pyyaml
+reportlab
+matplotlib
+osqp
+filterpy
+

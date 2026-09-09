@@ -12,6 +12,10 @@ from .belief_map import BeliefMapSearchStrategy
 
 class SearchManager:
     """
+<<<<<<< HEAD
+    Manages active search strategies (SPIRAL vs RASTER) and coordinates pattern resets.
+=======
+>>>>>>> 92e2bd53912221253438c9725805b613c2bd2b21
     Manages active search strategies (SPIRAL, RASTER, BELIEF_MAP) and coordinates pattern resets.
     """
 
