@@ -97,15 +97,22 @@ class SystemResponsePanelWidget(PanelSurface):
         self.telem_conf = MonospaceTelemetryLabel(value=None, unit="%", label_text="Perception Conf", parent=self)
         self.telem_quality = MonospaceTelemetryLabel(value=None, unit="%", label_text="Track Quality", parent=self)
         self.telem_error = MonospaceTelemetryLabel(value=None, unit="px", label_text="Tracking Error", parent=self)
+        self.telem_peak_err = MonospaceTelemetryLabel(value=None, unit="px", label_text="Peak Error", parent=self)
+        self.telem_reacq_lat = MonospaceTelemetryLabel(value=None, unit="ms", label_text="Reacq Latency", parent=self)
         self.telem_fps = MonospaceTelemetryLabel(value=None, unit="FPS", label_text="Pipeline Rate", parent=self)
 
         grid_r.addRow(self.telem_conf)
         grid_r.addRow(self.telem_quality)
         grid_r.addRow(self.telem_error)
+        grid_r.addRow(self.telem_peak_err)
+        grid_r.addRow(self.telem_reacq_lat)
         grid_r.addRow(self.telem_fps)
         main_layout.addLayout(grid_r)
 
         main_layout.addStretch()
+        
+        self._peak_error_px = 0.0
+        self._last_reacq_ms = 0.0
 
     def update_telemetry(
         self,
@@ -140,22 +147,36 @@ class SystemResponsePanelWidget(PanelSurface):
             # PAT Pill state mapping
             if pat_state.mode == PATMode.TRACK:
                 self.pill_pat_state.set_state(StatePillState.ACTIVE, "LOCKED")
+                # When in TRACK, decay peak error slightly so it doesn't stay forever, or keep it. Let's keep it until reset, but if it's a new run? Let's just track it globally.
             elif pat_state.mode == PATMode.ACQUIRE:
                 self.pill_pat_state.set_state(StatePillState.CONFIRMED, "ACQUIRE")
             elif pat_state.mode == PATMode.DEGRADED:
                 self.pill_pat_state.set_state(StatePillState.DEGRADED, "DEGRADED")
             elif pat_state.mode == PATMode.REACQUIRE:
                 self.pill_pat_state.set_state(StatePillState.LOST, "REACQUIRE")
+                self._last_reacq_ms = pat_state.mode_duration_s * 1000.0
             else:
                 self.pill_pat_state.set_state(StatePillState.IDLE, "SEARCHING")
+                self._last_reacq_ms = pat_state.mode_duration_s * 1000.0
 
             self.telem_quality.set_value(pat_state.track_quality * 100.0, "%")
             err_px = float(np.hypot(pat_state.pan_error_deg, pat_state.tilt_error_deg) * 60.0)
+            
+            # Peak Error Logic
+            if err_px > self._peak_error_px:
+                self._peak_error_px = err_px
+            # Decay peak error slowly so it's useful over time (1% decay per frame)
+            self._peak_error_px *= 0.99 
+
             self.telem_error.set_value(err_px, "px")
+            self.telem_peak_err.set_value(self._peak_error_px, "px")
+            self.telem_reacq_lat.set_value(self._last_reacq_ms, "ms")
         else:
             self.pill_pat_state.set_state(StatePillState.IDLE, "READY")
             self.telem_quality.set_value(None)
             self.telem_error.set_value(None)
+            self.telem_peak_err.set_value(None)
+            self.telem_reacq_lat.set_value(None)
 
         if detection_res and detection_res.detected:
             self.telem_conf.set_value(detection_res.confidence * 100.0, "%")

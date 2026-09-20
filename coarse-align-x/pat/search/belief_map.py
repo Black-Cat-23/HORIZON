@@ -234,9 +234,18 @@ class BeliefMapSearchStrategy(SearchStrategy):
         ) >= 0.1:
             self._trajectory_history.append((current_pan_deg, current_tilt_deg))
 
-        # Close proximity to current peak: accelerate discounting or allow smooth transition
+        # Close proximity to current peak: accelerate discounting to keep moving
         if dist < 0.05:
-            return (0.0, 0.0)
+            # Force massive discount at current spot to instantly push peak elsewhere
+            self.discount_visited(current_pan_deg, current_tilt_deg, 5.0)
+            target_pan, target_tilt, peak_prob = self.get_peak_location()
+            diff_pan = target_pan - current_pan_deg
+            diff_tilt = target_tilt - current_tilt_deg
+            dist = math.hypot(diff_pan, diff_tilt)
+            
+            # If still somehow close, command an outward exploration nudge
+            if dist < 0.05:
+                return (self.scan_speed_deg_s * 0.5, self.scan_speed_deg_s * 0.5)
 
         speed = min(self.scan_speed_deg_s, max(0.5, dist * 2.0))
         rate_pan = speed * (diff_pan / dist)
@@ -255,7 +264,4 @@ class BeliefMapSearchStrategy(SearchStrategy):
     def get_belief_grid(self) -> np.ndarray:
         """Returns a copy of the 2D angular belief probability array."""
         return np.copy(self.belief_grid)
-<<<<<<< HEAD
-=======
 
->>>>>>> 92e2bd53912221253438c9725805b613c2bd2b21

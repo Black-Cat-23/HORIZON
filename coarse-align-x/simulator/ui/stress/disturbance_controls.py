@@ -61,8 +61,13 @@ class DisturbanceControlsWidget(QWidget):
     disturbance_changed = Signal(object)  # Emits DisturbanceConfig
     run_test_requested = Signal()        # Emits on "Run stress test" click
 
-    PRESETS = ["NOMINAL", "DIFFICULT", "SEVERE", "RECOVERY", "ADVERSARIAL", "CUSTOM"]
+    PRESETS = [
+        "NOMINAL", "DIFFICULT", "SEVERE", "RECOVERY", "ADVERSARIAL", 
+        "DISTRACTOR_BURST", "OCCLUSION_EVENT", "BRIGHTNESS_FADE", 
+        "JITTER_BURST", "PLATFORM_SWING", "COMBINED_TURBULENCE", "CUSTOM"
+    ]
     ATMOSPHERES = ["clear", "haze", "fog", "rain", "low_light"]
+    PLATFORM_MODELS = ["linear", "circular", "random", "spiral", "figure8"]
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -152,13 +157,18 @@ class DisturbanceControlsWidget(QWidget):
         self.spin_jitter.valueChanged.connect(self._on_user_field_change)
         form_layout.addRow("Camera Jitter Max:", self.spin_jitter)
 
-        # E. Platform Motion Velocity
+        # E. Platform Motion Velocity & Model
         self.spin_platform = QDoubleSpinBox(scroll_content)
         self.spin_platform.setRange(0.0, 120.0)
         self.spin_platform.setSingleStep(5.0)
         self.spin_platform.setSuffix(" px/s")
         self.spin_platform.valueChanged.connect(self._on_user_field_change)
         form_layout.addRow("Platform Velocity:", self.spin_platform)
+
+        self.combo_platform_model = QComboBox(scroll_content)
+        self.combo_platform_model.addItems(self.PLATFORM_MODELS)
+        self.combo_platform_model.currentTextChanged.connect(self._on_user_field_change)
+        form_layout.addRow("Platform Model:", self.combo_platform_model)
 
         # F. Atmosphere Condition
         self.combo_atmo = QComboBox(scroll_content)
@@ -187,6 +197,7 @@ class DisturbanceControlsWidget(QWidget):
                 self.spin_poisson.setValue(100.0)
                 self.spin_jitter.setValue(0.0)
                 self.spin_platform.setValue(0.0)
+                self.combo_platform_model.setCurrentText("linear")
                 self.combo_atmo.setCurrentText("clear")
             else:
                 self.spin_gaussian.setValue(cfg.gaussian.sigma if cfg.gaussian.enabled else 0.0)
@@ -194,6 +205,7 @@ class DisturbanceControlsWidget(QWidget):
                 self.spin_poisson.setValue(cfg.poisson.peak_photons if cfg.poisson.enabled else 100.0)
                 self.spin_jitter.setValue(cfg.camera_jitter.max_x_px if cfg.camera_jitter.enabled else 0.0)
                 self.spin_platform.setValue(cfg.platform_motion.velocity_x if cfg.platform_motion.enabled else 0.0)
+                self.combo_platform_model.setCurrentText(cfg.platform_motion.model if cfg.platform_motion.enabled else "linear")
                 self.combo_atmo.setCurrentText(cfg.atmosphere.condition if cfg.atmosphere.enabled else "clear")
 
             self._emit_config()
@@ -214,6 +226,7 @@ class DisturbanceControlsWidget(QWidget):
         p_photons = self.spin_poisson.value()
         j_max = self.spin_jitter.value()
         p_vel = self.spin_platform.value()
+        p_model = self.combo_platform_model.currentText()
         atmo = self.combo_atmo.currentText()
 
         enabled = (g_sig > 0 or sp_prob > 0 or p_photons < 100 or j_max > 0 or p_vel > 0 or atmo != "clear")
@@ -224,7 +237,7 @@ class DisturbanceControlsWidget(QWidget):
             gaussian=GaussianNoiseConfig(enabled=(g_sig > 0), sigma=g_sig),
             poisson=PoissonNoiseConfig(enabled=(p_photons < 100), peak_photons=p_photons),
             camera_jitter=CameraJitterConfig(enabled=(j_max > 0), max_x_px=j_max, max_y_px=j_max),
-            platform_motion=PlatformMotionConfig(enabled=(p_vel > 0), model="linear", velocity_x=p_vel, velocity_y=p_vel*0.5),
+            platform_motion=PlatformMotionConfig(enabled=(p_vel > 0), model=p_model, velocity_x=p_vel, velocity_y=p_vel*0.5),
             atmosphere=AtmosphereConfig(enabled=(atmo != "clear"), condition=atmo),
         )
         self.disturbance_changed.emit(config)

@@ -219,14 +219,20 @@ class StressScreenView(QWidget):
         )
 
     def _on_run_stress_test(self) -> None:
-        """Execute a real backend experiment under current disturbance settings and show honest results."""
+        """Execute a real backend experiment under current disturbance settings and export results."""
+        import json
+        from datetime import datetime
+        from pathlib import Path
+
         # Sentence case action requirement: "Run stress test"
-        total_steps = 30
+        total_steps = 150  # 5 seconds at 30 fps
         detections = 0
         total_error = 0.0
+        max_error = 0.0
         error_samples = 0
+        start_time = time.time()
 
-        # Temporarily run 30 real backend steps
+        # Temporarily run 150 real backend steps
         for _ in range(total_steps):
             self._engine.step()
             frame = self._engine.get_camera_frame()
@@ -240,17 +246,40 @@ class StressScreenView(QWidget):
                         gt_y = self._engine.current_target_state.y
                         err = math.hypot(res.centroid[0] - gt_x, res.centroid[1] - gt_y)
                         total_error += err
+                        max_error = max(max_error, err)
                         error_samples += 1
 
+        exec_time = time.time() - start_time
+        avg_fps = total_steps / exec_time if exec_time > 0 else 0.0
         det_rate = (detections / total_steps) * 100.0
         mean_err = (total_error / error_samples) if error_samples > 0 else 0.0
+
+        # Generate performance report dict
+        report = {
+            "timestamp": datetime.now().isoformat(),
+            "disturbance_profile": self.controls_widget.combo_preset.currentText(),
+            "simulation_duration_frames": total_steps,
+            "processing_speed_fps": round(avg_fps, 2),
+            "lock_retention_rate": round(det_rate, 2),
+            "average_tracking_error_px": round(mean_err, 3),
+            "maximum_tracking_error_px": round(max_error, 3),
+            "target_loss_percent": round(100.0 - det_rate, 2)
+        }
+
+        # Save to logs directory
+        log_dir = Path("logs")
+        log_dir.mkdir(exist_ok=True)
+        report_path = log_dir / "stress_performance_report.json"
+        with open(report_path, "w") as f:
+            json.dump(report, f, indent=4)
 
         if self.isVisible():
             QMessageBox.information(
                 self,
                 "Stress Test Completed",
-                f"Executed {total_steps} real backend experiment steps.\n\n"
-                f"Detection Rate: {det_rate:.1f}%\n"
-                f"Mean Tracking Error: {mean_err:.2f} px\n"
-                f"Disturbance Profile: {self.controls_widget.combo_preset.currentText()}",
+                f"Executed {total_steps} frames.\n\n"
+                f"Lock Retention Rate: {det_rate:.1f}%\n"
+                f"Average Tracking Error: {mean_err:.2f} px\n"
+                f"Max Error: {max_error:.2f} px\n\n"
+                f"Detailed performance report saved to:\n{report_path.absolute()}",
             )
