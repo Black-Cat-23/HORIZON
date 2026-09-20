@@ -267,10 +267,17 @@ class HybridBeaconDetector:
                 cand.centroid, estimator_prediction, prediction_covariance
             )
 
-            # Strict Unmatched Penalty: When Neural detector is active and running,
-            # candidates not proposed/matched by Neural YOLOv8n are unverified optical noise clusters.
-            # Apply penalty = 0.20 to prevent false-positive detections on background noise specks when target is outside FOV.
-            penalty = 0.20 if self._neural_detector.is_model_loaded else 1.0
+            # Adaptive Optical-Neural Verification:
+            # Physically genuine optical emitters (high contrast/SNR) must not be suppressed
+            # merely because YOLOv8 missed them. Scale penalty smoothly based on optical evidence.
+            if not self._neural_detector.is_model_loaded:
+                penalty = 1.0
+            else:
+                contrast_ev = min(cand.local_contrast / 3.5, 1.0)
+                snr_ev = min(max(cand.peak_intensity - cand.background_estimate, 0.0) / 18.0, 1.0)
+                optical_strength = max(contrast_ev, snr_ev)
+                temporal_strength = s_temporal if estimator_prediction is not None else 0.5
+                penalty = float(np.clip(0.40 + 0.40 * optical_strength + 0.20 * temporal_strength, 0.40, 1.0))
 
             t_factor = s_temporal if estimator_prediction is not None else 1.0
             fused_score = float(
@@ -281,7 +288,7 @@ class HybridBeaconDetector:
                 f"confidence={c_class:.2f}, temporal={s_temporal:.2f})"
             )
             rej_reason = (
-                f"Unmatched classical optical candidate penalized by absent neural confirmation"
+                f"Unmatched classical optical candidate score below threshold (penalty={penalty:.2f})"
                 if penalty < 1.0 else "Classical candidate score below threshold"
             )
 

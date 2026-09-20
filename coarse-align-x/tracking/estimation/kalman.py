@@ -75,6 +75,9 @@ class KalmanFilterConfig:
     # Maximum valid dt before warning or forced coast clamp [seconds]
     max_dt_seconds: float = 2.0
 
+    # Enable directional velocity motion blur in measurement noise R:
+    adaptive_motion_noise: bool = False
+
 
 class TargetKalmanFilter:
     """Discrete-time Constant-Velocity Kalman Filter for optical beacon tracking.
@@ -270,10 +273,17 @@ class TargetKalmanFilter:
 
         z = np.array([[measurement[0]], [measurement[1]]], dtype=np.float64)
 
-        # Compute adaptive measurement noise R(confidence)
+        # Compute adaptive measurement noise R(confidence, velocity)
+        vel = None
+        if self._config.adaptive_motion_noise and self._x_pred is not None:
+            vx_p = float(self._x_pred[2, 0])
+            vy_p = float(self._x_pred[3, 0])
+            vel = (vx_p, vy_p)
+
         R = build_measurement_noise_matrix(
             confidence=confidence,
             base_sigma_px=self._config.base_measurement_sigma_px,
+            velocity_vector=vel,
         )
 
         # Compute innovation: y = z - H * x_pred, S = H P_pred H^T + R

@@ -236,6 +236,16 @@ def extract_candidates(
         bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )
 
+    # Secondary Morphological White Top-Hat extraction under diffuse/hazy illumination
+    if not contours and bg_level > 20.0:
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
+        tophat = cv2.morphologyEx(preprocessed, cv2.MORPH_TOPHAT, kernel)
+        th_tophat = int(max(14.0, 2.5 * noise_std))
+        _, bin_mask = cv2.threshold(tophat, th_tophat, 255, cv2.THRESH_BINARY)
+        contours, _ = cv2.findContours(
+            bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
+
     candidates: List[BeaconCandidate] = []
 
     # Pre-compute the valid area range: accept beacons from 5×5 to 20×20 pixels

@@ -113,6 +113,11 @@ class ScenarioConfigFormWidget(QWidget):
         self.spin_beacon_dim.valueChanged.connect(self._on_field_changed)
         layout_t.addRow("Beacon Diameter:", self.spin_beacon_dim)
 
+        self.combo_beacon_shape = QComboBox(cont_target.content_widget)
+        self.combo_beacon_shape.addItems(["Circular (Gaussian)", "Square (Box)"])
+        self.combo_beacon_shape.currentTextChanged.connect(self._on_field_changed)
+        layout_t.addRow("Beacon Shape:", self.combo_beacon_shape)
+
         form_main_layout.addWidget(cont_target)
 
         # ----------------------------------------------------------------------
@@ -208,6 +213,9 @@ class ScenarioConfigFormWidget(QWidget):
         else:
             self.combo_dist_preset.setCurrentText("NOMINAL")
 
+        shape_text = "Circular (Gaussian)" if getattr(cfg.target, "psf_model", "box") == "gaussian" else "Square (Box)"
+        self.combo_beacon_shape.setCurrentText(shape_text)
+
         self._validate_and_emit()
 
     def _on_field_changed(self) -> None:
@@ -236,6 +244,8 @@ class ScenarioConfigFormWidget(QWidget):
         # Build resolved AppConfig
         dist_cfg = get_preset_config(self.combo_dist_preset.currentText())
         traj_cfg = TrajectoryConfig(type=self.combo_traj.currentText())
+        is_circular = "Circular" in self.combo_beacon_shape.currentText()
+        psf_model = "gaussian" if is_circular else "box"
 
         resolved_config = AppConfig(
             trajectory=traj_cfg,
@@ -245,7 +255,12 @@ class ScenarioConfigFormWidget(QWidget):
                 duration_seconds=dur,
                 seed=self.spin_seed.value(),
             ),
-            target=TargetConfig(size_px=int(b_dim), intensity=255),
+            target=TargetConfig(
+                size_px=int(b_dim),
+                intensity=255,
+                psf_model=psf_model,
+                psf_sigma_px=max(1.0, b_dim / 6.0),
+            ),
         )
         self._current_config = resolved_config
         self.config_changed.emit(resolved_config)

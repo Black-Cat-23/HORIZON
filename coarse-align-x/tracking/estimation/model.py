@@ -14,7 +14,7 @@ Strict Invariant: Zero access to true target position or ground-truth state.
 from __future__ import annotations
 
 import math
-from typing import Literal
+from typing import Literal, Optional, Tuple
 import numpy as np
 
 
@@ -151,8 +151,10 @@ def build_measurement_noise_matrix(
     base_sigma_px: float = 0.5,
     min_sigma_px: float = 0.05,
     max_sigma_px: float = 5.0,
+    velocity_vector: Optional[Tuple[float, float]] = None,
+    spot_uncertainty: Optional[Tuple[float, float]] = None,
 ) -> np.ndarray:
-    """Construct the adaptive measurement noise covariance matrix R(confidence).
+    """Construct the adaptive measurement noise covariance matrix R(confidence, velocity, spot).
 
     PROJECT ENGINEERING PARAMETER:
         base_sigma_px: Nominal perception centroid measurement uncertainty [px]
@@ -168,14 +170,21 @@ def build_measurement_noise_matrix(
         sigma_r = clip(sigma_r, min_sigma_px, max_sigma_px)
         R = diag(sigma_r^2, sigma_r^2)
 
+        Directional Motion Blur / Anisotropy:
+        When the target possesses instantaneous velocity (v_x, v_y), optical integration
+        smears the centroid along the velocity vector:
+            R_motion = sigma_smear^2 * (v * v^T) / ||v||^2
+
     Args:
         confidence: Perception detection confidence in [0.0, 1.0].
         base_sigma_px: Nominal standard deviation at confidence 1.0 [px].
         min_sigma_px: Minimum allowable standard deviation [px].
         max_sigma_px: Maximum allowable standard deviation [px].
+        velocity_vector: Optional (vx, vy) estimated velocity [px/s].
+        spot_uncertainty: Optional (sigma_u, sigma_v) detector spot uncertainty [px].
 
     Returns:
-        2×2 float64 diagonal covariance matrix R.
+        2×2 float64 covariance matrix R (anisotropic when moving).
     """
     conf = float(np.clip(confidence, 0.05, 1.0))
     sigma_r = base_sigma_px / conf
@@ -185,4 +194,29 @@ def build_measurement_noise_matrix(
     R = np.zeros((2, 2), dtype=np.float64)
     R[0, 0] = var_r
     R[1, 1] = var_r
+
+    if spot_uncertainty is not None:
+        su, sv = spot_uncertainty
+        if su > 0.0 and sv > 0.0:
+            var_u = float(np.clip((su / conf) ** 2, min_sigma_px ** 2, max_sigma_px ** 2))
+            var_v = float(np.clip((sv / conf) ** 2, min_sigma_px ** 2, max_sigma_px ** 2))
+            R[0, 0] = var_u
+            R[1, 1] = var_v
+
+    if velocity_vector is not None:
+        vx, vy = float(velocity_vector[0]), float(velocity_vector[1])
+        speed_sq = vx * vx + vy * vy
+        if speed_sq > 4.0:  # Active motion (>2 px/s)
+            speed = math.sqrt(speed_sq)
+            # Physical camera exposure smear: exposure time ~10ms
+            # Motion uncertainty scales with speed up to 1.8 px
+            smear_sigma = min(1.8, 0.004 * speed)
+            smear_var = smear_sigma * smear_sigma
+            inv_speed_sq = 1.0 / speed_sq
+            R[0, 0] += smear_var * (vx * vx * inv_speed_sq)
+            R[1, 1] += smear_var * (vy * vy * inv_speed_sq)
+            cov_xy = smear_var * (vx * vy * inv_speed_sq)
+            R[0, 1] += cov_xy
+            R[1, 0] += cov_xy
+
     return R

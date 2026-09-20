@@ -23,11 +23,13 @@ No fake data, no dummy counters, no ground-truth leakage into perception.
 """
 
 from __future__ import annotations
+import csv
 import math
+import os
 from pathlib import Path
 import sys
 import time
-from typing import Optional
+from typing import Any, Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 
@@ -38,6 +40,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
+    QFileDialog,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
@@ -49,6 +52,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from sources.video_source import VideoFrameSource
 
 from simulator.core.config import (
     AppConfig,
@@ -149,6 +153,14 @@ class LiveScreenView(QWidget):
         self._last_fps_calc_time: float = time.time()
         self._current_fps: float = 0.0
         self._is_paused = True
+
+        # External Video Ingestion State (ISRO Evaluation-2)
+        self._input_source: str = "VIRTUAL_CAMERA"
+        self._video_source: Optional[VideoFrameSource] = None
+        self._video_path: Optional[str] = None
+        self._video_log_records: List[Dict[str, Any]] = []
+        self._video_last_frame: Optional[np.ndarray] = None
+        self._video_gt_data: Dict[int, Tuple[float, float]] = {}
 
         # Real-time update timer
         self._sim_timer = QTimer(self)
@@ -364,13 +376,44 @@ class LiveScreenView(QWidget):
         gt_form.addRow("Camera FOV Status:", self._lbl_fov_status)
         sidebar_layout.addWidget(gt_box)
 
+        # Button & Combo Style Helpers
+        btn_style = f"QPushButton {{ background-color: {COLOR_FIELD_RAISED}; color: {COLOR_TEXT_PRIMARY}; border: 1px solid {COLOR_HAIRLINE_BORDER_HEX}; border-radius: 4px; padding: 8px; font-weight: bold; font-family: {FONT_HEADLINE}; }} QPushButton:hover {{ background-color: #2a2a30; border-color: {COLOR_LOCK_CYAN}; }}"
+        combo_style = f"QComboBox {{ background-color: {COLOR_VOID}; color: {COLOR_TEXT_PRIMARY}; border: 1px solid {COLOR_HAIRLINE_BORDER_HEX}; border-radius: 3px; padding: 4px; font-family: {FONT_BODY}; }}"
+
+        # --- 4b. Video Input Source & Ingestion (ISRO Evaluation-2) ---
+        src_box = QGroupBox("Video Input Source (ISRO Evaluation-2)", self)
+        src_box.setStyleSheet(gb_style)
+        src_form = QFormLayout(src_box)
+        src_form.setSpacing(6)
+
+        self._combo_input_source = QComboBox(self)
+        self._combo_input_source.addItems(["VIRTUAL_CAMERA", "EXTERNAL_VIDEO"])
+        self._combo_input_source.setStyleSheet(combo_style)
+        self._combo_input_source.currentTextChanged.connect(self._on_input_source_changed)
+        src_form.addRow("Input Mode:", self._combo_input_source)
+
+        self._btn_load_video = QPushButton("📁 Load External MP4...", self)
+        self._btn_load_video.setStyleSheet(btn_style)
+        self._btn_load_video.clicked.connect(self._on_load_video_clicked)
+        src_form.addRow("Test Video:", self._btn_load_video)
+
+        self._lbl_video_info = QLabel("Engine: Internal Virtual Camera (60 FPS)")
+        self._lbl_video_info.setWordWrap(True)
+        self._lbl_video_info.setStyleSheet(f"font-family: {FONT_TELEMETRY}; color: {COLOR_TEXT_SECONDARY}; font-size: 11px;")
+        src_form.addRow("Source Info:", self._lbl_video_info)
+
+        self._btn_export_video_log = QPushButton("📊 Export Centroid Log (CSV)", self)
+        self._btn_export_video_log.setStyleSheet(btn_style)
+        self._btn_export_video_log.clicked.connect(self._on_export_centroid_csv_clicked)
+        src_form.addRow("Centroid Log:", self._btn_export_video_log)
+
+        sidebar_layout.addWidget(src_box)
+
         # --- 5. Configuration & Presets Form Box ---
         cfg_box = QGroupBox("Configuration Presets", self)
         cfg_box.setStyleSheet(gb_style)
         cfg_form = QFormLayout(cfg_box)
         cfg_form.setSpacing(6)
-
-        combo_style = f"QComboBox {{ background-color: {COLOR_VOID}; color: {COLOR_TEXT_PRIMARY}; border: 1px solid {COLOR_HAIRLINE_BORDER_HEX}; border-radius: 3px; padding: 4px; font-family: {FONT_BODY}; }}"
 
         self._combo_perc_mode = QComboBox(self)
         self._combo_perc_mode.addItems(["SOTA_FOURIER_GMM", "HYBRID", "NEURAL", "CLASSICAL"])
@@ -425,6 +468,20 @@ class LiveScreenView(QWidget):
         self._spin_duration.setStyleSheet(spin_style)
         self._spin_duration.valueChanged.connect(lambda _: self._reset_sim())
         cfg_form.addRow("Duration:", self._spin_duration)
+
+        self._combo_beacon_shape = QComboBox(self)
+        self._combo_beacon_shape.addItems(["Circular (Gaussian)", "Square (Box)"])
+        self._combo_beacon_shape.setStyleSheet(combo_style)
+        self._combo_beacon_shape.currentTextChanged.connect(lambda _: self._reset_sim())
+        cfg_form.addRow("Beacon Shape:", self._combo_beacon_shape)
+
+        self._spin_beacon_size = QSpinBox(self)
+        self._spin_beacon_size.setRange(5, 20)
+        self._spin_beacon_size.setValue(10)
+        self._spin_beacon_size.setSuffix(" px")
+        self._spin_beacon_size.setStyleSheet(spin_style)
+        self._spin_beacon_size.valueChanged.connect(lambda _: self._reset_sim())
+        cfg_form.addRow("Beacon Size:", self._spin_beacon_size)
 
         sidebar_layout.addWidget(cfg_box)
 
@@ -550,9 +607,16 @@ class LiveScreenView(QWidget):
 
     def _toggle_play(self) -> None:
         if self._is_paused:
+            if self._input_source == "EXTERNAL_VIDEO":
+                if self._video_source is None or not self._video_source.is_open():
+                    self._on_load_video_clicked()
+                    if self._video_source is None or not self._video_source.is_open():
+                        return
+                self._lbl_status.setText("Status: Tracking External Video...")
+            else:
+                self._lbl_status.setText("Status: Simulating & Tracking...")
             self._is_paused = False
             self._btn_play.setText("⏸ Pause")
-            self._lbl_status.setText("Status: Simulating & Tracking...")
             self._sim_timer.start()
         else:
             self._is_paused = True
@@ -562,7 +626,11 @@ class LiveScreenView(QWidget):
 
     def _toggle_blackout_test(self, checked: bool) -> None:
         self._suppress_detection_test = checked
-        curr_t = self._engine.clock.current_time if self._engine else 0.0
+        if self._input_source == "EXTERNAL_VIDEO" and self._video_source:
+            fps = max(self._video_source.get_fps(), 1.0)
+            curr_t = self._video_source._frame_index / fps
+        else:
+            curr_t = self._engine.clock.current_time if self._engine else 0.0
         if checked:
             self.event_timeline.add_event(curr_t, "DEGRADED", "Forced detection blackout test activated")
             self._btn_test_blackout.setText("⚡ Detection SUPPRESSED (Active Test)")
@@ -574,19 +642,43 @@ class LiveScreenView(QWidget):
         self._sim_timer.stop()
         self._is_paused = True
         self._btn_play.setText("▶ Resume")
+
+        if self._input_source == "EXTERNAL_VIDEO" and self._video_source is not None:
+            self._video_source.reset()
+            self._video_log_records.clear()
+            self._track.reset()
+            self._pat_mgr = PATModeManager()
+            self._pat_ctrl = PATCameraController()
+            self._last_estimate = None
+            self._last_pat_mode = PATMode.SEARCH
+            self._search_start_time = 0.0
+            self.event_timeline.clear_events()
+            self.event_timeline.add_event(0.0, "SEARCH", "Video tracking reset to frame 0")
+            ret, frame, timestamp, frame_idx, _ = self._video_source.read()
+            if ret and frame is not None:
+                self._video_last_frame = frame
+                self._video_source.seek(0)
+                disp_clean = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR) if frame.ndim == 2 else frame.copy()
+                self._render_opencv_to_label(disp_clean, self._clean_cam_label)
+                self._render_opencv_to_label(disp_clean, self._dist_cam_label)
+            self._lbl_status.setText("Status: Video Reset (Frame 0)")
+            return
+
         self._lbl_status.setText("Status: Reset")
 
         from simulator.core.config import TargetConfig, TargetInitialPosition
         traj_name = self._combo_traj.currentText()
+        is_circle = "Circular" in self._combo_beacon_shape.currentText()
+        b_size = self._spin_beacon_size.value()
         new_config = AppConfig(
             world=self._config.world,
             camera=self._config.camera,
             target=TargetConfig(
-                size_px=self._config.target.size_px,
+                size_px=b_size,
                 intensity=self._config.target.intensity,
                 initial_position=TargetInitialPosition(x=1000.0, y=1000.0),
-                psf_model=self._config.target.psf_model,
-                psf_sigma_px=self._config.target.psf_sigma_px,
+                psf_model="gaussian" if is_circle else "box",
+                psf_sigma_px=max(1.0, b_size / 6.0),
                 psf_background_adu=self._config.target.psf_background_adu,
             ),
             simulation=SimulationConfig(
@@ -625,10 +717,483 @@ class LiveScreenView(QWidget):
         self.event_timeline.add_event(0.0, "SEARCH", "System reset to initial SEARCH state")
         self._update_ui_displays()
 
+    def _on_reset_clicked(self) -> None:
+        """Alias for _reset_sim for backward compatibility."""
+        self._reset_sim()
+
+    # --------------------------------------------------------------------------
+    # External Video Ingestion Handlers (ISRO Evaluation-2)
+    # --------------------------------------------------------------------------
+    def _on_input_source_changed(self, mode: str) -> None:
+        self._input_source = mode
+        if mode == "EXTERNAL_VIDEO":
+            if self._video_source is None or not self._video_source.is_open():
+                self._on_load_video_clicked()
+            else:
+                self._lbl_status.setText(f"Status: Video Mode [{os.path.basename(self._video_path or '')}]")
+        else:
+            self._lbl_status.setText("Status: Virtual Camera Simulation")
+            self._lbl_video_info.setText("Engine: Internal Virtual Camera (60 FPS)")
+            self._reset_sim()
+
+    def _on_load_video_clicked(self) -> None:
+        default_dir = "data/samples" if os.path.exists("data/samples") else ""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select Test Video for Tracking Evaluation (ISRO PS-2)",
+            default_dir,
+            "Video Files (*.mp4 *.avi *.mov *.mkv);;All Files (*.*)",
+        )
+        if not file_path:
+            if self._video_source is None:
+                self._combo_input_source.blockSignals(True)
+                self._combo_input_source.setCurrentText("VIRTUAL_CAMERA")
+                self._combo_input_source.blockSignals(False)
+                self._input_source = "VIRTUAL_CAMERA"
+            return
+
+        self.load_video_source(file_path)
+
+    def load_video_source(self, file_path: str) -> bool:
+        """Load and initialize an external video file for live beacon tracking."""
+        try:
+            if self._video_source is not None:
+                self._video_source.close()
+
+            vsource = VideoFrameSource(file_path)
+            if not vsource.open():
+                QMessageBox.critical(self, "Video Load Error", f"Failed to open video file:\n{file_path}")
+                return False
+
+            meta = vsource.get_metadata()
+            self._video_source = vsource
+            self._video_path = file_path
+            self._video_log_records = []
+            self._input_source = "EXTERNAL_VIDEO"
+
+            self._combo_input_source.blockSignals(True)
+            self._combo_input_source.setCurrentText("EXTERNAL_VIDEO")
+            self._combo_input_source.blockSignals(False)
+
+            # Check for accompanying ground truth CSV
+            self._video_gt_data = {}
+            base_no_ext = os.path.splitext(file_path)[0]
+            gt_candidates = [f"{base_no_ext}_gt.csv", f"{base_no_ext}.csv"]
+            for cand in gt_candidates:
+                if os.path.isfile(cand):
+                    try:
+                        with open(cand, "r", encoding="utf-8") as f:
+                            reader = csv.DictReader(f)
+                            for row in reader:
+                                f_idx = int(row.get("frame_idx", row.get("frame", -1)))
+                                u_val = float(row.get("ground_truth_u", row.get("true_u", row.get("u", 0.0))))
+                                v_val = float(row.get("ground_truth_v", row.get("true_v", row.get("v", 0.0))))
+                                if f_idx >= 0:
+                                    self._video_gt_data[f_idx] = (u_val, v_val)
+                    except Exception:
+                        pass
+                    break
+
+            info_text = f"{os.path.basename(file_path)}\n{meta.native_width}x{meta.native_height} @ {meta.fps:.1f} FPS ({meta.total_frames} frames)"
+            if self._video_gt_data:
+                info_text += f"\n✓ Ground Truth ({len(self._video_gt_data)} frames)"
+            self._lbl_video_info.setText(info_text)
+
+            # Reset tracking filters & PAT manager
+            self._track.reset()
+            self._pat_mgr = PATModeManager()
+            self._pat_ctrl = PATCameraController()
+            self._last_estimate = None
+            self._last_pat_mode = PATMode.SEARCH
+            self._search_start_time = 0.0
+
+            # Timeline event
+            self.event_timeline.clear_events()
+            self.event_timeline.add_event(
+                0.0,
+                "SEARCH",
+                f"Loaded test video: {os.path.basename(file_path)} ({meta.total_frames} frames @ {meta.fps:.1f} FPS)",
+            )
+
+            # Read first frame to prime the viewports
+            ret, frame, timestamp, frame_idx, _ = self._video_source.read()
+            if ret and frame is not None:
+                self._video_last_frame = frame
+                self._video_source.seek(0)
+                disp_clean = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR) if frame.ndim == 2 else frame.copy()
+                self._render_opencv_to_label(disp_clean, self._clean_cam_label)
+                self._render_opencv_to_label(disp_clean, self._dist_cam_label)
+
+            self._is_paused = True
+            self._btn_play.setText("▶ Resume")
+            self._lbl_status.setText(f"Status: Video Ready ({os.path.basename(file_path)})")
+            return True
+        except Exception as ex:
+            QMessageBox.critical(self, "Video Load Failed", f"Error loading video:\n{str(ex)}")
+            return False
+
+    def _execute_video_step(self, step_start_t: float) -> None:
+        """Execute a single frame perception tick on the external video stream."""
+        if self._video_source is None or not self._video_source.is_open():
+            self._sim_timer.stop()
+            self._is_paused = True
+            self._btn_play.setText("▶ Resume")
+            self._lbl_status.setText("Status: No video source loaded")
+            return
+
+        # FPS Tracking
+        self._frame_count += 1
+        now = time.time()
+        dt_fps = now - self._last_fps_calc_time
+        if dt_fps >= 1.0:
+            self._current_fps = self._frame_count / dt_fps
+            self._frame_count = 0
+            self._last_fps_calc_time = now
+
+        ret, frame, timestamp, frame_idx, meta = self._video_source.read()
+        if not ret or frame is None:
+            self._sim_timer.stop()
+            self._is_paused = True
+            self._btn_play.setText("▶ Resume")
+            self._lbl_status.setText(f"Status: Video Complete ({len(self._video_log_records)} frames)")
+            self.event_timeline.add_event(
+                timestamp,
+                "TRACK COMPLETE",
+                f"External video stream complete ({len(self._video_log_records)} frames). Centroid log ready.",
+            )
+            return
+
+        self._video_last_frame = frame
+
+        # 1. Detect beacon centroid
+        detection_res = self._detector.detect(frame, timestamp=timestamp, collect_diagnostics=True)
+
+        # 2. Kalman Filter Estimation Step (no physical gimbal moving, rates=0)
+        estimate = self._track.step(
+            measurement=detection_res.centroid if (detection_res.detected and not self._suppress_detection_test) else None,
+            confidence=detection_res.confidence if not self._suppress_detection_test else 0.0,
+            timestamp=timestamp,
+            gimbal_pan_rate=0.0,
+            gimbal_tilt_rate=0.0,
+        )
+        self._last_estimate = estimate
+
+        # 3. PAT Mode Manager Step
+        fps = max(self._video_source.get_fps(), 1.0)
+        dt_step = 1.0 / fps
+        cov_trace = float(estimate.position_uncertainty**2)
+        is_measurement_accepted = (
+            detection_res.detected
+            and not self._suppress_detection_test
+            and estimate.filter_status != EstimatorStatus.REJECTED_MEASUREMENT
+        )
+        valid_confidence = detection_res.confidence if is_measurement_accepted else 0.0
+
+        pat_state = self._pat_mgr.process_step(
+            dt=dt_step,
+            timestamp_s=timestamp,
+            detection_valid=is_measurement_accepted,
+            detection_confidence=valid_confidence,
+            mahalanobis_d2=estimate.mahalanobis_distance**2,
+            covariance_trace=cov_trace,
+            estimated_u_px=estimate.estimated_x,
+            estimated_v_px=estimate.estimated_y,
+            estimated_vx_px_s=estimate.estimated_vx,
+            estimated_vy_px_s=estimate.estimated_vy,
+            current_pan_deg=0.0,
+            current_tilt_deg=0.0,
+            suppress_detection=self._suppress_detection_test,
+        )
+
+        # 4. Pointing Error & Centroid Error calculation
+        gt_pixel = self._video_gt_data.get(frame_idx, None)
+        pixel_error = None
+        if gt_pixel and detection_res.centroid:
+            pixel_error = math.hypot(detection_res.centroid[0] - gt_pixel[0], detection_res.centroid[1] - gt_pixel[1])
+
+        latency_ms = (time.perf_counter() - step_start_t) * 1000.0
+
+        # 5. Append record to video log
+        rec = {
+            "frame_idx": frame_idx,
+            "timestamp_s": round(timestamp, 4),
+            "detected": 1 if detection_res.detected else 0,
+            "centroid_u": round(float(detection_res.centroid[0]), 3) if detection_res.centroid else "",
+            "centroid_v": round(float(detection_res.centroid[1]), 3) if detection_res.centroid else "",
+            "estimated_u": round(float(estimate.estimated_x), 3),
+            "estimated_v": round(float(estimate.estimated_y), 3),
+            "estimated_vx": round(float(estimate.estimated_vx), 3),
+            "estimated_vy": round(float(estimate.estimated_vy), 3),
+            "ground_truth_u": round(float(gt_pixel[0]), 3) if gt_pixel else "",
+            "ground_truth_v": round(float(gt_pixel[1]), 3) if gt_pixel else "",
+            "centroid_error_px": round(float(pixel_error), 3) if pixel_error is not None else "",
+            "confidence": round(float(detection_res.confidence), 4),
+            "snr_db": round(float(getattr(detection_res, "snr_db", 0.0)), 2),
+            "pat_mode": pat_state.mode.value,
+            "latency_ms": round(latency_ms, 2),
+            "fps": round(self._current_fps, 1),
+        }
+        self._video_log_records.append(rec)
+
+        # Timeline event on state transition
+        if pat_state.mode != self._last_pat_mode:
+            ev_type = pat_state.mode.value
+            if pat_state.mode == PATMode.TRACK and self._last_pat_mode == PATMode.REACQUIRE:
+                ev_type = "TRACK RESTORED"
+            elif pat_state.mode == PATMode.ACQUIRE and detection_res.detected:
+                self.event_timeline.add_event(timestamp, "CANDIDATE FOUND", "Optical beacon detected in video frame")
+
+            self.event_timeline.add_event(
+                timestamp,
+                ev_type,
+                f"PAT state transition: {self._last_pat_mode.value if self._last_pat_mode else 'NONE'} → {pat_state.mode.value} ({pat_state.transition_reason})",
+            )
+            self._last_pat_mode = pat_state.mode
+
+        # 6. Render Viewports
+        # Clean frame
+        disp_clean = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR) if frame.ndim == 2 else frame.copy()
+        cv2.line(disp_clean, (320 - 15, 240), (320 + 15, 240), (180, 160, 100), 1)
+        cv2.line(disp_clean, (320, 240 - 15), (320, 240 + 15), (180, 160, 100), 1)
+        if gt_pixel:
+            cv2.circle(disp_clean, (int(gt_pixel[0]), int(gt_pixel[1])), 8, (0, 255, 0), 1)
+            cv2.putText(disp_clean, "GT", (int(gt_pixel[0]) + 10, int(gt_pixel[1]) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
+        self._render_opencv_to_label(disp_clean, self._clean_cam_label)
+
+        # Annotated tracking frame
+        annotated_frame = frame.copy()
+        meas_pixel = detection_res.centroid if (detection_res and detection_res.detected) else None
+        annotated_frame = draw_tracking_annotations(
+            frame=annotated_frame,
+            estimate=estimate,
+            ground_truth_pos=gt_pixel,
+            measurement_pos=meas_pixel,
+            detection_result=detection_res,
+        )
+        self._render_opencv_to_label(annotated_frame, self._dist_cam_label)
+
+        # 7. Update Telemetry Readouts
+        self._lbl_pat_mode.setText(pat_state.mode.value)
+        self._lbl_pat_quality.setText(f"{pat_state.track_quality * 100.0:.1f}%")
+        self._lbl_pat_error.setText(f"Pan: {pat_state.pan_error_deg:+.2f}° | Tilt: {pat_state.tilt_error_deg:+.2f}°")
+        self._lbl_pat_cmd_rate.setText("Pan: 0.00°/s | Tilt: 0.00°/s")
+        self._lbl_pat_act_rate.setText("N/A (External Video)")
+        self._lbl_pat_sat.setText("NO")
+
+        if estimate is not None:
+            self._lbl_est_status.setText(estimate.filter_status.value)
+            self._lbl_est_pos.setText(f"u: {estimate.estimated_x:.2f} | v: {estimate.estimated_y:.2f} px")
+            self._lbl_est_vel.setText(f"Vu: {estimate.estimated_vx:+.2f} | Vv: {estimate.estimated_vy:+.2f} px/s")
+            self._lbl_est_unc.setText(f"pos: ±{estimate.position_uncertainty:.2f} px | vel: ±{estimate.velocity_uncertainty:.2f} px/s")
+            inno_norm = float(np.linalg.norm(estimate.innovation)) if estimate.innovation is not None else 0.0
+            self._lbl_est_inno.setText(f"||y||: {inno_norm:.2f} px | d²: {estimate.mahalanobis_distance**2:.2f}")
+            self._lbl_est_latency.setText(f"{estimate.processing_time_ms:.1f} ms")
+
+        if detection_res is not None:
+            self._lbl_perc_lock.setText("LOCKED" if detection_res.detected else "SEARCHING")
+            self._lbl_perc_lock.setStyleSheet(f"font-family: {FONT_TELEMETRY}; color: {COLOR_CONFIRM_GREEN if detection_res.detected else COLOR_LOST_RED}; font-weight: bold;")
+            if detection_res.centroid:
+                u, v = detection_res.centroid
+                self._lbl_perc_centroid.setText(f"u: {u:.2f} | v: {v:.2f} px")
+            else:
+                self._lbl_perc_centroid.setText("u: N/A | v: N/A px")
+
+            if pixel_error is not None:
+                self._lbl_perc_error.setText(f"{pixel_error:.3f} px")
+            else:
+                self._lbl_perc_error.setText("N/A")
+            self._lbl_perc_conf.setText(f"{detection_res.confidence * 100.0:.1f}%")
+            self._lbl_perc_latency.setText(f"{detection_res.processing_time_ms:.1f} ms")
+
+        # Ground truth / kinematic readouts
+        self._lbl_time.setText(f"{timestamp:.3f} s")
+        self._lbl_frame.setText(str(frame_idx))
+        if gt_pixel:
+            self._lbl_pos.setText(f"u: {gt_pixel[0]:.1f} | v: {gt_pixel[1]:.1f} px")
+            self._lbl_cam_pixel.setText(f"u: {gt_pixel[0]:.2f} | v: {gt_pixel[1]:.2f} px")
+            self._lbl_fov_status.setText("INSIDE FOV")
+            self._lbl_fov_status.setStyleSheet(f"font-family: {FONT_TELEMETRY}; color: {COLOR_CONFIRM_GREEN}; font-weight: bold;")
+        else:
+            self._lbl_pos.setText("N/A (External Video)")
+            self._lbl_cam_pixel.setText("u: N/A | v: N/A px")
+            self._lbl_fov_status.setText("UNKNOWN")
+            self._lbl_fov_status.setStyleSheet(f"font-family: {FONT_TELEMETRY}; color: {COLOR_TEXT_SECONDARY};")
+        self._lbl_vel.setText(f"Vu: {estimate.estimated_vx:+.1f} | Vv: {estimate.estimated_vy:+.1f} px/s")
+
+        # Disturbance readouts
+        self._lbl_dt_status.setText("ACTIVE (Video Frame)")
+        self._lbl_dt_status.setStyleSheet(f"font-family: {FONT_TELEMETRY}; color: {COLOR_DISTURBANCE_AMBER}; font-weight: bold;")
+        self._lbl_gauss.setText("PRESENT")
+        self._lbl_atmos.setText("RAW VIDEO")
+
+        # Emit track_data_ready for Track screen
+        self.track_data_ready.emit(
+            frame,
+            detection_res,
+            estimate,
+            pat_state,
+            gt_pixel,
+            timestamp,
+        )
+
+        total_latency = (time.perf_counter() - step_start_t) * 1000.0
+        fps_display = self._current_fps if self._current_fps > 0 else fps
+        self._lbl_status.setText(f"Tracking Video: Frame {frame_idx} | {fps_display:.1f} FPS | Latency: {total_latency:.1f} ms")
+
+    def _on_export_centroid_csv_clicked(self) -> None:
+        """Export frame-by-frame centroid tracking and error log to CSV."""
+        if not self._video_log_records:
+            QMessageBox.information(
+                self,
+                "No Video Log Data",
+                "No video tracking data available to export.\n\n"
+                "Please select 'EXTERNAL_VIDEO', load a test MP4 video, and run playback first.",
+            )
+            return
+
+        default_name = "isro_centroid_tracking_log.csv"
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Centroid Tracking Log (ISRO Evaluation-2)",
+            default_name,
+            "CSV Files (*.csv);;All Files (*.*)",
+        )
+        if not file_path:
+            return
+
+        try:
+            fieldnames = [
+                "frame_idx",
+                "timestamp_s",
+                "detected",
+                "centroid_u",
+                "centroid_v",
+                "estimated_u",
+                "estimated_v",
+                "estimated_vx",
+                "estimated_vy",
+                "ground_truth_u",
+                "ground_truth_v",
+                "centroid_error_px",
+                "confidence",
+                "snr_db",
+                "pat_mode",
+                "latency_ms",
+                "fps",
+            ]
+            with open(file_path, "w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(self._video_log_records)
+
+            # Compute summary stats if errors are present
+            valid_errors = [float(r["centroid_error_px"]) for r in self._video_log_records if r["centroid_error_px"] != ""]
+            stats_msg = f"Successfully exported {len(self._video_log_records)} frame records to:\n{file_path}\n"
+            if valid_errors:
+                rmse = math.sqrt(sum(e**2 for e in valid_errors) / len(valid_errors))
+                mean_err = sum(valid_errors) / len(valid_errors)
+                max_err = max(valid_errors)
+                stats_msg += f"\nTracking Accuracy Summary:\n• Mean Centroid Error: {mean_err:.3f} px\n• RMSE Error: {rmse:.3f} px\n• Peak Error: {max_err:.3f} px"
+
+            QMessageBox.information(self, "Centroid Log Exported", stats_msg)
+        except Exception as ex:
+            QMessageBox.critical(self, "Export Failed", f"Failed to export centroid CSV:\n{str(ex)}")
+
+    def apply_mission_config(self, config: AppConfig) -> None:
+        """Apply resolved mission config from Mission Screen and initialize simulation."""
+        self._sim_timer.stop()
+        self._is_paused = True
+        self._btn_play.setText("▶ Resume")
+        self._lbl_status.setText(f"Status: Loaded Mission [{config.trajectory.type.upper()}]")
+
+        self._config = config
+
+        # Block signals during widget sync to prevent redundant resets
+        self._combo_traj.blockSignals(True)
+        self._combo_preset.blockSignals(True)
+        self._spin_seed.blockSignals(True)
+        self._spin_duration.blockSignals(True)
+
+        preset_name = getattr(config.disturbance, "preset", None) or getattr(config, "preset", None)
+        if not preset_name and config.disturbance is not None:
+            if not getattr(config.disturbance, "enabled", False):
+                preset_name = "NOMINAL"
+            elif getattr(config.disturbance, "atmosphere", None) and config.disturbance.atmosphere.condition == "haze":
+                preset_name = "DIFFICULT"
+            elif getattr(config.disturbance, "atmosphere", None) and config.disturbance.atmosphere.condition == "fog":
+                preset_name = "SEVERE"
+            elif getattr(config.disturbance, "atmosphere", None) and config.disturbance.atmosphere.condition == "low_light":
+                preset_name = "RECOVERY"
+            elif getattr(config.disturbance, "atmosphere", None) and config.disturbance.atmosphere.condition == "rain":
+                preset_name = "ADVERSARIAL"
+            elif getattr(config.disturbance, "gaussian", None) and config.disturbance.gaussian.sigma >= 19.0:
+                preset_name = "ADVERSARIAL"
+            else:
+                preset_name = "NOMINAL"
+
+        preset_str = preset_name if preset_name else "CUSTOM"
+
+        try:
+            traj_type = config.trajectory.type
+            idx = self._combo_traj.findText(traj_type)
+            if idx >= 0:
+                self._combo_traj.setCurrentIndex(idx)
+
+            if preset_name:
+                idx_preset = self._combo_preset.findText(preset_name)
+                if idx_preset >= 0:
+                    self._combo_preset.setCurrentIndex(idx_preset)
+
+            if config.simulation.seed is not None:
+                self._spin_seed.setValue(config.simulation.seed)
+            if config.simulation.duration_seconds is not None:
+                self._spin_duration.setValue(config.simulation.duration_seconds)
+
+            if config.target is not None:
+                self._spin_beacon_size.blockSignals(True)
+                self._combo_beacon_shape.blockSignals(True)
+                try:
+                    if hasattr(config.target, "size_px") and config.target.size_px is not None:
+                        self._spin_beacon_size.setValue(max(5, min(20, int(config.target.size_px))))
+                    if getattr(config.target, "psf_model", "box") == "gaussian":
+                        self._combo_beacon_shape.setCurrentText("Circular (Gaussian)")
+                    else:
+                        self._combo_beacon_shape.setCurrentText("Square (Box)")
+                finally:
+                    self._spin_beacon_size.blockSignals(False)
+                    self._combo_beacon_shape.blockSignals(False)
+        finally:
+            self._combo_traj.blockSignals(False)
+            self._combo_preset.blockSignals(False)
+            self._spin_seed.blockSignals(False)
+            self._spin_duration.blockSignals(False)
+
+        # Initialize real engine and controllers
+        self._engine = SimulationEngine(self._config)
+        self._engine.initialize()
+        self._track.reset()
+        self._pat_mgr = PATModeManager()
+        self._pat_ctrl = PATCameraController()
+        self._last_estimate = None
+        self._last_pat_mode = PATMode.SEARCH
+        self._search_start_time = 0.0
+
+        self.event_timeline.clear_events()
+        self.event_timeline.add_event(
+            0.0,
+            "SEARCH",
+            f"Mission launched: {config.trajectory.type.upper()} ({preset_str})",
+        )
+        self._update_ui_displays()
+
     # --------------------------------------------------------------------------
     # Simulation Tick Execution
     # --------------------------------------------------------------------------
     def _on_sim_step(self) -> None:
+        if self._input_source == "EXTERNAL_VIDEO":
+            self._execute_video_step(time.perf_counter())
+            return
+
         if not self._engine.is_running:
             self._sim_timer.stop()
             self._is_paused = True
