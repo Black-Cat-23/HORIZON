@@ -1,0 +1,11 @@
+# HORIZON YOLOv8n Beacon Detection Dataset Configuration
+# Single-class object detection for mobile FSOC optical beacon tracking
+path: research/data/yolo_dataset_split
+train: train/images
+val: val/images
+test: test/images
+
+# Classes
+nc: 1
+names:
+  0: beacon

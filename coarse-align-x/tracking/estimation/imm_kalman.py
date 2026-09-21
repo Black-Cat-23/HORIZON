@@ -45,23 +45,26 @@ class InteractingMultipleModelFilter:
     def __init__(self, config: Optional[KalmanFilterConfig] = None) -> None:
         self._config = config or KalmanFilterConfig(accel_noise_sigma=200.0)
 
-        # Instantiate 3 sub-filters
+        # Instantiate 3 sub-filters with adaptive motion blur covariance
         self._cv_filter = TargetKalmanFilter(
             KalmanFilterConfig(
                 accel_noise_sigma=200.0,
                 base_measurement_sigma_px=self._config.base_measurement_sigma_px,
+                adaptive_motion_noise=True,
             )
         )
         self._ca_filter = TargetKalmanFilter(
             KalmanFilterConfig(
                 accel_noise_sigma=800.0,
                 base_measurement_sigma_px=self._config.base_measurement_sigma_px,
+                adaptive_motion_noise=True,
             )
         )
         self._maneuver_filter = TargetKalmanFilter(
             KalmanFilterConfig(
                 accel_noise_sigma=2500.0,
                 base_measurement_sigma_px=self._config.base_measurement_sigma_px,
+                adaptive_motion_noise=True,
             )
         )
 
@@ -192,7 +195,16 @@ class InteractingMultipleModelFilter:
         fused_pvx = w_cv * est_cv.predicted_vx + w_ca * est_ca.predicted_vx + w_man * est_man.predicted_vx
         fused_pvy = w_cv * est_cv.predicted_vy + w_ca * est_ca.predicted_vy + w_man * est_man.predicted_vy
 
-        fused_cov = w_cv * est_cv.covariance + w_ca * est_ca.covariance + w_man * est_man.covariance
+        fused_cov = (w_cv * est_cv.covariance + w_ca * est_ca.covariance + w_man * est_man.covariance).copy()
+        # Rigorous IMM spread-of-the-means term: \sum \mu_j * (\hat{x}_j - \hat{x})(\hat{x}_j - \hat{x})^T
+        for w_j, est_j in [(w_cv, est_cv), (w_ca, est_ca), (w_man, est_man)]:
+            dx = np.array([
+                [est_j.estimated_x - fused_x],
+                [est_j.estimated_y - fused_y],
+                [est_j.estimated_vx - fused_vx],
+                [est_j.estimated_vy - fused_vy],
+            ], dtype=np.float64)
+            fused_cov += w_j * (dx @ dx.T)
 
         self._track_age += 1
         self._last_timestamp = timestamp if timestamp is not None else self._last_timestamp

@@ -62,7 +62,7 @@ class CameraConfig:
     fov_horizontal_deg: float = 4.0
     fov_vertical_deg: float = 3.0
     update_rate_hz: float = 30.0
-    rate_limit_deg_s: float = 5.0
+    rate_limit_deg_s: float = 20.0
     # Initial camera pointing (all three default to 0.0 = boresight centered)
     initial_pan_deg: float = 0.0
     initial_tilt_deg: float = 0.0

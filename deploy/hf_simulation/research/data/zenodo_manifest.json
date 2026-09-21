@@ -1,0 +1,14 @@
+{
+  "dataset_name": "ADVRHumanoids/nn_laser_spot_tracking (Zenodo)",
+  "source": "https://github.com/ADVRHumanoids/nn_laser_spot_tracking",
+  "license": "BSD-3-Clause",
+  "total_images": 200,
+  "valid_images": 200,
+  "invalid_images": 0,
+  "total_annotations": 165,
+  "class_names": [
+    "beacon"
+  ],
+  "mean_bbox_width_norm": 0.026135048484848485,
+  "mean_bbox_height_norm": 0.03484673333333333
+}

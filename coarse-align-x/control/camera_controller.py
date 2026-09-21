@@ -40,7 +40,7 @@ class PATCameraController:
         controller_type: str = "PID",
         lead_time_s: float = 0.05,
         smoothing_factor: float = 0.85,
-        max_rate_change_deg_s2: float = 45.0,
+        max_rate_change_deg_s2: float = 180.0,
     ):
         self.thresholds = thresholds or PATThresholds()
         self.scheduler = scheduler or GainScheduler()
@@ -110,11 +110,17 @@ class PATCameraController:
             self.reset()
 
         elif mode == PATMode.REACQUIRE:
-            cmd_pan = reacquire_pan_rate
-            cmd_tilt = reacquire_tilt_rate
+            if reacquire_pan_rate != 0.0 or reacquire_tilt_rate != 0.0:
+                cmd_pan = reacquire_pan_rate
+                cmd_tilt = reacquire_tilt_rate
+            else:
+                # Inertial momentum coasting: decay last command smoothly by 0.95 to maintain target inside FOV
+                cmd_pan = self._prev_cmd_pan * 0.95
+                cmd_tilt = self._prev_cmd_tilt * 0.95
             pid_pan, pid_tilt = 0.0, 0.0
             ff_pan, ff_tilt = 0.0, 0.0
-            self.reset()
+            self._prev_cmd_pan = cmd_pan
+            self._prev_cmd_tilt = cmd_tilt
 
         elif mode in (PATMode.ACQUIRE, PATMode.TRACK, PATMode.DEGRADED):
             # 1. Compute scheduled gains tailored to current tracking regime and confidence
@@ -126,21 +132,24 @@ class PATCameraController:
             self.active_gains = gains
 
             # 2. Determine target angular velocity: use direct 6-state IMM rate if provided, else convert pixel velocity
+            # Optical scale: 4.0 deg / 640 px = 0.00625 deg/px; 3.0 deg / 480 px = 0.00625 deg/px
+            deg_per_px_pan = 4.0 / 640.0
+            deg_per_px_tilt = 3.0 / 480.0
             if estimated_omega_x_deg_s is not None:
                 pan_vel_deg_s = float(estimated_omega_x_deg_s)
             else:
-                pan_vel_deg_s = estimated_vx_px_s * (self.thresholds.max_pan_rate_deg_s / 640.0)
+                pan_vel_deg_s = estimated_vx_px_s * deg_per_px_pan
 
             if estimated_omega_y_deg_s is not None:
                 tilt_vel_deg_s = float(estimated_omega_y_deg_s)
             else:
-                tilt_vel_deg_s = estimated_vy_px_s * (self.thresholds.max_tilt_rate_deg_s / 480.0)
+                tilt_vel_deg_s = estimated_vy_px_s * deg_per_px_tilt
 
             # 3. Forward Kinematic Extrapolation (Predictive Pointing Delay Compensation)
             # Extrapolates future pointing error over sensor/processing/actuator lag tau:
             # e_pred = e(t) + omega * tau
             # Modulate lead time with track quality (zero out lead extrapolation when track is degraded)
-            eff_lead_time = self.lead_time_s * float(np.clip(pat_state.track_quality, 0.0, 1.0))
+            eff_lead_time = min(0.033, self.lead_time_s) * float(np.clip(pat_state.track_quality, 0.0, 1.0))
             pan_error_pred = pat_state.pan_error_deg + pan_vel_deg_s * eff_lead_time
             tilt_error_pred = pat_state.tilt_error_deg + tilt_vel_deg_s * eff_lead_time
 

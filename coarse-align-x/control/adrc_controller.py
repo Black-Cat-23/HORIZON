@@ -23,14 +23,14 @@ class ADRCAxisController:
     def __init__(
         self,
         b0: float = 1.0,
-        omega_o: float = 60.0,
-        omega_c: float = 20.0,
+        omega_o: float = 25.0,
+        omega_c: float = 10.0,
         output_limit: float = 20.0,
     ):
         """
         Args:
             b0: System input gain estimate (deg/s^2 per unit control input).
-            omega_o: Observer bandwidth (rad/s). Higher values track fast disturbances.
+            omega_o: Observer bandwidth (rad/s). Tuned for discrete 60Hz stability.
             omega_c: Controller bandwidth (rad/s). Sets closed-loop error response speed.
             output_limit: Maximum allowed rate command output in deg/s.
         """
@@ -80,21 +80,21 @@ class ADRCAxisController:
             return 0.0
 
         if not self.initialized:
-            self.z1 = error
+            self.z1 = float(error)
             self.z2 = 0.0
             self.z3 = 0.0
             self.initialized = True
 
-        # 1. Update Linear Extended State Observer (LESO) via Euler integration
-        obs_err = error - self.z1
+        # 1. Update Linear Extended State Observer (LESO) via Euler integration with bounds
+        obs_err = float(np.clip(error - self.z1, -10.0, 10.0))
 
         dz1 = self.z2 + self.beta1 * obs_err
         dz2 = self.z3 + self.b0 * self.last_u + self.beta2 * obs_err
         dz3 = self.beta3 * obs_err
 
-        self.z1 += dz1 * dt
-        self.z2 += dz2 * dt
-        self.z3 += dz3 * dt
+        self.z1 = float(np.clip(self.z1 + dz1 * dt, -45.0, 45.0))
+        self.z2 = float(np.clip(self.z2 + dz2 * dt, -180.0, 180.0))
+        self.z3 = float(np.clip(self.z3 + dz3 * dt, -500.0, 500.0))
 
         # 2. State Feedback Control Law with scaled bandwidth
         kp_eff = self.kp * gain_scale

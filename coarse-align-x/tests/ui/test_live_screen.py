@@ -89,3 +89,72 @@ def test_event_timeline_widget(qapp):
 
     timeline.clear_events()
     assert len(timeline._records) == 0
+
+
+def test_live_screen_apply_mission_config(qapp):
+    """Verify apply_mission_config applies custom configuration from Mission Setup."""
+    from simulator.core.config import AppConfig, TrajectoryConfig, SimulationConfig, CircularTrajectoryConfig
+    from simulator.disturbances.presets import get_preset_config
+
+    screen = LiveScreenView()
+    custom_cfg = AppConfig(
+        simulation=SimulationConfig(seed=987, duration_seconds=15.0),
+        trajectory=TrajectoryConfig(type="circular", circular=CircularTrajectoryConfig(radius=150.0)),
+        disturbance=get_preset_config("DIFFICULT"),
+    )
+    screen.apply_mission_config(custom_cfg)
+
+    assert screen._config.simulation.seed == 987
+    assert screen._config.simulation.duration_seconds == 15.0
+    assert screen._config.trajectory.type == "circular"
+    assert screen._combo_traj.currentText() == "circular"
+    assert screen._spin_seed.value() == 987
+    assert screen._spin_duration.value() == 15.0
+    assert screen._combo_preset.currentText() == "DIFFICULT"
+    assert screen._engine is not None
+    assert screen._engine.is_running is True
+
+
+def test_live_screen_external_video_ingestion(qapp, tmp_path):
+    """Verify loading and processing external MP4 video file (ISRO Performance-2 requirement)."""
+    import os
+    import time
+
+    video_path = "data/samples/isro_sample_beacon_test.mp4"
+    if not os.path.exists(video_path):
+        from scripts.generate_sample_video import generate_sample_beacon_video
+        generate_sample_beacon_video()
+
+    screen = LiveScreenView()
+    success = screen.load_video_source(video_path)
+    assert success is True
+    assert screen._input_source == "EXTERNAL_VIDEO"
+    assert screen._video_source is not None
+    assert screen._video_source.is_open() is True
+    assert len(screen._video_gt_data) > 0
+
+    # Step through 5 frames
+    for _ in range(5):
+        screen._execute_video_step(time.perf_counter())
+
+    assert len(screen._video_log_records) == 5
+    first_rec = screen._video_log_records[0]
+    assert first_rec["frame_idx"] == 0
+    assert first_rec["detected"] == 1
+    assert isinstance(first_rec["centroid_u"], float)
+    assert isinstance(first_rec["centroid_v"], float)
+    assert first_rec["centroid_error_px"] != ""
+    assert float(first_rec["centroid_error_px"]) < 10.0
+
+    # Test export to CSV
+    out_csv = tmp_path / "test_centroid_export.csv"
+    import csv
+    fieldnames = list(first_rec.keys())
+    with open(out_csv, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(screen._video_log_records)
+
+    assert out_csv.exists()
+    assert out_csv.stat().st_size > 0
+

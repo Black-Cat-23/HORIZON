@@ -185,15 +185,33 @@ class SOTABeaconDetector:
                 cog_u = float(np.sum(grid_x * roi_sub) / total_flux)
                 cog_v = float(np.sum(grid_y * roi_sub) / total_flux)
 
-                # Resize ref PSF to ROI dimensions for Fourier Phase Correlation
-                ref_resized = cv2.resize(self._ref_psf, (roi_sub.shape[1], roi_sub.shape[0]))
-                du_fourier, dv_fourier, fourier_conf = compute_fourier_phase_correlation(
-                    roi_sub, ref_resized
+                # Isotropic analytical Gaussian reference PSF matching ROI dimensions
+                h_roi, w_roi = roi_sub.shape[:2]
+                grid_y, grid_x = np.indices((h_roi, w_roi), dtype=np.float64)
+                cy_center = (h_roi - 1.0) / 2.0
+                cx_center = (w_roi - 1.0) / 2.0
+                sigma_psf = max(1.0, min(float(selected.sigma_u_px), 3.0))
+                ref_psf = np.exp(-((grid_x - cx_center) ** 2 + (grid_y - cy_center) ** 2) / (2.0 * sigma_psf ** 2))
+                ref_psf /= (np.sum(ref_psf) + 1e-9)
+
+                shift_u, shift_v, fourier_conf = compute_fourier_phase_correlation(
+                    roi_sub, ref_psf
                 )
 
-                # Fuse Weighted CoG with Fourier Phase Correlation
-                fused_u = 0.6 * cog_u + 0.4 * (cog_u + du_fourier)
-                fused_v = 0.6 * cog_v + 0.4 * (cog_v + dv_fourier)
+                # Fourier estimated centroid location within ROI
+                pos_fourier_u = cx_center + shift_u
+                pos_fourier_v = cy_center + shift_v
+
+                # Agreement validation between CoG and Fourier phase peak
+                diff_dist = math.hypot(pos_fourier_u - cog_u, pos_fourier_v - cog_v)
+                if diff_dist < 3.0 and fourier_conf >= 0.2:
+                    # Valid Fourier subpixel refinement
+                    weight_fourier = float(np.clip(0.5 * fourier_conf, 0.0, 0.6))
+                    fused_u = (1.0 - weight_fourier) * cog_u + weight_fourier * pos_fourier_u
+                    fused_v = (1.0 - weight_fourier) * cog_v + weight_fourier * pos_fourier_v
+                else:
+                    fused_u = cog_u
+                    fused_v = cog_v
 
                 centroid = (float(x1 + fused_u), float(y1 + fused_v))
 

@@ -62,8 +62,12 @@ class NeuralBeaconDetector:
             return
 
         try:
+            opts = ort.SessionOptions()
+            opts.intra_op_num_threads = 4
+            opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+            opts.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
             self._session = ort.InferenceSession(
-                str(model_path), providers=["CPUExecutionProvider"]
+                str(model_path), sess_options=opts, providers=["CPUExecutionProvider"]
             )
             self._input_name = self._session.get_inputs()[0].name
             logger.info("Successfully initialized ONNX Runtime session for %s", model_path)
@@ -84,6 +88,8 @@ class NeuralBeaconDetector:
         frame: np.ndarray,
         timestamp: float = 0.0,
         collect_diagnostics: bool = False,
+        estimator_prediction: Optional[Tuple[float, float]] = None,
+        **kwargs,
     ) -> DetectionResult:
         """Process 640×480 optical frame and locate beacon centroid using YOLOv8n ONNX model."""
         t_start = time.perf_counter()
@@ -107,13 +113,13 @@ class NeuralBeaconDetector:
                 timestamp=timestamp,
             )
 
-        # 1. Preprocessing: 640x480 grayscale uint8 -> 640x640 float32 RGB tensor [1, 3, 640, 640]
+        # 1. High-Performance Preprocessing: Resize single channel, vectorized normalize & repeat to [1, 3, 640, 640]
         h_orig, w_orig = valid_frame.shape
-        img_rgb = cv2.cvtColor(valid_frame, cv2.COLOR_GRAY2RGB)
-        img_resized = cv2.resize(img_rgb, (self._neural_cfg.input_size, self._neural_cfg.input_size))
-        img_tensor = img_resized.astype(np.float32) / 255.0
-        img_tensor = np.transpose(img_tensor, (2, 0, 1))
-        img_batch = np.expand_dims(img_tensor, axis=0)
+        in_sz = self._neural_cfg.input_size
+        img_resized = cv2.resize(valid_frame, (in_sz, in_sz), interpolation=cv2.INTER_LINEAR)
+        img_f32 = img_resized.astype(np.float32) * (1.0 / 255.0)
+        img_tensor = np.repeat(img_f32[np.newaxis, :, :], 3, axis=0)
+        img_batch = img_tensor[np.newaxis, ...]
 
         # 2. Execute ONNX Runtime Inference
         raw_outputs = self._session.run(None, {self._input_name: img_batch})[0]
@@ -127,14 +133,28 @@ class NeuralBeaconDetector:
             boxes = output[:4, :].T
             confs = output[4, :]
 
-            scale_x = w_orig / float(self._neural_cfg.input_size)
-            scale_y = h_orig / float(self._neural_cfg.input_size)
+            scale_x = w_orig / float(in_sz)
+            scale_y = h_orig / float(in_sz)
 
             valid_mask = confs >= self._neural_cfg.confidence_threshold
             if np.any(valid_mask):
                 valid_indices = np.where(valid_mask)[0]
-                # Sort candidates by confidence descending
-                sorted_indices = valid_indices[np.argsort(-confs[valid_indices])]
+                # Precompute background median once using 4x spatial subsampling for speed
+                bg_est = float(np.median(valid_frame[::4, ::4]))
+
+                # If temporal prediction is available, rank candidates by joint neural confidence & spatial proximity
+                if estimator_prediction is not None:
+                    pred_u, pred_v = estimator_prediction
+                    def _rank_score(idx: int) -> float:
+                        cx = boxes[idx, 0] * scale_x
+                        cy = boxes[idx, 1] * scale_y
+                        dist = np.hypot(cx - pred_u, cy - pred_v)
+                        # Proximity bonus within 60px
+                        prox = np.exp(-0.5 * (dist / 40.0) ** 2)
+                        return float(0.6 * confs[idx] + 0.4 * prox)
+                    sorted_indices = valid_indices[np.argsort([-_rank_score(i) for i in valid_indices])]
+                else:
+                    sorted_indices = valid_indices[np.argsort(-confs[valid_indices])]
 
                 for idx in sorted_indices:
                     cx_box, cy_box, w_box, h_box = boxes[idx]
@@ -158,11 +178,10 @@ class NeuralBeaconDetector:
                         # Check if crop has real optical intensity contrast above background noise
                         crop = valid_frame[y1 : y1 + bh, x1 : x1 + bw]
                         if crop.size > 0:
-                            bg_est = float(np.median(valid_frame))
                             max_val = float(np.max(crop))
                             net_flux = float(np.sum(np.maximum(crop.astype(float) - bg_est, 0.0)))
                             # Reject dark/empty bounding boxes without real optical beacon signal
-                            if net_flux >= 35.0 and (max_val - bg_est) >= 25.0:
+                            if net_flux >= 25.0 and (max_val - bg_est) >= 15.0:
                                 best_cand_bbox = (x1, y1, bw, bh)
                                 best_conf = conf
                                 break

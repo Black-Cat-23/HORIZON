@@ -37,6 +37,7 @@ class ReportLinksWidget(PanelSurface):
     """Report Links & Validation Artifact Access Component Widget."""
 
     REPORTS = [
+        ("ISRO Performance PDF Report", "HORIZON_ISRO_Performance_Report.pdf", "Official publication-grade PDF report for ISRO jury"),
         ("HTML Validation Report", "COARSE_ALIGN_X_VALIDATION_REPORT.html", "Formal interactive HTML validation report"),
         ("Engineering Markdown Report", "AUTOMATED_ENGINEERING_REPORT.md", "Automated statistical engineering report"),
         ("Raw Benchmark JSON Results", "results/comparisons/comparison.json", "Exact Phase 10 aggregate metrics JSON"),
