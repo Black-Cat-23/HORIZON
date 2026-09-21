@@ -139,11 +139,31 @@ def find_latest_checkpoint() -> Optional[Path]:
     return max(candidates, key=lambda p: p.stat().st_mtime)
 
 
+def validate_onnx(onnx_model_path: Path) -> Dict[str, Any]:
+    """Convenience entry point used by run_colab_pipeline.py step 9.
+
+    Finds the latest best.pt and the v2 test split directory automatically.
+    """
+    onnx_model_path = Path(onnx_model_path)
+    pt_p = find_latest_checkpoint()
+    # Try v2 split first, fall back to v1
+    test_dir = Path("research/data/yolo_dataset_split_v2/test/images")
+    if not test_dir.exists():
+        test_dir = Path("research/data/yolo_dataset_split/test/images")
+
+    if pt_p and pt_p.exists() and onnx_model_path.exists() and test_dir.exists():
+        return validate_pytorch_onnx_consistency(pt_p, onnx_model_path, test_dir)
+    return {"error": f"Missing files: pt={pt_p}, onnx={onnx_model_path.exists()}, test_dir={test_dir.exists()}"}
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     pt_p = find_latest_checkpoint()
     onnx_p = Path("research/training/models/yolov8n_beacon.onnx")
-    test_dir = Path("research/data/yolo_dataset_split/test/images")
+    # Try v2 split first
+    test_dir = Path("research/data/yolo_dataset_split_v2/test/images")
+    if not test_dir.exists():
+        test_dir = Path("research/data/yolo_dataset_split/test/images")
     if pt_p and pt_p.exists() and onnx_p.exists() and test_dir.exists():
         res = validate_pytorch_onnx_consistency(pt_p, onnx_p, test_dir)
         print(json.dumps(res, indent=2))
