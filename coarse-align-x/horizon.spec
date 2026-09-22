@@ -22,6 +22,15 @@ hiddenimports += [
     'cv2',
     'numpy',
     'pandas',
+    'reportlab',
+    'reportlab.lib',
+    'reportlab.lib.pagesizes',
+    'reportlab.lib.styles',
+    'reportlab.platypus',
+    'reportlab.pdfgen',
+    'sources',
+    'sources.video_source',
+    'sources.frame_source',
 ]
 
 # Data files to bundle – include models, configs, fonts, icons, plugins, assets
@@ -44,6 +53,15 @@ if os.path.isdir('plugins'):
 # Additional assets (splash screen, etc.)
 if os.path.isdir('assets'):
     datas += collect_data_files('assets')
+# Data samples (ISRO sample test video)
+if os.path.isdir('data'):
+    for root, _, files in os.walk('data'):
+        for f in files:
+            p = os.path.join(root, f)
+            rel_dir = os.path.relpath(root, '.')
+            datas.append((p, rel_dir))
+if os.path.isfile('HORIZON_ISRO_Performance_Report.pdf'):
+    datas.append(('HORIZON_ISRO_Performance_Report.pdf', '.'))
 
 # Excludes – remove training‑only packages and unused Qt plugins
 excludes = [

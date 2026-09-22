@@ -137,12 +137,83 @@ def test_time_series_analytics_widget(qapp):
         tilt_errors=[0.3, 0.1, 0.05],
         confidences=[85.0, 95.0, 99.0],
     )
-    assert widget.graph_error.pixmap() is not None
+    assert widget.graph_error._val_data == [5.2, 3.1, 1.4]
 
 
 def test_track_screen_view_integration(qapp):
     """Verify TrackScreenView composite widget initialization."""
     screen = TrackScreenView()
-    assert screen._engine is not None
-    assert screen._detector is not None
     assert screen.geometry_view is not None
+    assert screen.radar_widget is not None
+    assert screen.cov_panel is not None
+    assert screen.estimate_panel is not None
+    assert screen.perception_panel is not None
+    assert screen.analytics_panel is not None
+
+
+def test_coarse_to_fine_radar_widget(qapp):
+    """Verify CoarseToFineRadarWidget updates alignment and coupling state."""
+    from simulator.ui.track.radar_widget import CoarseToFineRadarWidget
+    radar = CoarseToFineRadarWidget()
+    assert radar._coupling_pct == 0.0
+    radar.update_alignment(pan_error_deg=0.001, tilt_error_deg=0.001, error_px=0.5)
+    assert radar._fps_locked is True
+    assert radar._coupling_pct > 90.0
+
+
+def test_executive_kpi_strip_handoff_and_coupling(qapp):
+    """Verify ExecutiveKPIStripWidget FSM lock gate, consecutive lock counter, and coupling physics."""
+    from simulator.ui.track.track_screen import ExecutiveKPIStripWidget
+    from pat.state import PATMode, PATState
+
+    kpi = ExecutiveKPIStripWidget()
+    assert kpi._consecutive_lock_frames == 0
+
+    # 1. Feed 25 locked frames (within FSM basin <= 2.5 px, e.g. 0.0005 deg = 0.03 px)
+    pat_locked = PATState(
+        mode=PATMode.TRACK,
+        pan_error_deg=0.0005,
+        tilt_error_deg=0.0003,
+        track_quality=0.98,
+    )
+    est = StateEstimate(
+        estimated_x=320.0,
+        estimated_y=240.0,
+        estimated_vx=0.0,
+        estimated_vy=0.0,
+        covariance=np.eye(4) * 0.5,
+        innovation=np.array([[0.1], [0.1]]),
+        predicted_x=320.0,
+        predicted_y=240.0,
+        filter_status=EstimatorStatus.TRACKING,
+        timestamp=1.0,
+        measurement_available=True,
+        track_age=50,
+        consecutive_measurements=50,
+        consecutive_misses=0,
+    )
+
+    for _ in range(25):
+        kpi.update_kpis(estimate=est, pat_state=pat_locked, detection_res=None)
+
+    assert kpi._consecutive_lock_frames == 25
+    assert kpi.card_handoff.pill.text().strip() == "FSM LOCKED"
+    assert "Handoff Verified" in kpi.card_handoff.lbl_subtitle.text()
+    assert kpi.card_coupling.pill.text().strip() == "OPTIMAL"
+    assert "BER < 1e-9" in kpi.card_coupling.lbl_subtitle.text()
+
+    # 2. Slew perturbation (error > 6.0 px, e.g. 0.2 deg = 12 px)
+    pat_slew = PATState(
+        mode=PATMode.TRACK,
+        pan_error_deg=0.2,
+        tilt_error_deg=0.1,
+        track_quality=0.3,
+    )
+    kpi.update_kpis(estimate=est, pat_state=pat_slew, detection_res=None)
+
+    assert kpi._consecutive_lock_frames == 0
+    assert kpi.card_handoff.pill.text().strip() == "SLEWING"
+    assert "Sensor FOV Slew" in kpi.card_handoff.lbl_subtitle.text()
+    assert kpi.card_coupling.pill.text().strip() == "LOSS RISK"
+
+

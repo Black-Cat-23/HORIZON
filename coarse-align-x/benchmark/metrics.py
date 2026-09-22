@@ -14,11 +14,13 @@ import numpy as np
 
 
 def compute_percentiles(values: List[float] | np.ndarray) -> Dict[str, float]:
-    """Compute P50, P95, P99, and max from a numeric sequence."""
+    """Compute P50, P95, P99, min, median, and max from a numeric sequence."""
     arr = np.asarray(values, dtype=float)
     if len(arr) == 0:
-        return {"p50": 0.0, "p95": 0.0, "p99": 0.0, "max": 0.0}
+        return {"min": 0.0, "median": 0.0, "p50": 0.0, "p95": 0.0, "p99": 0.0, "max": 0.0}
     return {
+        "min": float(np.min(arr)),
+        "median": float(np.median(arr)),
         "p50": float(np.percentile(arr, 50)),
         "p95": float(np.percentile(arr, 95)),
         "p99": float(np.percentile(arr, 99)),

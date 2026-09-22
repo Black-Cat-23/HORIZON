@@ -98,7 +98,9 @@ def test_ablation_comparison_widget(qapp):
 
 def test_report_links_widget(qapp):
     links = ReportLinksWidget()
-    assert len(links.REPORTS) == 4
+    assert len(links.REPORTS) == 5
+    report_names = [r[0] for r in links.REPORTS]
+    assert "ISRO Performance PDF Report" in report_names
 
 
 def test_benchmark_screen_view(qapp):
@@ -111,3 +113,15 @@ def test_benchmark_screen_view(qapp):
     assert isinstance(screen.failure_intelligence, FailureIntelligenceWidget)
     assert isinstance(screen.ablation_comparison, AblationComparisonWidget)
     assert isinstance(screen.report_links, ReportLinksWidget)
+    assert screen.btn_run_benchmark is not None
+    assert screen.btn_export_pdf is not None
+
+
+def test_isro_pdf_report_generator(tmp_path):
+    """Verify ISROPerformancePDFGenerator produces a valid PDF file."""
+    from analysis.pdf_report_generator import ISROPerformancePDFGenerator
+    out_pdf = tmp_path / "test_isro_report.pdf"
+    gen = ISROPerformancePDFGenerator(str(out_pdf))
+    res_path = gen.generate()
+    assert out_pdf.exists()
+    assert out_pdf.stat().st_size > 5000

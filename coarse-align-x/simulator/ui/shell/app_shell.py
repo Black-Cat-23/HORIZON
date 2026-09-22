@@ -78,6 +78,12 @@ class ApplicationShell(QMainWindow):
             self.stack.addWidget(view)
             self.mode_views.append(view)
 
+        # Wire Live screen → Track screen: push live simulation data on every step
+        live_view = self.mode_views[1]
+        track_view = self.mode_views[2]
+        if hasattr(live_view, "track_data_ready") and hasattr(track_view, "update_track_displays"):
+            live_view.track_data_ready.connect(track_view.update_track_displays)
+
         self._current_mode_index = 0
         self._anim_group: QParallelAnimationGroup | None = None
 
@@ -117,9 +123,12 @@ class ApplicationShell(QMainWindow):
     def _on_mission_launched(self, config) -> None:
         """Handle mission launch: configure Live screen with resolved AppConfig and switch to Live mode."""
         live_view = self.mode_views[1]
-        if hasattr(live_view, "_config"):
+        if hasattr(live_view, "apply_mission_config"):
+            live_view.apply_mission_config(config)
+        elif hasattr(live_view, "_config"):
             live_view._config = config
-            live_view._on_reset_clicked()
+            if hasattr(live_view, "_reset_sim"):
+                live_view._reset_sim()
 
         # Update header title
         self.header.set_experiment_info(f"EXP_{config.trajectory.type.upper()[:8]}", f"Scenario: {config.trajectory.type.capitalize()}")

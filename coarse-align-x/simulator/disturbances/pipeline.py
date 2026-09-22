@@ -84,6 +84,7 @@ class DisturbanceTelemetry:
     ablated_module: Optional[str] = None
 
 
+
 class DisturbancePipeline:
     """Orchestrates deterministic disturbance transformations on camera frames.
 

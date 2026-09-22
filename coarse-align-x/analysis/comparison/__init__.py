@@ -8,10 +8,13 @@ from analysis.comparison.b0_b1_b2_ours import BaselineComparison
 from analysis.comparison.ablation import AblationAnalyzer
 from analysis.comparison.tradeoffs import TradeoffAnalyzer
 from analysis.comparison.pareto import ParetoFrontier
+from analysis.comparison.seed_matched import SeedMatchedAnalyzer
 
 __all__ = [
     "BaselineComparison",
     "AblationAnalyzer",
     "TradeoffAnalyzer",
     "ParetoFrontier",
+    "SeedMatchedAnalyzer",
 ]
+
