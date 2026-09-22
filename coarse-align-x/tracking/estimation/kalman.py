@@ -19,6 +19,7 @@ from typing import Optional, Tuple
 import numpy as np
 
 from tracking.estimation.covariance import (
+    clamp_covariance_spectrum,
     compute_covariance_ellipse,
     enforce_symmetry,
     validate_covariance,
@@ -216,6 +217,11 @@ class TargetKalmanFilter:
             model_type=self._config.process_model_type,  # type: ignore
         )
 
+        # NIS-driven process noise adaptive multiplier for maneuver recovery
+        if self._last_innovation is not None and self._last_innovation.nis > self._config.gate_chi2_threshold:
+            q_scale = min(10.0, max(1.0, 1.0 + 0.15 * (self._last_innovation.nis - self._config.gate_chi2_threshold)))
+            Q = Q * q_scale
+
         # 3. Propagate state: x_pred = F * x
         self._x_pred = F @ self._x
 
@@ -228,7 +234,7 @@ class TargetKalmanFilter:
 
         # 4. Propagate covariance: P_pred = F * P * F^T + Q
         P_pred = (F @ self._P @ F.T) + Q
-        self._P_pred = enforce_symmetry(P_pred)
+        self._P_pred = clamp_covariance_spectrum(P_pred)
 
         return self._x_pred.copy(), self._P_pred.copy()
 
@@ -355,7 +361,7 @@ class TargetKalmanFilter:
             # Standard form: P = (I - KH) * P_pred
             P_new = I_KH @ P_pred
 
-        self._P = enforce_symmetry(P_new)
+        self._P = clamp_covariance_spectrum(P_new)
         self._status = EstimatorStatus.TRACKING
         self._consecutive_hits += 1
         self._consecutive_misses = 0
@@ -369,10 +375,16 @@ class TargetKalmanFilter:
             proc_ms=(t_end - t_start) * 1000.0,
         )
 
-    def update_missing(self, timestamp: Optional[float] = None) -> StateEstimate:
-        """Handle a missing measurement (detected=False).
+    def update_missing(
+        self,
+        timestamp: Optional[float] = None,
+        gimbal_pan_rate: float = 0.0,
+        gimbal_tilt_rate: float = 0.0,
+        is_sensor_step: bool = True,
+    ) -> StateEstimate:
+        """Handle a missing measurement or inter-frame rate prediction tick.
 
-        Advances time and relies on kinematic prediction without measurement update.
+        Advances time and relies on kinematic prediction with gimbal motion compensation.
         Expands covariance naturally via process noise Q.
         """
         t_start = time.perf_counter()
@@ -401,17 +413,28 @@ class TargetKalmanFilter:
 
         if timestamp is not None and timestamp > self._last_timestamp:
             dt = timestamp - self._last_timestamp
-            self.predict(dt)
+            self.predict(dt, gimbal_pan_rate=gimbal_pan_rate, gimbal_tilt_rate=gimbal_tilt_rate)
             self._last_timestamp = timestamp
 
         # Retain predicted state and covariance
         self._x = self._x_pred.copy() if self._x_pred is not None else self._x
         self._P = self._P_pred.copy() if self._P_pred is not None else self._P
 
-        self._status = EstimatorStatus.PREDICTING
-        self._consecutive_hits = 0
-        self._consecutive_misses += 1
-        self._track_age += 1
+        if is_sensor_step:
+            self._status = EstimatorStatus.PREDICTING
+            self._consecutive_hits = 0
+            self._consecutive_misses += 1
+            self._track_age += 1
+            # Apply velocity damping during multi-frame dropouts to prevent unconstrained position explosion
+            if self._consecutive_misses >= 3 and self._x is not None:
+                self._x[2, 0] *= 0.92
+                self._x[3, 0] *= 0.92
+                if self._x_pred is not None:
+                    self._x_pred[2, 0] *= 0.92
+                    self._x_pred[3, 0] *= 0.92
+        else:
+            # Inter-frame simulation tick: maintain active status without accumulating false miss
+            self._track_age += 1
 
         t_end = time.perf_counter()
         return self._build_estimate(

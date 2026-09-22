@@ -91,7 +91,7 @@ class SimulationDebugViewer(QMainWindow):
 
         # Phase 4, Phase 7, Phase 8 & Phase 12 Perception Detectors
         self._centroid_method = "weighted_cog"
-        self._perception_mode = "SOTA_FOURIER_GMM"
+        self._perception_mode = "HYBRID"
         self._sota_detector = SOTABeaconDetector(
             DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="SOTA_FOURIER_GMM")
         )
@@ -104,7 +104,7 @@ class SimulationDebugViewer(QMainWindow):
         self._hybrid_detector = HybridBeaconDetector(
             DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="HYBRID")
         )
-        self._detector = self._sota_detector
+        self._detector = self._hybrid_detector
         self._last_detection: Optional[DetectionResult] = None
 
         # Phase 5 & Phase 12 Optical Target Tracker & State Estimator
@@ -113,7 +113,7 @@ class SimulationDebugViewer(QMainWindow):
 
         # Phase 6 & Phase 12 PAT Mode Manager & Closed-Loop Camera Controller
         self._pat_mgr = PATModeManager()
-        self._pat_ctrl = PATCameraController(controller_type="ADRC")
+        self._pat_ctrl = PATCameraController(controller_type="PID")
         self._suppress_detection_test = False
 
         # Playback timer
@@ -284,7 +284,7 @@ class SimulationDebugViewer(QMainWindow):
         form_layout = QFormLayout(controls_box)
         # Perception Mode selector (CLASSICAL vs NEURAL vs HYBRID)
         self._combo_perc_mode = QComboBox(self)
-        self._combo_perc_mode.addItems(["SOTA_FOURIER_GMM", "HYBRID", "NEURAL", "CLASSICAL"])
+        self._combo_perc_mode.addItems(["HYBRID", "SOTA_FOURIER_GMM", "NEURAL", "CLASSICAL"])
         self._combo_perc_mode.setCurrentText(self._perception_mode)
         self._combo_perc_mode.currentTextChanged.connect(self._on_perc_mode_changed)
         form_layout.addRow("Perception Engine:", self._combo_perc_mode)
@@ -318,10 +318,9 @@ class SimulationDebugViewer(QMainWindow):
 
         self._spin_duration = QDoubleSpinBox(self)
         self._spin_duration.setRange(1.0, 3600.0)
-        self._spin_duration.setValue(self._config.simulation.duration_seconds)
-        self._spin_duration.setSuffix(" s")
+        self._spin_duration.setValue(self._config.simulation.duration_s)
         self._spin_duration.valueChanged.connect(lambda _: self._reset_sim())
-        form_layout.addRow("Duration:", self._spin_duration)
+        form_layout.addRow("Duration (s):", self._spin_duration)
 
         ctrl_panel_layout.addWidget(controls_box)
 
@@ -351,33 +350,45 @@ class SimulationDebugViewer(QMainWindow):
         self._btn_export.clicked.connect(self._export_data)
         ctrl_panel_layout.addWidget(self._btn_export)
 
-        self._btn_gen_report = QPushButton("📊 Export Statistical Engineering Report", self)
-        self._btn_gen_report.setStyleSheet("background-color: #1e3a5f; color: #00d4ff; font-weight: bold;")
-        self._btn_gen_report.clicked.connect(self._generate_engineering_report)
-        ctrl_panel_layout.addWidget(self._btn_gen_report)
+        # 6. Diagnostic Controls
+        diag_box = QGroupBox("Interactive Injections & Verification", self)
+        diag_layout = QVBoxLayout(diag_box)
 
         self._btn_test_blackout = QPushButton("⚡ Suppress Detection (Test Loss)", self)
         self._btn_test_blackout.setCheckable(True)
+        self._btn_test_blackout.toggled.connect(self._toggle_blackout_test)
         self._btn_test_blackout.setStyleSheet("background-color: #3a2020; color: #ff3b30; font-weight: bold;")
-        self._btn_test_blackout.clicked.connect(self._toggle_blackout_test)
-        ctrl_panel_layout.addWidget(self._btn_test_blackout)
+        diag_layout.addWidget(self._btn_test_blackout)
+
+        self._btn_gen_report = QPushButton("📊 Export Verification Report (MD)", self)
+        self._btn_gen_report.clicked.connect(self._generate_engineering_report)
+        self._btn_gen_report.setStyleSheet("background-color: #1a3320; color: #4cd964; font-weight: bold;")
+        diag_layout.addWidget(self._btn_gen_report)
+
+        ctrl_panel_layout.addWidget(diag_box)
 
         self._lbl_status = QLabel("Status: Ready (Paused)", self)
         self._lbl_status.setStyleSheet("color: #888; font-style: italic;")
         ctrl_panel_layout.addWidget(self._lbl_status)
 
         ctrl_panel_layout.addStretch()
+
+        # Wrap control panel in scroll area so it adapts to small displays
+        scroll_area = QScrollArea(self)
+        scroll_area.setWidgetResizable(True)
+        scroll_content = QWidget()
+        scroll_content.setLayout(ctrl_panel_layout)
         scroll_area.setWidget(scroll_content)
         root_layout.addWidget(scroll_area, stretch=1)
 
     def _on_perc_mode_changed(self, mode_str: str) -> None:
         self._perception_mode = mode_str
-        if mode_str == "SOTA_FOURIER_GMM":
+        if mode_str == "HYBRID":
+            self._detector = self._hybrid_detector
+        elif mode_str == "SOTA_FOURIER_GMM":
             self._detector = self._sota_detector
         elif mode_str == "NEURAL":
             self._detector = self._neural_detector
-        elif mode_str == "HYBRID":
-            self._detector = self._hybrid_detector
         else:
             self._detector = self._classical_detector
         self._lbl_status.setText(f"Perception Mode: {mode_str}")
@@ -385,6 +396,9 @@ class SimulationDebugViewer(QMainWindow):
 
     def _on_method_changed(self, method_name: str) -> None:
         self._centroid_method = method_name
+        self._sota_detector = SOTABeaconDetector(
+            DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="SOTA_FOURIER_GMM")
+        )
         self._classical_detector = ClassicalBeaconDetector(
             DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="CLASSICAL")
         )
@@ -394,10 +408,12 @@ class SimulationDebugViewer(QMainWindow):
         self._hybrid_detector = HybridBeaconDetector(
             DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="HYBRID")
         )
-        if self._perception_mode == "NEURAL":
-            self._detector = self._neural_detector
-        elif self._perception_mode == "HYBRID":
+        if self._perception_mode == "HYBRID":
             self._detector = self._hybrid_detector
+        elif self._perception_mode == "SOTA_FOURIER_GMM":
+            self._detector = self._sota_detector
+        elif self._perception_mode == "NEURAL":
+            self._detector = self._neural_detector
         else:
             self._detector = self._classical_detector
         self._update_display()
@@ -504,7 +520,7 @@ class SimulationDebugViewer(QMainWindow):
         self._engine.initialize()
         self._track.reset()
         self._pat_mgr = PATModeManager()
-        self._pat_ctrl = PATCameraController()
+        self._pat_ctrl = PATCameraController(controller_type="PID")
         self._last_estimate = None
         self._update_display()
 
@@ -515,6 +531,9 @@ class SimulationDebugViewer(QMainWindow):
             self._btn_play.setText("▶ Start")
             self._lbl_status.setText("Status: Complete (Reached Duration)")
             return
+
+        # Advance simulation step (steps target trajectory AND camera gimbal ONCE per dt)
+        self._engine.step()
 
         self._update_display()
 
@@ -529,18 +548,49 @@ class SimulationDebugViewer(QMainWindow):
         # 1. Ground Truth Projection
         _, _, u_true, v_true, in_fov = camera.project_target(state.x, state.y)
 
-        # 2. Execute Phase 4 Perception Detection on Disturbed Frame
-        detection_res = self._detector.detect(dist_cam_frame, timestamp=state.timestamp, collect_diagnostics=True)
-        self._last_detection = detection_res
+        # 2. Execute Perception & Estimation (gate measurement on fresh frame, prediction-only otherwise)
+        est_pred = (self._last_estimate.estimated_x, self._last_estimate.estimated_y) if self._last_estimate else None
+        est_cov = self._last_estimate.covariance[:2, :2] if (self._last_estimate and hasattr(self._last_estimate, "covariance")) else None
+        vel_hint = math.hypot(self._last_estimate.estimated_vx, self._last_estimate.estimated_vy) if self._last_estimate else 0.0
 
-        # 3. Execute Phase 5 Target Tracking & State Estimation with Gimbal Compensation
-        estimate = self._track.step(
-            measurement=detection_res.centroid if (detection_res.detected and not self._suppress_detection_test) else None,
-            confidence=detection_res.confidence if not self._suppress_detection_test else 0.0,
-            timestamp=state.timestamp,
-            gimbal_pan_rate=camera.gimbal.actual_pan_rate,
-            gimbal_tilt_rate=camera.gimbal.actual_tilt_rate,
-        )
+        if camera.is_new_observation:
+            detection_res = self._detector.detect(
+                dist_cam_frame,
+                timestamp=state.timestamp,
+                collect_diagnostics=True,
+                estimator_prediction=est_pred,
+                prediction_covariance=est_cov,
+                velocity_hint_px_s=vel_hint,
+            )
+            self._last_detection = detection_res
+            is_measurement_accepted = (
+                detection_res.detected 
+                and not self._suppress_detection_test 
+                and (self._last_estimate is None or self._last_estimate.filter_status != EstimatorStatus.REJECTED_MEASUREMENT)
+            )
+            meas = detection_res.centroid if is_measurement_accepted else None
+            conf = detection_res.confidence if is_measurement_accepted else 0.0
+            estimate = self._track.step(
+                measurement=meas,
+                confidence=conf,
+                timestamp=state.timestamp,
+                gimbal_pan_rate=camera.gimbal.actual_pan_rate,
+                gimbal_tilt_rate=camera.gimbal.actual_tilt_rate,
+                is_sensor_step=True,
+            )
+        else:
+            detection_res = self._last_detection if self._last_detection is not None else DetectionResult(
+                detected=False, confidence=0.0, timestamp=state.timestamp, method_used="none"
+            )
+            is_measurement_accepted = False
+            estimate = self._track.step(
+                measurement=None,
+                confidence=0.0,
+                timestamp=state.timestamp,
+                gimbal_pan_rate=camera.gimbal.actual_pan_rate,
+                gimbal_tilt_rate=camera.gimbal.actual_tilt_rate,
+                is_sensor_step=False,
+            )
         self._last_estimate = estimate
 
         # 3a. Execute Phase 6 Closed-Loop PAT Mode Manager & Controller
@@ -553,11 +603,6 @@ class SimulationDebugViewer(QMainWindow):
             dt_step, camera.gimbal.pan_deg, camera.gimbal.tilt_deg
         )
 
-        is_measurement_accepted = (
-            detection_res.detected 
-            and not self._suppress_detection_test 
-            and estimate.filter_status != EstimatorStatus.REJECTED_MEASUREMENT
-        )
         valid_confidence = detection_res.confidence if is_measurement_accepted else 0.0
 
         pat_state = self._pat_mgr.process_step(
@@ -574,7 +619,9 @@ class SimulationDebugViewer(QMainWindow):
             current_pan_deg=camera.gimbal.pan_deg,
             current_tilt_deg=camera.gimbal.tilt_deg,
             suppress_detection=self._suppress_detection_test,
+            is_new_frame=camera.is_new_observation,
         )
+
 
         cmd_pan_rate, cmd_tilt_rate, pid_p, pid_t, ff_p, ff_t, is_sat = self._pat_ctrl.compute_control_command(
             dt=dt_step,
@@ -588,8 +635,8 @@ class SimulationDebugViewer(QMainWindow):
             gimbal=camera.gimbal,
         )
 
-        # Advance simulation step (steps target trajectory AND camera gimbal ONCE per dt)
-        self._engine.step()
+        # Wire gimbal rate command explicitly (BUG-01)
+        camera.gimbal.set_rate_command(cmd_pan_rate, cmd_tilt_rate)
 
         # Update Phase 6 PAT Telemetry Readouts
         m_str = pat_state.mode.value

@@ -16,6 +16,7 @@ PROJECT DEFAULTS.
 from __future__ import annotations
 
 from typing import Optional, Tuple
+import cv2
 import numpy as np
 
 from simulator.disturbances.config import ATMOSPHERE_PRESETS, AtmosphereConfig
@@ -70,3 +71,71 @@ def apply_atmospheric_degradation(
     degraded = norm * contrast + brightness
     clipped = np.clip(degraded, 0.0, 1.0) * 255.0
     return np.rint(clipped).astype(np.uint8), contrast, brightness
+
+
+class KolmogorovPhaseScreenEngine:
+    """Generates 2D Kolmogorov atmospheric turbulence phase screens.
+
+    Uses Split-Step Fourier Method (SSFM) with Von Kármán spectrum modeling:
+      Phi(k) = 0.023 * r0^(-5/3) * (k^2 + k0^2)^(-11/6) * exp(-k^2 / km^2)
+
+    Attributes:
+        r0_m: Fried parameter in meters (smaller r0 = stronger turbulence).
+        cn2: Structure constant of refractive index fluctuations (m^-2/3).
+    """
+
+    def __init__(
+        self,
+        r0_m: float = 0.15,
+        grid_size: int = 128,
+        rng: Optional[np.random.Generator] = None,
+    ) -> None:
+        self.r0_m = max(0.01, float(r0_m))
+        self.grid_size = grid_size
+        self._rng = rng or np.random.default_rng(42)
+        self._phase_screen: Optional[np.ndarray] = None
+        self._generate_screen()
+
+    def _generate_screen(self) -> None:
+        """Generate static 2D Kolmogorov phase screen using spectral filtering."""
+        N = self.grid_size
+        kx = np.fft.fftfreq(N) * 2.0 * np.pi
+        ky = np.fft.fftfreq(N) * 2.0 * np.pi
+        k_x, k_y = np.meshgrid(kx, ky)
+        k = np.sqrt(k_x**2 + k_y**2)
+        k[0, 0] = 1e-6  # Prevent division by zero at DC
+
+        # Von Kármán spatial spectrum
+        L0 = 10.0  # Outer scale (meters)
+        l0 = 0.005 # Inner scale (meters)
+        k0 = 2.0 * np.pi / L0
+        km = 5.92 / l0
+
+        spectrum = 0.023 * (self.r0_m ** (-5.0 / 3.0)) * ((k**2 + k0**2) ** (-11.0 / 6.0)) * np.exp(-(k**2) / (km**2))
+        spectrum[0, 0] = 0.0
+
+        # Random complex Gaussian field
+        white_noise = self._rng.normal(0.0, 1.0, (N, N)) + 1j * self._rng.normal(0.0, 1.0, (N, N))
+        phase_freq = white_noise * np.sqrt(spectrum)
+        phase_screen = np.real(np.fft.ifft2(phase_freq))
+        self._phase_screen = (phase_screen - np.min(phase_screen)) / (np.ptp(phase_screen) + 1e-9)
+
+    def apply_speckle_boiling(
+        self,
+        frame: np.ndarray,
+        time_s: float,
+        wind_speed_m_s: float = 5.0,
+    ) -> np.ndarray:
+        """Modulate frame wavefront intensity via dynamic drifting phase screen."""
+        if self._phase_screen is None:
+            return frame.copy()
+
+        h, w = frame.shape[:2]
+        shift_x = int((wind_speed_m_s * time_s * 20.0) % self.grid_size)
+        shifted_screen = np.roll(self._phase_screen, shift_x, axis=1)
+
+        screen_resized = cv2.resize(shifted_screen, (w, h), interpolation=cv2.INTER_CUBIC)
+        speckle_modulation = 0.75 + 0.5 * screen_resized  # [0.75, 1.25] envelope
+
+        degraded = frame.astype(np.float64) * speckle_modulation
+        return np.clip(degraded, 0, 255).astype(np.uint8)

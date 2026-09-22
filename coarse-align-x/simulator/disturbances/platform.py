@@ -177,6 +177,26 @@ class PlatformMotionEngine:
             if abs(self._offset_y) > bound_limit:
                 self._offset_y = math.copysign(bound_limit, self._offset_y)
 
+        elif model == "cwh_orbital":
+            # Clohessy-Wiltshire-Hill LEO relative orbital motion
+            n = float(getattr(self._config, "cwh_mean_motion_n", 0.0011))
+            x0 = 30.0
+            y0 = 20.0
+            vx0 = 0.5
+            vy0 = -0.2
+            nt = n * sim_time
+            target_ox = (4.0 * x0 + 2.0 * vy0 / n) - (vx0 / n) * math.cos(nt) - (3.0 * x0 + 2.0 * vy0 / n) * math.cos(nt)
+            target_oy = (6.0 * x0 + 4.0 * vy0 / n) * nt + (y0 - 2.0 * vx0 / n) + (2.0 * vx0 / n) * math.sin(nt) - (6.0 * x0 + 4.0 * vy0 / n) * math.sin(nt)
+            target_ox = math.copysign(min(abs(target_ox), bound_limit), target_ox)
+            target_oy = math.copysign(min(abs(target_oy), bound_limit), target_oy)
+
+            step_dx = max(min(target_ox - self._offset_x, max_step_x), -max_step_x)
+            step_dy = max(min(target_oy - self._offset_y, max_step_y), -max_step_y)
+            self._offset_x += step_dx
+            self._offset_y += step_dy
+            self._vx = step_dx / dt if dt > 0 else 0.0
+            self._vy = step_dy / dt if dt > 0 else 0.0
+
         # Displace observation frame according to platform offset
         h, w = frame.shape[:2]
         m = np.array([[1.0, 0.0, self._offset_x], [0.0, 1.0, self._offset_y]], dtype=np.float32)

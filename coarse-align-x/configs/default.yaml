@@ -17,7 +17,8 @@ camera:
   fov_horizontal_deg: 4.0
   fov_vertical_deg: 3.0
   update_rate_hz: 30
-  rate_limit_deg_s: 5.0 # maximum gimbal pan/tilt rate (deg/s)
+  rate_limit_deg_s: 20.0 # maximum gimbal pan/tilt rate (deg/s)
+  auto_align_boresight: true
 
 target:
   count: 1              # Phase 1 supports exactly 1 target

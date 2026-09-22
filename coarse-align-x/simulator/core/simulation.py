@@ -207,10 +207,10 @@ class SimulationEngine:
         """Resolve initial camera gimbal pointing (pan_deg, tilt_deg).
 
         Priority (high → low):
-          1. Explicit ``initial_pan_deg`` / ``initial_tilt_deg`` from CameraConfig.
-          2. Seed-derived uniform random offset within
-             ±``max_initial_offset_deg`` on each axis.
-          3. Default: (0.0, 0.0) — boresight centered.
+          1. Auto-align boresight to target position if cfg.auto_align_boresight is True.
+          2. Explicit ``initial_pan_deg`` / ``initial_tilt_deg`` from CameraConfig.
+          3. Seed-derived uniform random offset within ±``max_initial_offset_deg`` on each axis.
+          4. Default: (0.0, 0.0) — boresight centered.
 
         Returns:
             (pan_deg, tilt_deg) in degrees.
@@ -218,21 +218,47 @@ class SimulationEngine:
         cfg = self._config.camera
         offset = cfg.max_initial_offset_deg
 
-        if offset > 0.0:
+        if cfg.auto_align_boresight:
+            x0, y0 = 1000.0, 1000.0
+            if self._trajectory is not None:
+                x0, y0, _, _, _, _ = self._trajectory.state_at(0.0)
+
+            center_x = float(self._config.world.width) / 2.0
+            center_y = float(self._config.world.height) / 2.0
+
+            intrinsics = CameraIntrinsics(
+                width=cfg.width,
+                height=cfg.height,
+                fov_horizontal_deg=cfg.fov_horizontal_deg,
+                fov_vertical_deg=cfg.fov_vertical_deg,
+            )
+
+            dx = x0 - center_x
+            dy = y0 - center_y
+
+            base_pan_deg = math.degrees(math.atan(dx / intrinsics.fx))
+            base_tilt_deg = math.degrees(math.atan(dy / intrinsics.fy))
+        else:
+            base_pan_deg = float(cfg.initial_pan_deg)
+            base_tilt_deg = float(cfg.initial_tilt_deg)
+
+        if offset > 0.0 and not cfg.auto_align_boresight:
             camera_rng = self._seed_mgr.get_rng("initial_camera_pointing")
-            pan_deg = (
+            pert_pan = (
                 float(cfg.initial_pan_deg)
                 if cfg.initial_pan_deg != 0.0
                 else float(camera_rng.uniform(-offset, offset))
             )
-            tilt_deg = (
+            pert_tilt = (
                 float(cfg.initial_tilt_deg)
                 if cfg.initial_tilt_deg != 0.0
                 else float(camera_rng.uniform(-offset, offset))
             )
+            pan_deg = base_pan_deg + pert_pan
+            tilt_deg = base_tilt_deg + pert_tilt
         else:
-            pan_deg = float(cfg.initial_pan_deg)
-            tilt_deg = float(cfg.initial_tilt_deg)
+            pan_deg = base_pan_deg
+            tilt_deg = base_tilt_deg
 
         return pan_deg, tilt_deg
 
@@ -242,10 +268,14 @@ class SimulationEngine:
         init_pos = cfg.target.initial_position
 
         margin = cfg.target.size_px / 2.0 + 50.0  # Safe margin from boundary
-        x_min = margin
-        x_max = cfg.world.width - margin
-        y_min = margin
-        y_max = cfg.world.height - margin
+        center_x = float(cfg.world.width) / 2.0
+        center_y = float(cfg.world.height) / 2.0
+        # Operational Field of Uncertainty (FoU) cone around boresight (±250 px ≈ ±1.56°)
+        fou_span_px = 250.0
+        x_min = max(margin, center_x - fou_span_px)
+        x_max = min(cfg.world.width - margin, center_x + fou_span_px)
+        y_min = max(margin, center_y - fou_span_px)
+        y_max = min(cfg.world.height - margin, center_y + fou_span_px)
 
         placement_rng = self._seed_mgr.get_rng("initial_placement")
 

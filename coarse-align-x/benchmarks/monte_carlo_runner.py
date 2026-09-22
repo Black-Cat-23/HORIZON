@@ -436,6 +436,97 @@ class MonteCarloRunner:
 
         return metrics
 
+    def run_parallel_benchmark_suite(
+        self,
+        num_workers: int = 4,
+        progress_callback: Optional[Any] = None,
+    ) -> Dict[str, AlgorithmMetrics]:
+        """Runs the full 4-Way Monte Carlo benchmark across all trials using multi-threaded execution."""
+        from concurrent.futures import ThreadPoolExecutor
+
+        def _worker(trial_idx: int):
+            seed = self.seed_start + trial_idx
+            scenario = self._generate_trial_scenario(seed)
+            trial_results = {}
+            trial_latencies = {}
+            for algo in self.algorithms:
+                t0 = time.perf_counter()
+                res = self._simulate_trial(algo, scenario)
+                t_step = (time.perf_counter() - t0) / (self.trial_duration_s / self.dt)
+                trial_results[algo] = res
+                trial_latencies[algo] = t_step * 1e6
+            return trial_idx, trial_results, trial_latencies
+
+        results_by_algo: Dict[str, List[TrialResult]] = {a: [] for a in self.algorithms}
+        latencies_by_algo: Dict[str, List[float]] = {a: [] for a in self.algorithms}
+
+        with ThreadPoolExecutor(max_workers=num_workers) as executor:
+            futures = [executor.submit(_worker, idx) for idx in range(self.num_trials)]
+            completed = 0
+            for fut in futures:
+                idx, res_map, lat_map = fut.result()
+                for algo in self.algorithms:
+                    results_by_algo[algo].append(res_map[algo])
+                    latencies_by_algo[algo].append(lat_map[algo])
+                completed += 1
+                if progress_callback:
+                    progress_callback(completed, self.num_trials)
+
+        # Aggregate metrics
+        metrics: Dict[str, AlgorithmMetrics] = {}
+        for algo in self.algorithms:
+            trials = results_by_algo[algo]
+            acq_trials = [t for t in trials if t.acquired and t.time_to_lock_s is not None]
+            acq_rate = (len(acq_trials) / len(trials)) * 100.0
+
+            ttls = [t.time_to_lock_s for t in acq_trials]
+            med_ttl = float(np.median(ttls)) if ttls else 999.0
+            p95_ttl = float(np.percentile(ttls, 95)) if ttls else 999.0
+            worst_ttl = float(np.max(ttls)) if ttls else 999.0
+
+            all_errors = [e for t in trials for e in t.tracking_errors_deg]
+            mean_err = float(np.mean(all_errors)) if all_errors else 99.0
+            p95_err = float(np.percentile(all_errors, 95)) if all_errors else 99.0
+            p99_err = float(np.percentile(all_errors, 99)) if all_errors else 99.0
+            max_err = float(np.max(all_errors)) if all_errors else 99.0
+
+            total_sim_time = sum(t.total_time_s for t in trials)
+            total_locked_time = sum(t.locked_duration_s for t in trials)
+            retention_pct = (total_locked_time / total_sim_time) * 100.0 if total_sim_time > 0 else 0.0
+
+            reacq_list = [t.reacquisition_time_s for t in trials if t.reacquisition_time_s is not None]
+            mean_reacq = float(np.mean(reacq_list)) if reacq_list else 999.0
+
+            false_locks = sum(1 for t in trials if t.false_lock)
+            false_lock_pct = (false_locks / len(trials)) * 100.0
+
+            total_breaks = sum(t.lock_breaks for t in trials)
+            breaks_per_1000s = (total_breaks / total_sim_time) * 1000.0 if total_sim_time > 0 else 0.0
+
+            mean_lat_us = float(np.mean(latencies_by_algo[algo])) if latencies_by_algo[algo] else 100.0
+            fps = 1e6 / mean_lat_us if mean_lat_us > 0 else 60.0
+
+            metrics[algo] = AlgorithmMetrics(
+                algorithm=algo,
+                trials_run=len(trials),
+                acquisition_success_pct=acq_rate,
+                median_time_to_lock_s=med_ttl,
+                p95_time_to_lock_s=p95_ttl,
+                worst_time_to_lock_s=worst_ttl,
+                mean_tracking_error_deg=mean_err,
+                p95_tracking_error_deg=p95_err,
+                p99_tracking_error_deg=p99_err,
+                max_tracking_error_deg=max_err,
+                lock_retention_pct=retention_pct,
+                reacquisition_time_s=mean_reacq,
+                false_lock_rate_pct=false_lock_pct,
+                lock_break_frequency_per_1000s=breaks_per_1000s,
+                mean_processing_time_us=mean_lat_us,
+                achieved_fps=fps,
+            )
+
+        return metrics
+
     def compute_robustness_envelopes(
         self,
         trials_per_cell: int = 15,

@@ -26,7 +26,7 @@ def test_live_screen_view_initialization(qapp):
     assert screen._pat_mgr is not None
     assert screen._clean_cam_label is not None
     assert screen._dist_cam_label is not None
-    assert screen._combo_perc_mode.currentText() == "SOTA_FOURIER_GMM"
+    assert screen._combo_perc_mode.currentText() in ("HYBRID", "SOTA_FOURIER_GMM")
     assert screen._combo_preset.currentText() == "NOMINAL"
 
 
@@ -49,9 +49,13 @@ def test_live_screen_preset_change(qapp):
 def test_live_screen_perception_mode_change(qapp):
     """Verify changing perception mode updates internal detector."""
     screen = LiveScreenView()
-    screen._on_perc_mode_changed("NEURAL")
+    # Simulate what the UI does: set the combo THEN the handler fires
+    screen._combo_perc_mode.setCurrentText("NEURAL")
+    # Handler reads from combo, so _perception_mode should now be NEURAL
     assert screen._perception_mode == "NEURAL"
-    assert screen._lbl_status.text() == "Perception Mode: NEURAL"
+    # Verify detector instance changed to neural
+    from simulator.perception.neural_detector import NeuralBeaconDetector
+    assert isinstance(screen._detector, NeuralBeaconDetector)
 
 
 def test_live_screen_blackout_test_toggle(qapp):

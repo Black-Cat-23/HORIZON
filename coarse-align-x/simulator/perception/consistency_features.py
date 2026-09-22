@@ -17,16 +17,37 @@ from simulator.perception.hybrid_candidate import UnifiedCandidate
 
 
 def compute_spatial_agreement(
-    dist_px: float, dist_sigma_px: float = 10.0
+    dist_px: float,
+    dist_sigma_px: float = 10.0,
+    velocity_hint_px_s: float = 0.0,
+    camera_rate_hz: float = 30.0,
 ) -> float:
     """Compute spatial agreement score in range [0.0, 1.0].
 
     Uses Gaussian decay relative to centroid distance:
-        score = exp(-0.5 * (dist / dist_sigma)^2)
+        score = exp(-0.5 * (dist / adaptive_sigma)^2)
+
+    The sigma is widened proportionally to the beacon velocity so that fast-moving
+    beacons (e.g. random trajectory, spiral) are not penalised for inter-frame drift
+    between Classical optical and Neural bbox centroids:
+        adaptive_sigma = max(dist_sigma_px,
+                            dist_sigma_px + 0.5 * (velocity_hint_px_s / camera_rate_hz))
+
+    Args:
+        dist_px:           Centroid distance between Classical and Neural proposals (px).
+        dist_sigma_px:     Base sigma of the agreement Gaussian (px). From config.
+        velocity_hint_px_s: Optional estimated beacon velocity magnitude (px/s) from the
+                            state estimator. 0.0 disables velocity adaptation.
+        camera_rate_hz:    Camera frame rate used to convert velocity to per-frame distance.
     """
     if dist_sigma_px <= 0.0:
         dist_sigma_px = 10.0
-    val = math.exp(-0.5 * (dist_px / dist_sigma_px) ** 2)
+    if velocity_hint_px_s > 0.0 and camera_rate_hz > 0.0:
+        per_frame_drift = velocity_hint_px_s / camera_rate_hz
+        adaptive_sigma = max(dist_sigma_px, dist_sigma_px + 0.5 * per_frame_drift)
+    else:
+        adaptive_sigma = dist_sigma_px
+    val = math.exp(-0.5 * (dist_px / adaptive_sigma) ** 2)
     return float(np.clip(val, 0.0, 1.0))
 
 
@@ -102,12 +123,25 @@ def compute_appearance_agreement(
     """
     if cand.raw_classical_candidate is not None:
         rc = cand.raw_classical_candidate
-        # Weighted combination of optical shape metrics
+        # Weighted combination of optical shape, profile, and energy metrics
         circ = getattr(rc, "circularity", 0.5)
         comp = getattr(rc, "compactness", 0.5)
         symm = getattr(rc, "symmetry", 0.5)
         rad = getattr(rc, "radial_consistency", 0.5)
-        score = 0.30 * circ + 0.25 * comp + 0.25 * symm + 0.20 * rad
+        size_plaus = getattr(rc, "size_plausibility", 0.5)
+        flux = getattr(rc, "integrated_flux", 0.0)
+        flux_score = float(np.clip(flux / 2000.0, 0.20, 1.0))
+        area = getattr(rc, "area_px", 10.0)
+        area_reg = float(np.clip(area / 8.0, 0.40, 1.0))
+
+        score = (
+            0.20 * (circ * area_reg)
+            + 0.15 * (comp * area_reg)
+            + 0.15 * symm
+            + 0.20 * rad
+            + 0.15 * size_plaus
+            + 0.15 * flux_score
+        )
         return float(np.clip(score, 0.0, 1.0))
 
     # For neural bounding boxes, estimate aspect ratio symmetry
@@ -123,15 +157,32 @@ def compute_estimator_consistency(
     predicted_pos: Optional[Tuple[float, float]],
     prediction_cov: Optional[np.ndarray] = None,
     gate_threshold: float = 9.210,
+    grace_factor: float = 1.0,
+    velocity_hint_px_s: float = 0.0,
 ) -> Tuple[bool, float, float]:
     """Test candidate against estimator validation gate.
+
+    Args:
+        candidate_centroid: (u, v) of the candidate in pixels.
+        predicted_pos:      Estimator predicted position, or None (disables gating).
+        prediction_cov:     2×2 position covariance matrix, or None (uses Euclidean fallback).
+        gate_threshold:     Mahalanobis² chi-squared gate (default 9.21 = 99th percentile 2-DOF).
+        grace_factor:       Multiplier on gate_threshold, e.g. 2.0 during trajectory inflection
+                            points where estimator may be momentarily uncertain. >1 widens the gate.
+        velocity_hint_px_s: Estimated target speed (px/s) to dynamically adapt gate to fast maneuvers.
 
     Returns:
         (is_valid, mahalanobis_sq, consistency_score)
     """
-    if predicted_pos is None:
+    if predicted_pos is None or prediction_cov is None:
         return True, 0.0, 1.0
 
+    # Expand grace factor dynamically for high-velocity maneuvers
+    dyn_grace = max(grace_factor, 1.0)
+    if velocity_hint_px_s > 0.0:
+        dyn_grace = max(dyn_grace, 1.0 + float(velocity_hint_px_s) / 80.0)
+
+    effective_gate = gate_threshold * dyn_grace
     dx = candidate_centroid[0] - predicted_pos[0]
     dy = candidate_centroid[1] - predicted_pos[1]
     diff = np.array([dx, dy], dtype=np.float64)
@@ -140,16 +191,20 @@ def compute_estimator_consistency(
         try:
             inv_cov = np.linalg.inv(prediction_cov)
             d2 = float(diff.T @ inv_cov @ diff)
-            is_valid = bool(d2 <= gate_threshold)
+            is_valid = bool(d2 <= effective_gate)
             score = float(np.clip(math.exp(-0.5 * max(d2, 0.0)), 0.0, 1.0))
             return is_valid, d2, score
         except np.linalg.LinAlgError:
             pass
 
-    # Euclidean approximation
+    # Euclidean approximation using gate-scaled sigma
     dist_sq = float(dx * dx + dy * dy)
-    sigma_sq = 25.0 ** 2
-    d2 = dist_sq / sigma_sq
-    is_valid = bool(d2 <= gate_threshold)
+    # sigma derived from gate to keep Euclidean fallback consistent:
+    # chi2_2dof_99 = 9.21 → sigma = sqrt(dist_sq / 9.21) when at the boundary
+    sigma_sq = max(prediction_cov[0, 0] + prediction_cov[1, 1], 1.0) if (
+        prediction_cov is not None and prediction_cov.shape == (2, 2)
+    ) else (25.0 ** 2)
+    d2 = dist_sq / max(sigma_sq, 1e-6)
+    is_valid = bool(d2 <= effective_gate)
     score = float(np.clip(math.exp(-0.5 * d2), 0.0, 1.0))
     return is_valid, d2, score

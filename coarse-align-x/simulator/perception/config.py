@@ -26,7 +26,7 @@ class PreprocessingConfig:
 class CandidateScoringConfig:
     """Parameters for beacon candidate extraction, filtering, and scoring."""
     min_area_px: float = 4.0        # Minimum valid beacon area (supporting down to subpixel beacon)
-    max_area_px: float = 1100.0     # Maximum valid beacon area (supporting up to 25×25 beacon)
+    max_area_px: float = 1600.0     # Maximum valid beacon area (supporting up to 30×30 beacon)
     min_peak_intensity: int = 15    # Minimum peak intensity above noise floor (supporting low contrast / fog)
     min_snr: float = 1.2            # Signal-to-noise ratio threshold
     expected_size_px: float = 10.0  # Project nominal beacon size
@@ -56,17 +56,60 @@ class NeuralDetectorConfig:
 
 @dataclass(frozen=True)
 class HybridFusionConfig:
-    """Parameters and weight allocations for Phase 8 Hybrid Perception Fusion."""
-    classical_weight: float = 0.30
-    neural_weight: float = 0.30
-    spatial_weight: float = 0.15
+    """Parameters and weight allocations for Phase 8 Hybrid Perception Fusion.
+
+    All weights are normalised at runtime — they express relative importance, not
+    absolute magnitudes.  Setting a weight to 0.0 removes that feature entirely.
+
+    Acceptance thresholds:
+        acceptance_threshold           — gate for any single candidate to be declared detected.
+        partial_confidence_threshold   — lower gate ONLY applied to MATCHED (BOTH) pairs;
+                                         allows fused confirmation even in heavy disturbance.
+        disagreement_rejection_threshold — candidates below this are immediately rejected.
+
+    Matching:
+        max_matching_distance_px  — base centroid-distance gate; scaled dynamically by
+                                    estimated beacon velocity at runtime.
+        velocity_scale_factor     — controls how aggressively velocity widens the gate:
+                                    dynamic_gate = base × (1 + vel_px_s / velocity_scale_factor)
+                                    Set to 0.0 to disable velocity scaling (fixed gate).
+        max_matching_distance_cap — hard upper bound on dynamic gate in pixels.
+
+    SNR gating:
+        min_contrast_sigma_factor — contrast gate = max(min_contrast_floor_adu,
+                                    min_contrast_sigma_factor × bg_noise_std)
+        min_contrast_floor_adu    — absolute minimum contrast (ADU); prevents gate from
+                                    collapsing under very low noise estimates.
+        min_snr_factor            — SNR gate = max(min_snr_floor,
+                                    min_snr_factor × bg_noise_std / 8.0)
+        min_snr_floor             — absolute minimum SNR floor.
+    """
+    # --- Fusion weights (normalised at runtime) ---
+    classical_weight: float = 0.28
+    neural_weight: float = 0.28
+    spatial_weight: float = 0.16
     size_weight: float = 0.10
     optical_weight: float = 0.10
-    temporal_weight: float = 0.05
+    temporal_weight: float = 0.08
+
+    # --- Acceptance gates ---
+    acceptance_threshold: float = 0.28           # any candidate
+    partial_confidence_threshold: float = 0.20   # BOTH-source matched pairs only
+    disagreement_rejection_threshold: float = 0.10
+
+    # --- Matching geometry ---
     max_matching_distance_px: float = 25.0
+    velocity_scale_factor: float = 60.0          # pixels/s per unit of gate expansion
+    max_matching_distance_cap: float = 80.0      # hard upper cap (px)
     min_matching_iou: float = 0.10
-    acceptance_threshold: float = 0.35
-    disagreement_rejection_threshold: float = 0.15
+
+    # --- SNR-adaptive candidate extraction ---
+    min_contrast_sigma_factor: float = 3.0       # contrast >= factor × bg_noise_std
+    min_contrast_floor_adu: float = 12.0         # absolute minimum (ADU)
+    min_snr_factor: float = 0.90                 # snr >= factor × (bg_noise_std / 8)
+    min_snr_floor: float = 1.2                   # absolute minimum SNR
+
+    # --- Feature flags ---
     enable_optical_centroid_refinement: bool = True
     enable_temporal_consistency: bool = True
 
@@ -83,7 +126,7 @@ class DetectorConfig:
     """Root configuration for classical, neural, and hybrid perception engines."""
     input_width: int = 640
     input_height: int = 480
-    min_detection_confidence: float = 0.35
+    min_detection_confidence: float = 0.28
     perception_mode: Literal["CLASSICAL", "NEURAL", "HYBRID"] = "HYBRID"
     preprocessing: PreprocessingConfig = field(default_factory=PreprocessingConfig)
     scoring: CandidateScoringConfig = field(default_factory=CandidateScoringConfig)

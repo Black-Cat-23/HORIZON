@@ -18,6 +18,7 @@ Strict Invariant: Zero ground-truth leakage or dependencies.
 from __future__ import annotations
 
 import logging
+import math
 import time
 from typing import List, Optional, Tuple, Any
 import cv2
@@ -71,6 +72,8 @@ class HybridBeaconDetector:
         self._matcher = CandidateMatcher(
             max_centroid_distance_px=self._fusion_cfg.max_matching_distance_px,
             min_iou_threshold=self._fusion_cfg.min_matching_iou,
+            velocity_scale_factor=getattr(self._fusion_cfg, "velocity_scale_factor", 60.0),
+            max_matching_distance_cap=getattr(self._fusion_cfg, "max_matching_distance_cap", 80.0),
         )
 
     @property
@@ -92,6 +95,7 @@ class HybridBeaconDetector:
         collect_diagnostics: bool = False,
         estimator_prediction: Optional[Tuple[float, float]] = None,
         prediction_covariance: Optional[np.ndarray] = None,
+        velocity_hint_px_s: float = 0.0,
     ) -> DetectionResult:
         """Process optical sensor frame using configured perception mode (CLASSICAL, NEURAL, or HYBRID).
 
@@ -101,6 +105,7 @@ class HybridBeaconDetector:
             collect_diagnostics: Toggle creation of visual diagnostics.
             estimator_prediction: Optional predicted beacon position from Phase 5 estimator.
             prediction_covariance: Optional (2,2) prediction covariance matrix.
+            velocity_hint_px_s: Optional estimated beacon velocity magnitude (px/s).
 
         Returns:
             DetectionResult dataclass with detection status, refined centroid, and telemetry.
@@ -116,7 +121,7 @@ class HybridBeaconDetector:
 
         # Mode == "HYBRID"
         return self._detect_hybrid(
-            frame, timestamp, collect_diagnostics, estimator_prediction, prediction_covariance
+            frame, timestamp, collect_diagnostics, estimator_prediction, prediction_covariance, velocity_hint_px_s
         )
 
     def _detect_hybrid(
@@ -126,6 +131,7 @@ class HybridBeaconDetector:
         collect_diagnostics: bool,
         estimator_prediction: Optional[Tuple[float, float]],
         prediction_covariance: Optional[np.ndarray],
+        velocity_hint_px_s: float = 0.0,
     ) -> DetectionResult:
         t_start = time.perf_counter()
 
@@ -162,9 +168,9 @@ class HybridBeaconDetector:
                 decision_reason="No candidates proposed by Classical or Neural detectors",
             )
 
-        # 3. Candidate Matching
+        # 3. Candidate Matching with dynamic velocity gating
         matched_pairs, un_c, un_n = self._matcher.match_candidates(
-            classical_candidates, neural_candidates
+            classical_candidates, neural_candidates, velocity_hint_px_s=velocity_hint_px_s
         )
 
         # 4. Feature Scoring & Confidence Fusion across all candidates
@@ -172,7 +178,10 @@ class HybridBeaconDetector:
 
         # Process Matched Pairs (BOTH)
         for pair in matched_pairs:
-            s_spatial = compute_spatial_agreement(pair.centroid_distance)
+            s_spatial = compute_spatial_agreement(
+                pair.centroid_distance,
+                velocity_hint_px_s=velocity_hint_px_s,
+            )
             s_size = compute_size_agreement(pair.classical.area, pair.neural.area)
             s_optical = compute_optical_agreement(
                 pair.classical.local_contrast, pair.classical.background_estimate
@@ -182,33 +191,35 @@ class HybridBeaconDetector:
                 pair.fused_candidate.centroid, estimator_prediction, prediction_covariance
             )
             is_valid_est, d2_est, s_est = compute_estimator_consistency(
-                pair.fused_candidate.centroid, estimator_prediction, prediction_covariance
+                pair.fused_candidate.centroid, estimator_prediction, prediction_covariance, velocity_hint_px_s=velocity_hint_px_s
             )
 
             c_class = pair.classical.classical_confidence or 0.0
             c_neur = pair.neural.neural_confidence or 0.0
             det_conf = float(0.5 * (c_class + c_neur))
 
-            # Weight formulation: normalized
+            # Dynamic weight formulation (LE-01 & HC-02)
             w = self._fusion_cfg
+            neural_w = w.neural_weight if self._neural_detector.is_model_loaded else 0.0
+            temporal_w = w.temporal_weight if estimator_prediction is not None else 0.0
+
             raw_score = (
                 w.classical_weight * c_class
-                + w.neural_weight * c_neur
+                + neural_w * c_neur
                 + w.spatial_weight * s_spatial
                 + w.size_weight * s_size
                 + w.optical_weight * s_optical
+                + temporal_w * s_temporal
             )
             total_weight = (
                 w.classical_weight
-                + w.neural_weight
+                + neural_w
                 + w.spatial_weight
                 + w.size_weight
                 + w.optical_weight
+                + temporal_w
             )
-            base_score = raw_score / max(total_weight, 1e-5)
-            # Modulate by temporal consistency when tracking estimate exists
-            t_factor = s_temporal if estimator_prediction is not None else 1.0
-            fused_score = float(np.clip(base_score * t_factor, 0.0, 1.0))
+            fused_score = float(np.clip(raw_score / max(total_weight, 1e-5), 0.0, 1.0))
 
             # Agreement state determination
             if s_spatial > 0.70 and s_size > 0.50:
@@ -264,7 +275,7 @@ class HybridBeaconDetector:
                 cand.centroid, estimator_prediction, prediction_covariance
             )
             is_valid_est, d2_est, s_est = compute_estimator_consistency(
-                cand.centroid, estimator_prediction, prediction_covariance
+                cand.centroid, estimator_prediction, prediction_covariance, velocity_hint_px_s=velocity_hint_px_s
             )
 
             # Adaptive Optical-Neural Verification:
@@ -279,10 +290,23 @@ class HybridBeaconDetector:
                 temporal_strength = s_temporal if estimator_prediction is not None else 0.5
                 penalty = float(np.clip(0.40 + 0.40 * optical_strength + 0.20 * temporal_strength, 0.40, 1.0))
 
-            t_factor = s_temporal if estimator_prediction is not None else 1.0
-            fused_score = float(
-                np.clip((0.45 * c_class + 0.25 * s_optical + 0.30 * s_appearance) * t_factor * penalty, 0.0, 1.0)
-            )
+            if estimator_prediction is not None:
+                base_score = (
+                    0.35 * c_class
+                    + 0.25 * s_optical
+                    + 0.25 * s_appearance
+                    + 0.15 * s_temporal
+                )
+            else:
+                d_center = math.hypot(cand.centroid_x - 320.0, cand.centroid_y - 240.0)
+                s_boresight = math.exp(-0.5 * (d_center / 150.0) ** 2)
+                base_score = (
+                    0.35 * c_class
+                    + 0.25 * s_optical
+                    + 0.20 * s_appearance
+                    + 0.20 * s_boresight
+                )
+            fused_score = float(np.clip(base_score * penalty, 0.0, 1.0))
             reason = (
                 f"Candidate selected via classical optical detection (contrast={cand.local_contrast:.1f}, "
                 f"confidence={c_class:.2f}, temporal={s_temporal:.2f})"
@@ -333,10 +357,14 @@ class HybridBeaconDetector:
                 cand.centroid, estimator_prediction, prediction_covariance
             )
             is_valid_est, d2_est, s_est = compute_estimator_consistency(
-                cand.centroid, estimator_prediction, prediction_covariance
+                cand.centroid, estimator_prediction, prediction_covariance, velocity_hint_px_s=velocity_hint_px_s
             )
 
-            fused_score = float(np.clip(0.70 * c_neur + 0.30 * s_temporal, 0.0, 1.0))
+            if estimator_prediction is not None:
+                fused_score = float(np.clip((0.40 * c_neur + 0.60 * s_temporal) * s_est, 0.0, 1.0))
+            else:
+                fused_score = float(np.clip(0.70 * c_neur * s_appearance, 0.0, 1.0))
+
             reason = (
                 f"Candidate selected via neural bounding box detection (confidence={c_neur:.2f}, "
                 f"temporal={s_temporal:.2f})"
@@ -376,12 +404,27 @@ class HybridBeaconDetector:
                 (fused_score, enriched_cand, "SINGLE_SOURCE_NEURAL", reason)
             )
 
-        # Sort scored candidates by fused confidence score descending
-        scored_candidates.sort(key=lambda x: x[0], reverse=True)
+        # Sort scored candidates: valid candidates (passing estimator gate) first, then by fused confidence descending
+        scored_candidates.sort(key=lambda x: (x[1].valid, x[0]), reverse=True)
         top_score, top_candidate, top_agr, top_reason = scored_candidates[0]
 
-        # 5. Acceptance Gate & Fallback Handling
-        if top_score < self._fusion_cfg.acceptance_threshold:
+        # 5. Acceptance Gate & Fallback Handling (HC-03)
+        # Strong optical emitter proposals (high detector confidence >= 0.55) are verified beacons
+        # and should not be dropped solely because a newly-initialized or lagging estimator gate failed.
+        cand_optical_strong = (
+            top_candidate.detector_confidence is not None and top_candidate.detector_confidence >= 0.55
+        )
+        is_candidate_valid = top_candidate.valid or cand_optical_strong
+        is_accepted = (top_score >= self._fusion_cfg.acceptance_threshold) and is_candidate_valid
+        partial_thresh = getattr(self._fusion_cfg, "partial_confidence_threshold", 0.20)
+        is_partial = (
+            not is_accepted
+            and top_candidate.source == CandidateSource.BOTH
+            and top_score >= partial_thresh
+            and is_candidate_valid
+        )
+
+        if not is_accepted and not is_partial:
             t_end = time.perf_counter()
             return DetectionResult(
                 detected=False,
@@ -397,6 +440,12 @@ class HybridBeaconDetector:
                 agreement_state="REJECTED_LOW_CONFIDENCE",
                 fused_confidence=top_score,
                 decision_reason=f"Candidate rejected because top confidence {top_score:.3f} below acceptance threshold {self._fusion_cfg.acceptance_threshold:.3f}",
+            )
+
+        if is_partial:
+            top_agr = "PARTIAL_CONFIDENCE"
+            top_reason = (
+                f"{top_reason} [Partial confidence acceptance: dual-source match confirmed under high disturbance]"
             )
 
         # 6. Optical Subpixel Centroid Refinement on Selected ROI
@@ -434,7 +483,9 @@ class HybridBeaconDetector:
 
         for i, cand in enumerate(res_c.candidates):
             contrast = cand.peak_intensity - cand.background_level
-            if contrast < 25.0 or cand.snr < 1.8:
+            min_contrast = float(getattr(self._fusion_cfg, "min_contrast_floor_adu", 12.0))
+            min_snr = float(getattr(self._fusion_cfg, "min_snr_floor", 1.2))
+            if contrast < min_contrast or cand.snr < min_snr:
                 continue
 
             # Compute centroid from candidate contour/bbox
@@ -507,7 +558,11 @@ class HybridBeaconDetector:
         if not self._fusion_cfg.enable_optical_centroid_refinement:
             return (candidate.centroid_x, candidate.centroid_y), "GEOMETRIC"
 
-        x, y, w, h = candidate.bbox
+        # Use classical candidate bbox if available for optical subpixel centering (LE-08)
+        if candidate.raw_classical_candidate is not None:
+            x, y, w, h = candidate.raw_classical_candidate.bbox
+        else:
+            x, y, w, h = candidate.bbox
         pad = self._config.centroid.roi_padding_px
         h_f, w_f = frame.shape[:2]
 
@@ -528,6 +583,8 @@ class HybridBeaconDetector:
             cnt_roi[:, :, 1] -= y1
             roi_mask = np.zeros(roi.shape, dtype=np.uint8)
             cv2.drawContours(roi_mask, [cnt_roi], -1, 255, thickness=-1)
+            if roi_mask.sum() == 0:
+                roi_mask = np.ones(roi.shape, dtype=np.uint8)
 
         bg_level = candidate.background_estimate or float(np.median(frame))
         method = self._config.centroid.method

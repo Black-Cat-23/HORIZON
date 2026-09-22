@@ -195,6 +195,7 @@ class StressScreenView(QWidget):
             measurement=meas_centroid if target_detected else None,
             confidence=detection_res.confidence if target_detected else 0.0,
             timestamp=time.time(),
+            is_sensor_step=True,
         )
         self._last_estimate = estimate
 

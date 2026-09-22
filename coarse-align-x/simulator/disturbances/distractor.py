@@ -147,6 +147,28 @@ class FalseTargetDistractorEngine:
                 cluster = (self._rng.uniform(0.6, 1.0, size=(r2 - r1, c2 - c1)) * intensity).astype(np.uint8)
                 out[r1:r2, c1:c2] = np.maximum(out[r1:r2, c1:c2], cluster)
 
+            elif d_type == "sun_glint":
+                # Specular solar reflection with angle-dependent BRDF falloff
+                phase_rad = math.radians(float(getattr(self._config, "sun_phase_angle_deg", 15.0)))
+                spec_factor = max(0.1, math.cos(phase_rad) ** 4.0)
+                radius = 12
+                r1, r2 = max(0, iy - radius), min(h, iy + radius + 1)
+                c1, c2 = max(0, ix - radius), min(w, ix + radius + 1)
+                cols, rows = np.meshgrid(np.arange(c1, c2), np.arange(r1, r2))
+                r2_dist = (cols - px) ** 2 + (rows - py) ** 2
+                glint = intensity * spec_factor * np.exp(-r2_dist / (2.0 * 4.0 ** 2))
+                out[r1:r2, c1:c2] = np.clip(np.maximum(out[r1:r2, c1:c2], glint), 0, 255).astype(np.uint8)
+
+            elif d_type == "cloud_edge_clutter":
+                # Spatially correlated cloud edge diffraction clutter line
+                r1, r2 = max(0, iy - 4), min(h, iy + 5)
+                c1, c2 = max(0, ix - 20), min(w, ix + 21)
+                sub_w = c2 - c1
+                sub_h = r2 - r1
+                if sub_w > 0 and sub_h > 0:
+                    clutter_pattern = (self._rng.uniform(0.3, 0.8, size=(sub_h, sub_w)) * intensity).astype(np.uint8)
+                    out[r1:r2, c1:c2] = np.clip(out[r1:r2, c1:c2].astype(np.float64) + clutter_pattern * 0.5, 0, 255).astype(np.uint8)
+
             else:  # multiple_spots / default
                 radius = 5
                 r1, r2 = max(0, iy - radius), min(h, iy + radius + 1)

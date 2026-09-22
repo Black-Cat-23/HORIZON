@@ -29,7 +29,7 @@ from simulator.perception.preprocessing import estimate_local_background
 # Multi-scale support: beacon sizes in pixels (side length) to test
 # Each scale defines its own reasonable area range (Phase 7 upgrade: 3 to 30 px)
 # ---------------------------------------------------------------------------
-_MULTISCALE_SIZES_PX: Tuple[int, ...] = (3, 5, 8, 10, 15, 20, 25, 30)
+_MULTISCALE_SIZES_PX: Tuple[int, ...] = (5, 8, 10, 15, 20, 25, 30)
 
 
 @dataclass
@@ -74,7 +74,58 @@ class BeaconCandidate:
     scale_class: int             # Best matching scale class in pixels (5, 10, 15, or 20)
 
     # Contour for visualisation
-    contour: np.ndarray
+    contour: Optional[np.ndarray] = None
+
+
+# ---------------------------------------------------------------------------
+# Velocity-Adaptive Ellipsoidal ROI Bounding Box Computation
+# ---------------------------------------------------------------------------
+
+def compute_velocity_adaptive_roi(
+    predicted_u: float,
+    predicted_v: float,
+    predicted_vx: float,
+    predicted_vy: float,
+    pos_uncertainty_px: float,
+    sensor_w: int = 640,
+    sensor_h: int = 480,
+    base_size_px: float = 30.0,
+) -> Tuple[int, int, int, int]:
+    """Compute velocity-adaptive ellipsoidal ROI bounding box along target flight vector.
+
+    Args:
+        predicted_u: Predicted center X in pixel space.
+        predicted_v: Predicted center Y in pixel space.
+        predicted_vx: Estimated velocity along X in px/s.
+        predicted_vy: Estimated velocity along Y in px/s.
+        pos_uncertainty_px: 1-sigma positional uncertainty in pixels.
+        sensor_w: Image width in pixels.
+        sensor_h: Image height in pixels.
+        base_size_px: Base ROI bounding box dimension.
+
+    Returns:
+        (x_min, y_min, width, height) in sensor frame pixel coordinates.
+    """
+    speed = float(np.hypot(predicted_vx, predicted_vy))
+    scale_speed = 1.0 + min(speed / 100.0, 2.5)
+    scale_unc = 1.0 + min(pos_uncertainty_px / 10.0, 2.0)
+
+    w_roi = int(round(base_size_px * scale_speed * scale_unc))
+    h_roi = int(round(base_size_px * scale_unc))
+
+    heading = float(np.arctan2(predicted_vy, predicted_vx))
+    cos_h = abs(np.cos(heading))
+    sin_h = abs(np.sin(heading))
+
+    bbox_w = int(round(w_roi * cos_h + h_roi * sin_h))
+    bbox_h = int(round(w_roi * sin_h + h_roi * cos_h))
+
+    x1 = max(0, min(sensor_w - 10, int(round(predicted_u - bbox_w / 2.0))))
+    y1 = max(0, min(sensor_h - 10, int(round(predicted_v - bbox_h / 2.0))))
+    bw = max(10, min(sensor_w - x1, bbox_w))
+    bh = max(10, min(sensor_h - y1, bbox_h))
+
+    return x1, y1, bw, bh
 
 
 # ---------------------------------------------------------------------------
@@ -93,18 +144,24 @@ def _compute_symmetry(roi: np.ndarray) -> float:
 
     roi_f = roi.astype(np.float64)
 
+    def _safe_corr(a: np.ndarray, b: np.ndarray) -> float:
+        std_a = float(np.std(a))
+        std_b = float(np.std(b))
+        if std_a < 1e-4 or std_b < 1e-4:
+            return 0.5
+        c = float(np.corrcoef(a.ravel(), b.ravel())[0, 1])
+        return c if not math.isnan(c) else 0.5
+
     # Left-right symmetry
     left_half = roi_f[:, :w // 2]
     right_half_flip = cv2.flip(roi_f[:, w - w // 2:], 1)
-    lr_corr = float(np.corrcoef(left_half.ravel(), right_half_flip.ravel())[0, 1])
+    lr = max(0.0, min(1.0, _safe_corr(left_half, right_half_flip)))
 
     # Top-bottom symmetry
     top_half = roi_f[:h // 2, :]
     bottom_half_flip = cv2.flip(roi_f[h - h // 2:, :], 0)
-    tb_corr = float(np.corrcoef(top_half.ravel(), bottom_half_flip.ravel())[0, 1])
+    tb = max(0.0, min(1.0, _safe_corr(top_half, bottom_half_flip)))
 
-    lr = max(0.0, min(1.0, lr_corr)) if not math.isnan(lr_corr) else 0.5
-    tb = max(0.0, min(1.0, tb_corr)) if not math.isnan(tb_corr) else 0.5
     return 0.5 * (lr + tb)
 
 
@@ -224,8 +281,9 @@ def extract_candidates(
     # k = 3.5 gives ~0.02% false alarm rate for Gaussian noise
     # Clamped to [30, 250] to remain physically meaningful for uint8 data
     # -----------------------------------------------------------------------
-    thresh_val = float(bg_level + max(15.0, 3.5 * noise_std))
-    thresh_val = min(max(thresh_val, 30.0), 250.0)
+    dynamic_offset = max(8.0, min(180.0, 2.5 * noise_std))
+    thresh_val = float(bg_level + dynamic_offset)
+    thresh_val = min(max(thresh_val, 12.0), 250.0)
 
     _, bin_mask = cv2.threshold(
         preprocessed, int(thresh_val), 255, cv2.THRESH_BINARY
@@ -236,11 +294,11 @@ def extract_candidates(
         bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )
 
-    # Secondary Morphological White Top-Hat extraction under diffuse/hazy illumination
-    if not contours and bg_level > 20.0:
+    # Secondary Morphological White Top-Hat extraction under diffuse/hazy/attenuated illumination
+    if not contours:
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
         tophat = cv2.morphologyEx(preprocessed, cv2.MORPH_TOPHAT, kernel)
-        th_tophat = int(max(14.0, 2.5 * noise_std))
+        th_tophat = int(max(5.0, min(18.0, 0.8 * noise_std)))
         _, bin_mask = cv2.threshold(tophat, th_tophat, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(
             bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
@@ -257,6 +315,13 @@ def extract_candidates(
     for cnt in contours:
         area = cv2.contourArea(cnt)
         if area < min_area or area > max_area:
+            continue
+
+        # Gate 0: Impulse noise (Salt & Pepper spike) defense.
+        # Real optical beacons (5-20px) have area >= 6 px. 1-3 pixel noise spikes
+        # from salt & pepper injection are rejected under elevated noise or S&P presence.
+        has_impulse_noise = (noise_std > 5.0 or np.count_nonzero(preprocessed == 255) > 30)
+        if area <= 3.0 and has_impulse_noise:
             continue
 
         x, y, bw, bh = cv2.boundingRect(cnt)
@@ -292,7 +357,7 @@ def extract_candidates(
 
         # Gate 3: local contrast must exceed local noise sigma
         local_sigma = max(math.sqrt(local_bg_var), 1.0)
-        if local_contrast < max(12.0, 2.5 * local_sigma):
+        if local_contrast < max(10.0, 2.0 * local_sigma):
             continue
 
         mean_int = float(np.mean(roi_orig))
@@ -310,9 +375,6 @@ def extract_candidates(
         if integrated_flux < min_required_flux:
             continue
 
-        # -----------------------------------------------------------------------
-        # Optical Shape Validation — multi-component, not a single opaque score
-        # -----------------------------------------------------------------------
         # Compactness
         compactness = _compute_compactness(area, (x, y, bw, bh))
         if compactness < 0.08:
@@ -325,17 +387,70 @@ def extract_candidates(
         if circularity < config.min_circularity:
             continue
 
+        # Gate 5b: Dense clutter & impulse noise defense (scale-adaptive)
+        # Under dense clutter (> 12 contours or elevated noise floor), low-energy noise clusters
+        # with flux density < max(6.0, 0.8 * local_sigma) or circularity < 0.15 are rejected.
+        is_dense_clutter = (noise_std > 6.0 or len(contours) > 12)
+        min_flux_density = max(6.0, 0.8 * local_sigma)
+        min_required_flux_clutter = float(area) * min_flux_density
+        if is_dense_clutter and (integrated_flux < min_required_flux_clutter or circularity < 0.15):
+            continue
+
         # Radial intensity consistency (Gaussian profile check)
         radial_consistency = _compute_radial_consistency(roi_orig, local_bg_mean)
         if radial_consistency < 0.08:          # Relaxed gate: accepts motion blurred PSFs
             continue
 
-        # Gate 6: Distractor / Glint rejection (rejects elongated non-Gaussian slits)
-        if (aspect_ratio > 3.0 or aspect_ratio < 0.33) and radial_consistency < 0.35:
-            continue
-
-        # Bilateral symmetry
+        # Bilateral symmetry (computed early to feed the noise-variance-aware gate below)
         symmetry = _compute_symmetry(roi_orig)
+
+        # Gate 5c: Multi-criterion variance-aware noise cluster rejection.
+        #
+        # Salt-and-pepper noise clusters exhibit three jointly distinguishing features:
+        #   1. ROI fill ratio (mean_int / peak_int) approx 0.10 -- very sparse pixel population
+        #      relative to the bounding box; a real Gaussian PSF fills >= 0.25 of its ROI.
+        #   2. Low compactness -- scattered noise dots create irregular bboxes with compactness ~ 0.25
+        #   3. Low bilateral symmetry -- noise is random, not radially symmetric
+        #
+        # All thresholds derived dynamically from measured local background statistics.
+        # No hard-coded pixel values.
+        #
+        # Strategy:
+        #   - variance_gate_factor in [0,1] grows with local background variance
+        #     (0 = clean frame, 1 = extreme S&P noise)
+        #   - When factor > 0.2 (moderate noise present), apply the combined gate
+        #   - Candidate must pass fill_ratio AND at least one of (compactness, symmetry)
+        fill_ratio = mean_int / max(peak_int, 1.0)   # [0,1]: how filled the bbox is
+        compactness_early = _compute_compactness(area, (x, y, bw, bh))
+
+        # variance_gate_factor: 0 = clean, 1 = saturated noise
+        variance_gate_factor = float(np.clip(local_bg_var / 800.0, 0.0, 1.0))
+
+        if variance_gate_factor > 0.2:
+            # Dynamic thresholds -- scale with noise level
+            # Physics floor: real Gaussian PSF fills >= 15% of bbox; S&P noise < 12%
+            min_fill = max(0.15, variance_gate_factor * 0.18)
+            min_compact = variance_gate_factor * 0.30  # e.g. 0.15 at factor=0.5, 0.30 at factor=1.0
+            min_sym = variance_gate_factor * 0.08      # e.g. 0.04 at factor=0.5, 0.08 at factor=1.0
+
+            passes_fill = fill_ratio >= min_fill
+            passes_compact = compactness_early >= min_compact
+            passes_sym = symmetry >= min_sym
+
+            # Candidate must pass fill_ratio AND at least one of (compactness, symmetry)
+            # Prevents sparse noise blobs from slipping through even if accidentally symmetric
+            if not (passes_fill and (passes_compact or passes_sym)):
+                continue
+
+        # compactness alias: compactness_early always defined in Gate 5c above
+        compactness = compactness_early
+
+        # Gate 6: Distractor / Glint rejection
+        # Only reject if both non-Gaussian and low SNR. Fast-moving optical beacons
+        # create physical motion streaks (aspect_ratio > 3.0) with high local contrast/SNR.
+        is_elongated = (aspect_ratio > 3.0 or aspect_ratio < 0.33)
+        if is_elongated and radial_consistency < 0.20 and snr < 3.2:
+            continue
 
         # Size plausibility across all expected scales
         size_plausibility, scale_class = _size_plausibility(area)
@@ -357,18 +472,40 @@ def extract_candidates(
         # -----------------------------------------------------------------------
         snr_score = float(np.clip(snr / 12.0, 0.0, 1.0))
         contrast_score = float(np.clip(local_contrast / 150.0, 0.0, 1.0))
+        flux_score = float(np.clip(integrated_flux / 2000.0, 0.0, 1.0))
         clipping_penalty = 0.15 if clipped else 0.0
 
-        score = (
-            0.30 * radial_consistency
-            + 0.20 * snr_score
-            + 0.15 * circularity
-            + 0.12 * compactness
-            + 0.12 * symmetry
-            + 0.08 * size_plausibility
-            + 0.08 * contrast_score
-            - clipping_penalty
-        )
+        # Discrete pixel grid regularisation for tiny speckles:
+        # A 2x2 or 1x3 noise artifact gets artificially high circularity/compactness.
+        # Scale discrete shape metrics by area confidence for candidates < 8 px:
+        area_reg = float(np.clip(area / 8.0, 0.40, 1.0))
+        adj_circularity = circularity * area_reg
+        adj_compactness = compactness * area_reg
+
+        # Dynamic scoring blend: if candidate is elongated due to rapid target motion,
+        # adapt weights to emphasize SNR, contrast, flux, and size over circularity/radial consistency.
+        if aspect_ratio > 2.2 or aspect_ratio < 0.45:
+            score = (
+                0.15 * radial_consistency
+                + 0.25 * snr_score
+                + 0.20 * contrast_score
+                + 0.15 * flux_score
+                + 0.10 * adj_compactness
+                + 0.05 * symmetry
+                + 0.10 * size_plausibility
+                - clipping_penalty
+            )
+        else:
+            score = (
+                0.25 * radial_consistency
+                + 0.20 * snr_score
+                + 0.15 * flux_score
+                + 0.12 * adj_circularity
+                + 0.10 * adj_compactness
+                + 0.10 * symmetry
+                + 0.08 * size_plausibility
+                - clipping_penalty
+            )
         score = float(np.clip(score, 0.0, 1.0))
 
         candidates.append(

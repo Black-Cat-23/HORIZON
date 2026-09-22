@@ -22,6 +22,7 @@ Strict Invariant: Zero ground-truth leakage or dependencies.
 
 from __future__ import annotations
 
+import math
 import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
@@ -139,6 +140,7 @@ class ClassicalBeaconDetector:
         frame: np.ndarray,
         timestamp: float = 0.0,
         collect_diagnostics: bool = False,
+        **kwargs: Any,
     ) -> DetectionResult:
         """Process a 640×480 optical frame and locate the beacon centroid.
 
@@ -205,7 +207,18 @@ class ClassicalBeaconDetector:
         # -----------------------------------------------------------------------
         selected: Optional[BeaconCandidate] = None
         if candidates:
-            best_cand = candidates[0]
+            est_pred = kwargs.get("estimator_prediction", None)
+            prior_cx, prior_cy = (est_pred[0], est_pred[1]) if est_pred is not None else (320.0, 240.0)
+
+            def _candidate_rank(c: BeaconCandidate) -> float:
+                cx = c.bbox[0] + c.bbox[2] / 2.0
+                cy = c.bbox[1] + c.bbox[3] / 2.0
+                d = math.hypot(cx - prior_cx, cy - prior_cy)
+                spatial_prior = math.exp(-0.5 * (d / 150.0) ** 2)
+                return c.score * 0.6 + spatial_prior * 0.4
+
+            ranked_candidates = sorted(candidates, key=_candidate_rank, reverse=True)
+            best_cand = ranked_candidates[0]
             if best_cand.score >= self._config.min_detection_confidence:
                 selected = best_cand
             # Secondary false-lock check: if edge-clipped candidate is the

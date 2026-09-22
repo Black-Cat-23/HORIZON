@@ -52,7 +52,12 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from sources.video_source import VideoFrameSource
+from sources import (
+    ExternalVideoSource,
+    FramePacket,
+    VirtualCameraFrameAdapter,
+    VideoFrameSource,
+)
 
 from simulator.core.config import (
     AppConfig,
@@ -111,9 +116,13 @@ class LiveScreenView(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
-        from simulator.core.config import TargetConfig, TargetInitialPosition
+        from simulator.core.config import TargetConfig, TargetInitialPosition, CameraConfig
         self._config = AppConfig(
-            target=TargetConfig(initial_position=TargetInitialPosition(x=1000.0, y=1000.0)),
+            camera=CameraConfig(
+                max_initial_offset_deg=1.5,  # Seed-derived ±1.5° camera offset so SEARCH is active from launch
+                auto_align_boresight=False,
+            ),
+            target=TargetConfig(initial_position=TargetInitialPosition(x=None, y=None)),  # Seed-placed
             trajectory=TrajectoryConfig(
                 type="figure8",
                 figure8=FigureEightTrajectoryConfig(amplitude_x=220.0, amplitude_y=140.0, angular_velocity=0.6),
@@ -125,7 +134,7 @@ class LiveScreenView(QWidget):
 
         # Detector Setup
         self._centroid_method = "weighted_cog"
-        self._perception_mode = "SOTA_FOURIER_GMM"
+        self._perception_mode = "HYBRID"
         self._sota_detector = SOTABeaconDetector(
             DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="SOTA_FOURIER_GMM")
         )
@@ -138,12 +147,13 @@ class LiveScreenView(QWidget):
         self._hybrid_detector = HybridBeaconDetector(
             DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="HYBRID")
         )
-        self._detector = self._sota_detector
+        self._detector = self._hybrid_detector
+
 
         # Tracker & PAT Subsystems
         self._track = Track(track_id=1, filter_type="IMM_ADAPTIVE_EKF")
         self._pat_mgr = PATModeManager()
-        self._pat_ctrl = PATCameraController(controller_type="ADRC")
+        self._pat_ctrl = PATCameraController(controller_type="PID")
 
         self._suppress_detection_test = False
         self._last_estimate: Optional[StateEstimate] = None
@@ -156,7 +166,8 @@ class LiveScreenView(QWidget):
 
         # External Video Ingestion State (ISRO Evaluation-2)
         self._input_source: str = "VIRTUAL_CAMERA"
-        self._video_source: Optional[VideoFrameSource] = None
+        self._external_video: Optional[ExternalVideoSource] = None
+        self._video_source: Optional[ExternalVideoSource] = None
         self._video_path: Optional[str] = None
         self._video_log_records: List[Dict[str, Any]] = []
         self._video_last_frame: Optional[np.ndarray] = None
@@ -397,9 +408,10 @@ class LiveScreenView(QWidget):
         self._btn_load_video.clicked.connect(self._on_load_video_clicked)
         src_form.addRow("Test Video:", self._btn_load_video)
 
-        self._lbl_video_info = QLabel("Engine: Internal Virtual Camera (60 FPS)")
+        self._lbl_video_info = QLabel("")
         self._lbl_video_info.setWordWrap(True)
         self._lbl_video_info.setStyleSheet(f"font-family: {FONT_TELEMETRY}; color: {COLOR_TEXT_SECONDARY}; font-size: 11px;")
+        self._update_source_info_display()
         src_form.addRow("Source Info:", self._lbl_video_info)
 
         self._btn_export_video_log = QPushButton("📊 Export Centroid Log (CSV)", self)
@@ -416,8 +428,9 @@ class LiveScreenView(QWidget):
         cfg_form.setSpacing(6)
 
         self._combo_perc_mode = QComboBox(self)
-        self._combo_perc_mode.addItems(["SOTA_FOURIER_GMM", "HYBRID", "NEURAL", "CLASSICAL"])
+        self._combo_perc_mode.addItems(["HYBRID", "SOTA_FOURIER_GMM", "NEURAL", "CLASSICAL"])
         self._combo_perc_mode.setStyleSheet(combo_style)
+
         self._combo_perc_mode.currentTextChanged.connect(self._on_perc_mode_changed)
         cfg_form.addRow("Perception Engine:", self._combo_perc_mode)
 
@@ -428,8 +441,9 @@ class LiveScreenView(QWidget):
         cfg_form.addRow("State Estimator:", self._combo_estimator)
 
         self._combo_controller = QComboBox(self)
-        self._combo_controller.addItems(["ADRC_NONLINEAR", "PID"])
+        self._combo_controller.addItems(["PID", "ADRC_NONLINEAR", "LQG"])
         self._combo_controller.setStyleSheet(combo_style)
+
         self._combo_controller.currentTextChanged.connect(self._on_controller_changed)
         cfg_form.addRow("Controller Mode:", self._combo_controller)
 
@@ -545,48 +559,44 @@ class LiveScreenView(QWidget):
     # --------------------------------------------------------------------------
     # Configuration & Control Event Handlers
     # --------------------------------------------------------------------------
-    def _on_perc_mode_changed(self, mode_str: str) -> None:
-        self._perception_mode = mode_str
-        if mode_str == "SOTA_FOURIER_GMM":
-            self._detector = self._sota_detector
-        elif mode_str == "NEURAL":
-            self._detector = self._neural_detector
-        elif mode_str == "HYBRID":
-            self._detector = self._hybrid_detector
-        else:
-            self._detector = self._classical_detector
-        self._lbl_status.setText(f"Perception Mode: {mode_str}")
-        self._update_ui_displays()
-
-    def _on_estimator_changed(self, est_str: str) -> None:
-        self._track = Track(track_id=1, filter_type=est_str)
-        self._lbl_status.setText(f"State Estimator: {est_str}")
-        self._update_ui_displays()
-
-    def _on_controller_changed(self, ctrl_str: str) -> None:
-        c_type = "ADRC" if ctrl_str == "ADRC_NONLINEAR" else "PID"
-        self._pat_ctrl.controller_type = c_type
-        self._lbl_status.setText(f"Controller Mode: {ctrl_str}")
-        self._update_ui_displays()
-
-    def _on_method_changed(self, method_name: str) -> None:
-        self._centroid_method = method_name
+    def _update_detectors(self) -> None:
+        self._centroid_method = self._combo_method.currentText()
+        self._perception_mode = self._combo_perc_mode.currentText()
+        cent_cfg = CentroidConfig(method=self._centroid_method)
         self._classical_detector = ClassicalBeaconDetector(
-            DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="CLASSICAL")
+            DetectorConfig(centroid=cent_cfg, perception_mode="CLASSICAL")
         )
         self._neural_detector = NeuralBeaconDetector(
-            DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="NEURAL")
+            DetectorConfig(centroid=cent_cfg, perception_mode="NEURAL")
         )
         self._hybrid_detector = HybridBeaconDetector(
-            DetectorConfig(centroid=CentroidConfig(method=self._centroid_method), perception_mode="HYBRID")
+            DetectorConfig(centroid=cent_cfg, perception_mode="HYBRID")
         )
-        if self._perception_mode == "NEURAL":
+        self._sota_detector = SOTABeaconDetector(
+            DetectorConfig(centroid=cent_cfg, perception_mode="SOTA_FOURIER_GMM")
+        )
+        if self._perception_mode == "SOTA_FOURIER_GMM":
+            self._detector = self._sota_detector
+        elif self._perception_mode == "NEURAL":
             self._detector = self._neural_detector
         elif self._perception_mode == "HYBRID":
             self._detector = self._hybrid_detector
         else:
             self._detector = self._classical_detector
-        self._update_ui_displays()
+
+    def _on_perc_mode_changed(self, mode_str: str) -> None:
+        self._update_detectors()
+        self._reset_sim()
+
+    def _on_estimator_changed(self, est_str: str) -> None:
+        self._reset_sim()
+
+    def _on_controller_changed(self, ctrl_str: str) -> None:
+        self._reset_sim()
+
+    def _on_method_changed(self, method_name: str) -> None:
+        self._update_detectors()
+        self._reset_sim()
 
     def _on_preset_changed(self, preset_name: str) -> None:
         if self._combo_preset.currentText() != preset_name:
@@ -608,11 +618,13 @@ class LiveScreenView(QWidget):
     def _toggle_play(self) -> None:
         if self._is_paused:
             if self._input_source == "EXTERNAL_VIDEO":
-                if self._video_source is None or not self._video_source.is_open():
+                if self._external_video is None or not self._external_video.is_open:
                     self._on_load_video_clicked()
-                    if self._video_source is None or not self._video_source.is_open():
+                    if self._external_video is None or not self._external_video.is_open:
                         return
-                self._lbl_status.setText("Status: Tracking External Video...")
+                self._external_video.resume()
+                self._lbl_status.setText("Status: Playing External Video...")
+                self._update_source_info_display()
             else:
                 self._lbl_status.setText("Status: Simulating & Tracking...")
             self._is_paused = False
@@ -623,12 +635,14 @@ class LiveScreenView(QWidget):
             self._btn_play.setText("▶ Resume")
             self._lbl_status.setText("Status: Paused")
             self._sim_timer.stop()
+            if self._input_source == "EXTERNAL_VIDEO" and self._external_video:
+                self._external_video.pause()
+                self._update_source_info_display()
 
     def _toggle_blackout_test(self, checked: bool) -> None:
         self._suppress_detection_test = checked
-        if self._input_source == "EXTERNAL_VIDEO" and self._video_source:
-            fps = max(self._video_source.get_fps(), 1.0)
-            curr_t = self._video_source._frame_index / fps
+        if self._input_source == "EXTERNAL_VIDEO" and self._external_video:
+            curr_t = self._external_video.timestamp
         else:
             curr_t = self._engine.clock.current_time if self._engine else 0.0
         if checked:
@@ -643,40 +657,51 @@ class LiveScreenView(QWidget):
         self._is_paused = True
         self._btn_play.setText("▶ Resume")
 
-        if self._input_source == "EXTERNAL_VIDEO" and self._video_source is not None:
-            self._video_source.reset()
+        if self._input_source == "EXTERNAL_VIDEO" and self._external_video is not None:
+            self._external_video.reset()
             self._video_log_records.clear()
-            self._track.reset()
-            self._pat_mgr = PATModeManager()
-            self._pat_ctrl = PATCameraController()
-            self._last_estimate = None
-            self._last_pat_mode = PATMode.SEARCH
-            self._search_start_time = 0.0
             self.event_timeline.clear_events()
-            self.event_timeline.add_event(0.0, "SEARCH", "Video tracking reset to frame 0")
-            ret, frame, timestamp, frame_idx, _ = self._video_source.read()
-            if ret and frame is not None:
-                self._video_last_frame = frame
-                self._video_source.seek(0)
-                disp_clean = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR) if frame.ndim == 2 else frame.copy()
+            self.event_timeline.add_event(0.0, "SEARCH", f"Video stream reset to frame 0 ({self._external_video.filename})")
+            packet = self._external_video.read_frame()
+            if packet.valid and packet.frame is not None:
+                self._video_last_frame = packet.frame
+                self._external_video.seek(0)
+                disp_clean = cv2.cvtColor(packet.frame, cv2.COLOR_GRAY2BGR) if packet.frame.ndim == 2 else packet.frame.copy()
                 self._render_opencv_to_label(disp_clean, self._clean_cam_label)
                 self._render_opencv_to_label(disp_clean, self._dist_cam_label)
-            self._lbl_status.setText("Status: Video Reset (Frame 0)")
+                self._lbl_frame.setText("0")
+                self._lbl_time.setText("0.000 s")
+            self._lbl_status.setText(f"Status: Video Reset (Frame 0: {self._external_video.filename})")
+            self._update_source_info_display()
             return
 
         self._lbl_status.setText("Status: Reset")
 
-        from simulator.core.config import TargetConfig, TargetInitialPosition
+        from simulator.core.config import TargetConfig, TargetInitialPosition, CameraConfig
         traj_name = self._combo_traj.currentText()
         is_circle = "Circular" in self._combo_beacon_shape.currentText()
         b_size = self._spin_beacon_size.value()
+
+        cam_cfg = CameraConfig(
+            width=self._config.camera.width,
+            height=self._config.camera.height,
+            fov_horizontal_deg=self._config.camera.fov_horizontal_deg,
+            fov_vertical_deg=self._config.camera.fov_vertical_deg,
+            update_rate_hz=self._config.camera.update_rate_hz,
+            rate_limit_deg_s=self._config.camera.rate_limit_deg_s,
+            initial_pan_deg=self._config.camera.initial_pan_deg,
+            initial_tilt_deg=self._config.camera.initial_tilt_deg,
+            max_initial_offset_deg=1.5,   # Seed-derived random offset ±1.5° so SEARCH is exercised
+            auto_align_boresight=False,   # Do NOT auto-align — camera must search for beacon
+        )
+
         new_config = AppConfig(
             world=self._config.world,
-            camera=self._config.camera,
+            camera=cam_cfg,
             target=TargetConfig(
                 size_px=b_size,
                 intensity=self._config.target.intensity,
-                initial_position=TargetInitialPosition(x=1000.0, y=1000.0),
+                initial_position=TargetInitialPosition(x=None, y=None),  # Seed-derived position
                 psf_model="gaussian" if is_circle else "box",
                 psf_sigma_px=max(1.0, b_size / 6.0),
                 psf_background_adu=self._config.target.psf_background_adu,
@@ -706,9 +731,21 @@ class LiveScreenView(QWidget):
         self._config = new_config
         self._engine = SimulationEngine(self._config)
         self._engine.initialize()
-        self._track.reset()
+
+        est_str = self._combo_estimator.currentText()
+        ctrl_str = self._combo_controller.currentText()
+        # Full mapping: PID → PID, ADRC_NONLINEAR → ADRC, LQG → LQG
+        if ctrl_str == "ADRC_NONLINEAR":
+            c_type = "ADRC"
+        elif ctrl_str == "LQG":
+            c_type = "LQG"
+        else:
+            c_type = "PID"
+
+        self._update_detectors()
+        self._track = Track(track_id=1, filter_type=est_str)
         self._pat_mgr = PATModeManager()
-        self._pat_ctrl = PATCameraController()
+        self._pat_ctrl = PATCameraController(controller_type=c_type)
         self._last_estimate = None
         self._last_pat_mode = PATMode.SEARCH
         self._search_start_time = 0.0
@@ -722,19 +759,51 @@ class LiveScreenView(QWidget):
         self._reset_sim()
 
     # --------------------------------------------------------------------------
-    # External Video Ingestion Handlers (ISRO Evaluation-2)
+    # External Video Ingestion Handlers (ISRO Evaluation-2 / Phase 1B)
     # --------------------------------------------------------------------------
+    def _update_source_info_display(self) -> None:
+        """Update Source Info UI with dynamic metadata according to Phase 1B Step 3."""
+        if self._input_source == "EXTERNAL_VIDEO" and self._external_video is not None and self._external_video.is_open:
+            v = self._external_video
+            info_text = (
+                f"File: {v.filename}\n"
+                f"Resolution: {v.width}x{v.height}\n"
+                f"FPS: {v.fps:.2f} FPS\n"
+                f"Duration: {v.duration:.2f}s\n"
+                f"Frames: {v.frame_count}\n"
+                f"Status: {v.status}"
+            )
+            if self._video_gt_data:
+                info_text += f"\n✓ Ground Truth ({len(self._video_gt_data)} frames)"
+        else:
+            cam_w = self._config.camera.width
+            cam_h = self._config.camera.height
+            fps = float(self._config.simulation.frequency_hz)
+            duration = float(self._config.simulation.duration_seconds)
+            total_f = int(self._config.simulation.total_frames)
+            sim_status = "RUNNING" if (self._engine and self._engine.is_running and not self._is_paused) else "READY"
+            info_text = (
+                f"File: N/A (Internal Simulation)\n"
+                f"Resolution: {cam_w}x{cam_h}\n"
+                f"FPS: {fps:.2f} FPS\n"
+                f"Duration: {duration:.2f}s\n"
+                f"Frames: {total_f}\n"
+                f"Status: {sim_status}"
+            )
+        self._lbl_video_info.setText(info_text)
+
     def _on_input_source_changed(self, mode: str) -> None:
         self._input_source = mode
         if mode == "EXTERNAL_VIDEO":
-            if self._video_source is None or not self._video_source.is_open():
+            if self._external_video is None or not self._external_video.is_open:
                 self._on_load_video_clicked()
             else:
-                self._lbl_status.setText(f"Status: Video Mode [{os.path.basename(self._video_path or '')}]")
+                self._lbl_status.setText(f"Status: Video Mode [{self._external_video.filename}]")
+                self._update_source_info_display()
         else:
             self._lbl_status.setText("Status: Virtual Camera Simulation")
-            self._lbl_video_info.setText("Engine: Internal Virtual Camera (60 FPS)")
             self._reset_sim()
+            self._update_source_info_display()
 
     def _on_load_video_clicked(self) -> None:
         default_dir = "data/samples" if os.path.exists("data/samples") else ""
@@ -745,11 +814,12 @@ class LiveScreenView(QWidget):
             "Video Files (*.mp4 *.avi *.mov *.mkv);;All Files (*.*)",
         )
         if not file_path:
-            if self._video_source is None:
+            if self._external_video is None or not self._external_video.is_open:
                 self._combo_input_source.blockSignals(True)
                 self._combo_input_source.setCurrentText("VIRTUAL_CAMERA")
                 self._combo_input_source.blockSignals(False)
                 self._input_source = "VIRTUAL_CAMERA"
+                self._update_source_info_display()
             return
 
         self.load_video_source(file_path)
@@ -757,16 +827,16 @@ class LiveScreenView(QWidget):
     def load_video_source(self, file_path: str) -> bool:
         """Load and initialize an external video file for live beacon tracking."""
         try:
-            if self._video_source is not None:
-                self._video_source.close()
+            if self._external_video is not None:
+                self._external_video.close()
 
-            vsource = VideoFrameSource(file_path)
+            vsource = ExternalVideoSource(file_path)
             if not vsource.open():
-                QMessageBox.critical(self, "Video Load Error", f"Failed to open video file:\n{file_path}")
+                QMessageBox.critical(self, "Video Load Error", f"Failed to open or validate video file:\n{file_path}")
                 return False
 
-            meta = vsource.get_metadata()
-            self._video_source = vsource
+            self._external_video = vsource
+            self._video_source = vsource  # Alias for backward compatibility
             self._video_path = file_path
             self._video_log_records = []
             self._input_source = "EXTERNAL_VIDEO"
@@ -794,51 +864,47 @@ class LiveScreenView(QWidget):
                         pass
                     break
 
-            info_text = f"{os.path.basename(file_path)}\n{meta.native_width}x{meta.native_height} @ {meta.fps:.1f} FPS ({meta.total_frames} frames)"
-            if self._video_gt_data:
-                info_text += f"\n✓ Ground Truth ({len(self._video_gt_data)} frames)"
-            self._lbl_video_info.setText(info_text)
+            self._update_source_info_display()
 
-            # Reset tracking filters & PAT manager
-            self._track.reset()
-            self._pat_mgr = PATModeManager()
-            self._pat_ctrl = PATCameraController()
-            self._last_estimate = None
-            self._last_pat_mode = PATMode.SEARCH
-            self._search_start_time = 0.0
+            # Dynamic timer interval based on video native FPS
+            timer_interval_ms = max(1, int(round(1000.0 / max(vsource.fps, 1.0))))
+            self._sim_timer.setInterval(timer_interval_ms)
 
             # Timeline event
             self.event_timeline.clear_events()
             self.event_timeline.add_event(
                 0.0,
                 "SEARCH",
-                f"Loaded test video: {os.path.basename(file_path)} ({meta.total_frames} frames @ {meta.fps:.1f} FPS)",
+                f"Loaded test video: {vsource.filename} ({vsource.frame_count} frames @ {vsource.fps:.1f} FPS)",
             )
 
-            # Read first frame to prime the viewports
-            ret, frame, timestamp, frame_idx, _ = self._video_source.read()
-            if ret and frame is not None:
-                self._video_last_frame = frame
-                self._video_source.seek(0)
-                disp_clean = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR) if frame.ndim == 2 else frame.copy()
+            # Read first frame to prime the viewports without running tracking
+            packet = self._external_video.read_frame()
+            if packet.valid and packet.frame is not None:
+                self._video_last_frame = packet.frame
+                self._external_video.seek(0)
+                disp_clean = cv2.cvtColor(packet.frame, cv2.COLOR_GRAY2BGR) if packet.frame.ndim == 2 else packet.frame.copy()
                 self._render_opencv_to_label(disp_clean, self._clean_cam_label)
                 self._render_opencv_to_label(disp_clean, self._dist_cam_label)
+                self._lbl_frame.setText("0")
+                self._lbl_time.setText("0.000 s")
 
             self._is_paused = True
             self._btn_play.setText("▶ Resume")
-            self._lbl_status.setText(f"Status: Video Ready ({os.path.basename(file_path)})")
+            self._lbl_status.setText(f"Status: Video Ready ({vsource.filename})")
             return True
         except Exception as ex:
             QMessageBox.critical(self, "Video Load Failed", f"Error loading video:\n{str(ex)}")
             return False
 
     def _execute_video_step(self, step_start_t: float) -> None:
-        """Execute a single frame perception tick on the external video stream."""
-        if self._video_source is None or not self._video_source.is_open():
+        """Execute a single frame decode and display step on the external video stream."""
+        if self._external_video is None or not self._external_video.is_open:
             self._sim_timer.stop()
             self._is_paused = True
             self._btn_play.setText("▶ Resume")
             self._lbl_status.setText("Status: No video source loaded")
+            self._update_source_info_display()
             return
 
         # FPS Tracking
@@ -850,66 +916,83 @@ class LiveScreenView(QWidget):
             self._frame_count = 0
             self._last_fps_calc_time = now
 
-        ret, frame, timestamp, frame_idx, meta = self._video_source.read()
-        if not ret or frame is None:
+        packet = self._external_video.read_frame()
+        if not packet.valid or packet.frame is None or self._external_video.is_eof:
             self._sim_timer.stop()
             self._is_paused = True
             self._btn_play.setText("▶ Resume")
-            self._lbl_status.setText(f"Status: Video Complete ({len(self._video_log_records)} frames)")
+            self._lbl_status.setText(f"Status: Video Complete ({packet.frame_id} frames)")
+            self._update_source_info_display()
             self.event_timeline.add_event(
-                timestamp,
+                packet.timestamp,
                 "TRACK COMPLETE",
-                f"External video stream complete ({len(self._video_log_records)} frames). Centroid log ready.",
+                f"External video stream complete ({packet.frame_id} frames).",
             )
             return
 
-        self._video_last_frame = frame
+        self._video_last_frame = packet.frame
+        frame = packet.frame
+        timestamp = packet.timestamp
+        frame_idx = packet.frame_id
 
-        # 1. Detect beacon centroid
-        detection_res = self._detector.detect(frame, timestamp=timestamp, collect_diagnostics=True)
+        # Update frame & time telemetry readouts
+        self._lbl_time.setText(f"{timestamp:.3f} s")
+        self._lbl_frame.setText(str(frame_idx))
+
+        # 1. Optical Detection (if detector active)
+        detection_res = None
+        meas_pixel = None
+        if hasattr(self, "_detector") and self._detector is not None:
+            detection_res = self._detector.detect(frame, timestamp=timestamp, collect_diagnostics=True)
+            if detection_res and detection_res.detected:
+                meas_pixel = detection_res.centroid
 
         # 2. Kalman Filter Estimation Step (no physical gimbal moving, rates=0)
-        estimate = self._track.step(
-            measurement=detection_res.centroid if (detection_res.detected and not self._suppress_detection_test) else None,
-            confidence=detection_res.confidence if not self._suppress_detection_test else 0.0,
-            timestamp=timestamp,
-            gimbal_pan_rate=0.0,
-            gimbal_tilt_rate=0.0,
-        )
-        self._last_estimate = estimate
+        estimate = None
+        if hasattr(self, "_track") and self._track is not None:
+            estimate = self._track.step(
+                measurement=meas_pixel if not self._suppress_detection_test else None,
+                confidence=detection_res.confidence if (detection_res and not self._suppress_detection_test) else 0.0,
+                timestamp=timestamp,
+                gimbal_pan_rate=0.0,
+                gimbal_tilt_rate=0.0,
+            )
+            self._last_estimate = estimate
 
         # 3. PAT Mode Manager Step
-        fps = max(self._video_source.get_fps(), 1.0)
-        dt_step = 1.0 / fps
-        cov_trace = float(estimate.position_uncertainty**2)
-        is_measurement_accepted = (
-            detection_res.detected
-            and not self._suppress_detection_test
-            and estimate.filter_status != EstimatorStatus.REJECTED_MEASUREMENT
-        )
-        valid_confidence = detection_res.confidence if is_measurement_accepted else 0.0
-
-        pat_state = self._pat_mgr.process_step(
-            dt=dt_step,
-            timestamp_s=timestamp,
-            detection_valid=is_measurement_accepted,
-            detection_confidence=valid_confidence,
-            mahalanobis_d2=estimate.mahalanobis_distance**2,
-            covariance_trace=cov_trace,
-            estimated_u_px=estimate.estimated_x,
-            estimated_v_px=estimate.estimated_y,
-            estimated_vx_px_s=estimate.estimated_vx,
-            estimated_vy_px_s=estimate.estimated_vy,
-            current_pan_deg=0.0,
-            current_tilt_deg=0.0,
-            suppress_detection=self._suppress_detection_test,
-        )
+        pat_state = None
+        if hasattr(self, "_pat_mgr") and self._pat_mgr is not None and estimate is not None:
+            fps = max(self._external_video.fps, 1.0)
+            dt_step = 1.0 / fps
+            cov_trace = float(estimate.position_uncertainty**2)
+            is_measurement_accepted = (
+                detection_res is not None
+                and detection_res.detected
+                and not self._suppress_detection_test
+                and estimate.filter_status != EstimatorStatus.REJECTED_MEASUREMENT
+            )
+            valid_confidence = detection_res.confidence if (detection_res and is_measurement_accepted) else 0.0
+            pat_state = self._pat_mgr.process_step(
+                dt=dt_step,
+                timestamp_s=timestamp,
+                detection_valid=is_measurement_accepted,
+                detection_confidence=valid_confidence,
+                mahalanobis_d2=estimate.mahalanobis_distance**2,
+                covariance_trace=cov_trace,
+                estimated_u_px=estimate.estimated_x,
+                estimated_v_px=estimate.estimated_y,
+                estimated_vx_px_s=estimate.estimated_vx,
+                estimated_vy_px_s=estimate.estimated_vy,
+                current_pan_deg=0.0,
+                current_tilt_deg=0.0,
+                suppress_detection=self._suppress_detection_test,
+            )
 
         # 4. Pointing Error & Centroid Error calculation
         gt_pixel = self._video_gt_data.get(frame_idx, None)
         pixel_error = None
-        if gt_pixel and detection_res.centroid:
-            pixel_error = math.hypot(detection_res.centroid[0] - gt_pixel[0], detection_res.centroid[1] - gt_pixel[1])
+        if gt_pixel and meas_pixel:
+            pixel_error = math.hypot(meas_pixel[0] - gt_pixel[0], meas_pixel[1] - gt_pixel[1])
 
         latency_ms = (time.perf_counter() - step_start_t) * 1000.0
 
@@ -917,98 +1000,31 @@ class LiveScreenView(QWidget):
         rec = {
             "frame_idx": frame_idx,
             "timestamp_s": round(timestamp, 4),
-            "detected": 1 if detection_res.detected else 0,
-            "centroid_u": round(float(detection_res.centroid[0]), 3) if detection_res.centroid else "",
-            "centroid_v": round(float(detection_res.centroid[1]), 3) if detection_res.centroid else "",
-            "estimated_u": round(float(estimate.estimated_x), 3),
-            "estimated_v": round(float(estimate.estimated_y), 3),
-            "estimated_vx": round(float(estimate.estimated_vx), 3),
-            "estimated_vy": round(float(estimate.estimated_vy), 3),
+            "detected": 1 if (detection_res and detection_res.detected) else 0,
+            "centroid_u": round(float(meas_pixel[0]), 3) if meas_pixel else "",
+            "centroid_v": round(float(meas_pixel[1]), 3) if meas_pixel else "",
+            "estimated_u": round(float(estimate.estimated_x), 3) if estimate else "",
+            "estimated_v": round(float(estimate.estimated_y), 3) if estimate else "",
+            "estimated_vx": round(float(estimate.estimated_vx), 3) if estimate else "",
+            "estimated_vy": round(float(estimate.estimated_vy), 3) if estimate else "",
             "ground_truth_u": round(float(gt_pixel[0]), 3) if gt_pixel else "",
             "ground_truth_v": round(float(gt_pixel[1]), 3) if gt_pixel else "",
             "centroid_error_px": round(float(pixel_error), 3) if pixel_error is not None else "",
-            "confidence": round(float(detection_res.confidence), 4),
-            "snr_db": round(float(getattr(detection_res, "snr_db", 0.0)), 2),
-            "pat_mode": pat_state.mode.value,
+            "confidence": round(float(detection_res.confidence), 4) if detection_res else 0.0,
+            "snr_db": round(float(getattr(detection_res, "snr_db", 0.0)), 2) if detection_res else 0.0,
+            "pat_mode": pat_state.mode.value if pat_state else "SEARCH",
             "latency_ms": round(latency_ms, 2),
             "fps": round(self._current_fps, 1),
         }
         self._video_log_records.append(rec)
 
-        # Timeline event on state transition
-        if pat_state.mode != self._last_pat_mode:
-            ev_type = pat_state.mode.value
-            if pat_state.mode == PATMode.TRACK and self._last_pat_mode == PATMode.REACQUIRE:
-                ev_type = "TRACK RESTORED"
-            elif pat_state.mode == PATMode.ACQUIRE and detection_res.detected:
-                self.event_timeline.add_event(timestamp, "CANDIDATE FOUND", "Optical beacon detected in video frame")
-
-            self.event_timeline.add_event(
-                timestamp,
-                ev_type,
-                f"PAT state transition: {self._last_pat_mode.value if self._last_pat_mode else 'NONE'} → {pat_state.mode.value} ({pat_state.transition_reason})",
-            )
-            self._last_pat_mode = pat_state.mode
-
         # 6. Render Viewports
-        # Clean frame
         disp_clean = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR) if frame.ndim == 2 else frame.copy()
         cv2.line(disp_clean, (320 - 15, 240), (320 + 15, 240), (180, 160, 100), 1)
         cv2.line(disp_clean, (320, 240 - 15), (320, 240 + 15), (180, 160, 100), 1)
         if gt_pixel:
             cv2.circle(disp_clean, (int(gt_pixel[0]), int(gt_pixel[1])), 8, (0, 255, 0), 1)
             cv2.putText(disp_clean, "GT", (int(gt_pixel[0]) + 10, int(gt_pixel[1]) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
-        self._render_opencv_to_label(disp_clean, self._clean_cam_label)
-
-        # Annotated tracking frame
-        annotated_frame = frame.copy()
-        meas_pixel = detection_res.centroid if (detection_res and detection_res.detected) else None
-        annotated_frame = draw_tracking_annotations(
-            frame=annotated_frame,
-            estimate=estimate,
-            ground_truth_pos=gt_pixel,
-            measurement_pos=meas_pixel,
-            detection_result=detection_res,
-        )
-        self._render_opencv_to_label(annotated_frame, self._dist_cam_label)
-
-        # 7. Update Telemetry Readouts
-        self._lbl_pat_mode.setText(pat_state.mode.value)
-        self._lbl_pat_quality.setText(f"{pat_state.track_quality * 100.0:.1f}%")
-        self._lbl_pat_error.setText(f"Pan: {pat_state.pan_error_deg:+.2f}° | Tilt: {pat_state.tilt_error_deg:+.2f}°")
-        self._lbl_pat_cmd_rate.setText("Pan: 0.00°/s | Tilt: 0.00°/s")
-        self._lbl_pat_act_rate.setText("N/A (External Video)")
-        self._lbl_pat_sat.setText("NO")
-
-        if estimate is not None:
-            self._lbl_est_status.setText(estimate.filter_status.value)
-            self._lbl_est_pos.setText(f"u: {estimate.estimated_x:.2f} | v: {estimate.estimated_y:.2f} px")
-            self._lbl_est_vel.setText(f"Vu: {estimate.estimated_vx:+.2f} | Vv: {estimate.estimated_vy:+.2f} px/s")
-            self._lbl_est_unc.setText(f"pos: ±{estimate.position_uncertainty:.2f} px | vel: ±{estimate.velocity_uncertainty:.2f} px/s")
-            inno_norm = float(np.linalg.norm(estimate.innovation)) if estimate.innovation is not None else 0.0
-            self._lbl_est_inno.setText(f"||y||: {inno_norm:.2f} px | d²: {estimate.mahalanobis_distance**2:.2f}")
-            self._lbl_est_latency.setText(f"{estimate.processing_time_ms:.1f} ms")
-
-        if detection_res is not None:
-            self._lbl_perc_lock.setText("LOCKED" if detection_res.detected else "SEARCHING")
-            self._lbl_perc_lock.setStyleSheet(f"font-family: {FONT_TELEMETRY}; color: {COLOR_CONFIRM_GREEN if detection_res.detected else COLOR_LOST_RED}; font-weight: bold;")
-            if detection_res.centroid:
-                u, v = detection_res.centroid
-                self._lbl_perc_centroid.setText(f"u: {u:.2f} | v: {v:.2f} px")
-            else:
-                self._lbl_perc_centroid.setText("u: N/A | v: N/A px")
-
-            if pixel_error is not None:
-                self._lbl_perc_error.setText(f"{pixel_error:.3f} px")
-            else:
-                self._lbl_perc_error.setText("N/A")
-            self._lbl_perc_conf.setText(f"{detection_res.confidence * 100.0:.1f}%")
-            self._lbl_perc_latency.setText(f"{detection_res.processing_time_ms:.1f} ms")
-
-        # Ground truth / kinematic readouts
-        self._lbl_time.setText(f"{timestamp:.3f} s")
-        self._lbl_frame.setText(str(frame_idx))
-        if gt_pixel:
             self._lbl_pos.setText(f"u: {gt_pixel[0]:.1f} | v: {gt_pixel[1]:.1f} px")
             self._lbl_cam_pixel.setText(f"u: {gt_pixel[0]:.2f} | v: {gt_pixel[1]:.2f} px")
             self._lbl_fov_status.setText("INSIDE FOV")
@@ -1018,27 +1034,42 @@ class LiveScreenView(QWidget):
             self._lbl_cam_pixel.setText("u: N/A | v: N/A px")
             self._lbl_fov_status.setText("UNKNOWN")
             self._lbl_fov_status.setStyleSheet(f"font-family: {FONT_TELEMETRY}; color: {COLOR_TEXT_SECONDARY};")
-        self._lbl_vel.setText(f"Vu: {estimate.estimated_vx:+.1f} | Vv: {estimate.estimated_vy:+.1f} px/s")
 
-        # Disturbance readouts
-        self._lbl_dt_status.setText("ACTIVE (Video Frame)")
-        self._lbl_dt_status.setStyleSheet(f"font-family: {FONT_TELEMETRY}; color: {COLOR_DISTURBANCE_AMBER}; font-weight: bold;")
-        self._lbl_gauss.setText("PRESENT")
-        self._lbl_atmos.setText("RAW VIDEO")
+        self._render_opencv_to_label(disp_clean, self._clean_cam_label)
 
-        # Emit track_data_ready for Track screen
-        self.track_data_ready.emit(
-            frame,
-            detection_res,
-            estimate,
-            pat_state,
-            gt_pixel,
-            timestamp,
+        annotated_frame = frame.copy()
+        annotated_frame = draw_tracking_annotations(
+            frame=annotated_frame,
+            estimate=estimate,
+            ground_truth_pos=gt_pixel,
+            measurement_pos=meas_pixel,
+            detection_result=detection_res,
         )
+        self._render_opencv_to_label(annotated_frame, self._dist_cam_label)
 
+        # Telemetry readouts
+        if pat_state is not None:
+            self._lbl_pat_mode.setText(pat_state.mode.value)
+            self._lbl_pat_quality.setText(f"{pat_state.track_quality * 100.0:.1f}%")
+            self._lbl_pat_error.setText(f"Pan: {pat_state.pan_error_deg:+.2f}° | Tilt: {pat_state.tilt_error_deg:+.2f}°")
+        else:
+            self._lbl_pat_mode.setText("SEARCH")
+
+        if detection_res is not None:
+            self._lbl_perc_lock.setText("LOCKED" if detection_res.detected else "SEARCHING")
+            self._lbl_perc_lock.setStyleSheet(f"font-family: {FONT_TELEMETRY}; color: {COLOR_CONFIRM_GREEN if detection_res.detected else COLOR_LOST_RED}; font-weight: bold;")
+            if meas_pixel:
+                self._lbl_perc_centroid.setText(f"u: {meas_pixel[0]:.2f} | v: {meas_pixel[1]:.2f} px")
+            else:
+                self._lbl_perc_centroid.setText("u: N/A | v: N/A px")
+            self._lbl_perc_conf.setText(f"{detection_res.confidence * 100.0:.1f}%")
+            self._lbl_perc_latency.setText(f"{detection_res.processing_time_ms:.1f} ms")
+
+        # Status update
         total_latency = (time.perf_counter() - step_start_t) * 1000.0
-        fps_display = self._current_fps if self._current_fps > 0 else fps
-        self._lbl_status.setText(f"Tracking Video: Frame {frame_idx} | {fps_display:.1f} FPS | Latency: {total_latency:.1f} ms")
+        fps_display = self._current_fps if self._current_fps > 0 else packet.source_fps
+        self._lbl_status.setText(f"External Video: Frame {frame_idx}/{self._external_video.frame_count} | {fps_display:.1f} FPS | Latency: {total_latency:.1f} ms")
+        self._update_source_info_display()
 
     def _on_export_centroid_csv_clicked(self) -> None:
         """Export frame-by-frame centroid tracking and error log to CSV."""
@@ -1173,7 +1204,9 @@ class LiveScreenView(QWidget):
         self._engine.initialize()
         self._track.reset()
         self._pat_mgr = PATModeManager()
-        self._pat_ctrl = PATCameraController()
+        _ctrl_str_m = self._combo_controller.currentText()
+        _c_type_m = "ADRC" if _ctrl_str_m == "ADRC_NONLINEAR" else ("LQG" if _ctrl_str_m == "LQG" else "PID")
+        self._pat_ctrl = PATCameraController(controller_type=_c_type_m)
         self._last_estimate = None
         self._last_pat_mode = PATMode.SEARCH
         self._search_start_time = 0.0
@@ -1214,38 +1247,80 @@ class LiveScreenView(QWidget):
             self._frame_count = 0
             self._last_fps_calc_time = now
 
+        # 1. Advance simulation step (steps target trajectory AND camera gimbal to t_k)
+        self._engine.step()
+
         state = self._engine.get_current_state()
         dist_cam_frame = self._engine.get_disturbed_frame()
         camera = self._engine.camera
 
-        # 1. Perception Detection on current disturbed frame
-        detection_res = self._detector.detect(dist_cam_frame, timestamp=state.timestamp, collect_diagnostics=True)
+        # 1. Perception Detection & Kalman Filter Estimation Step
+        # Only provide estimator prediction to perception once track is firmly established
+        # in TRACK or DEGRADED mode with age > 2, so uninitialized / zero-velocity states
+        # do not falsely reject the true optical beacon during initial search and acquisition.
+        if (
+            self._last_estimate
+            and self._last_estimate.track_age > 2
+            and self._pat_mgr.state.mode in (PATMode.TRACK, PATMode.DEGRADED)
+        ):
+            est_pred = (self._last_estimate.predicted_x, self._last_estimate.predicted_y)
+            est_cov = self._last_estimate.covariance[:2, :2] if hasattr(self._last_estimate, "covariance") else None
+            vel_hint = math.hypot(self._last_estimate.estimated_vx, self._last_estimate.estimated_vy)
+        else:
+            est_pred = None
+            est_cov = None
+            vel_hint = 0.0
 
-        # 2. Kalman Filter Estimation Step
-        estimate = self._track.step(
-            measurement=detection_res.centroid if (detection_res.detected and not self._suppress_detection_test) else None,
-            confidence=detection_res.confidence if not self._suppress_detection_test else 0.0,
-            timestamp=state.timestamp,
-            gimbal_pan_rate=camera.gimbal.actual_pan_rate,
-            gimbal_tilt_rate=camera.gimbal.actual_tilt_rate,
-        )
+        if camera.is_new_observation:
+            detection_res = self._detector.detect(
+                dist_cam_frame,
+                timestamp=state.timestamp,
+                collect_diagnostics=True,
+                estimator_prediction=est_pred,
+                prediction_covariance=est_cov,
+                velocity_hint_px_s=vel_hint,
+            )
+            is_measurement_accepted = (
+                detection_res.detected
+                and not self._suppress_detection_test
+            )
+            meas = detection_res.centroid if is_measurement_accepted else None
+            conf = detection_res.confidence if is_measurement_accepted else 0.0
+            estimate = self._track.step(
+                measurement=meas,
+                confidence=conf,
+                timestamp=state.timestamp,
+                gimbal_pan_rate=camera.gimbal.actual_pan_rate,
+                gimbal_tilt_rate=camera.gimbal.actual_tilt_rate,
+                is_sensor_step=True,
+            )
+        else:
+            detection_res = self._last_detection if hasattr(self, "_last_detection") and self._last_detection is not None else DetectionResult(
+                detected=False, centroid=None, bbox=None, confidence=0.0, processing_time_ms=0.0, candidate_count=0, method_used="none", timestamp=state.timestamp
+            )
+            is_measurement_accepted = False
+            estimate = self._track.step(
+                measurement=None,
+                confidence=0.0,
+                timestamp=state.timestamp,
+                gimbal_pan_rate=camera.gimbal.actual_pan_rate,
+                gimbal_tilt_rate=camera.gimbal.actual_tilt_rate,
+                is_sensor_step=False,
+            )
+        self._last_detection = detection_res
         self._last_estimate = estimate
 
         # 3. PAT State Machine & Control Loop
         dt_step = 1.0 / self._config.simulation.frequency_hz
         cov_trace = float(estimate.position_uncertainty**2)
-        search_pan_r, search_tilt_r = self._pat_mgr.search_manager.get_command(
-            dt_step, camera.gimbal.pan_deg, camera.gimbal.tilt_deg
-        )
-        reacq_pan_r, reacq_tilt_r, _ = self._pat_mgr.reacquisition_manager.process_step(
-            dt_step, camera.gimbal.pan_deg, camera.gimbal.tilt_deg
-        )
+        _current_mode = self._pat_mgr.state.mode
+        if _current_mode == PATMode.SEARCH:
+            search_pan_r, search_tilt_r = self._pat_mgr.search_manager.get_command(
+                dt_step, camera.gimbal.pan_deg, camera.gimbal.tilt_deg
+            )
+        else:
+            search_pan_r, search_tilt_r = 0.0, 0.0
 
-        is_measurement_accepted = (
-            detection_res.detected
-            and not self._suppress_detection_test
-            and estimate.filter_status != EstimatorStatus.REJECTED_MEASUREMENT
-        )
         valid_confidence = detection_res.confidence if is_measurement_accepted else 0.0
 
         pat_state = self._pat_mgr.process_step(
@@ -1262,23 +1337,25 @@ class LiveScreenView(QWidget):
             current_pan_deg=camera.gimbal.pan_deg,
             current_tilt_deg=camera.gimbal.tilt_deg,
             suppress_detection=self._suppress_detection_test,
+            is_new_frame=camera.is_new_observation,
         )
 
         # 4. Compute control command & set rate on camera.gimbal
+        # Use reacquire rate commands computed directly by mode_manager.process_step (no double-stepping)
         cmd_pan_rate, cmd_tilt_rate, _, _, _, _, _ = self._pat_ctrl.compute_control_command(
             dt=dt_step,
             pat_state=pat_state,
             search_pan_rate=search_pan_r,
             search_tilt_rate=search_tilt_r,
-            reacquire_pan_rate=reacq_pan_r,
-            reacquire_tilt_rate=reacq_tilt_r,
+            reacquire_pan_rate=pat_state.reacquire_pan_rate,
+            reacquire_tilt_rate=pat_state.reacquire_tilt_rate,
             estimated_vx_px_s=estimate.estimated_vx,
             estimated_vy_px_s=estimate.estimated_vy,
             gimbal=camera.gimbal,
         )
 
-        # 5. Advance simulation step (steps target trajectory AND camera gimbal ONCE per dt)
-        self._engine.step()
+        # Wire gimbal rate command explicitly so camera physically tracks
+        camera.gimbal.set_rate_command(cmd_pan_rate, cmd_tilt_rate)
 
         # Log timeline transitions
         if pat_state.mode != self._last_pat_mode:
@@ -1297,13 +1374,13 @@ class LiveScreenView(QWidget):
 
         latency_ms = (time.perf_counter() - step_start_t) * 1000.0
 
-        # Emit live data signal so Track screen can update without a separate engine
-        camera_state = self._engine.camera if self._engine else None
-        if camera_state is not None and state is not None:
-            _, _, u_true, v_true, in_fov = camera_state.project_target(state.x, state.y)
+        # Ground truth projection strictly at CURRENT timestamp t_k using camera pose at t_k
+        if camera is not None and state is not None:
+            _, _, u_true, v_true, in_fov = camera.project_target(state.x, state.y)
             gt_pos = (u_true, v_true) if in_fov else None
         else:
             gt_pos = None
+
         self.track_data_ready.emit(
             dist_cam_frame,
             detection_res,
@@ -1313,7 +1390,7 @@ class LiveScreenView(QWidget):
             state.timestamp if state is not None else 0.0,
         )
 
-        # Update Displays & Readouts (skip heavy render if step ran over budget)
+        # Update Displays & Readouts for current frame at t_k (zero 1-frame lag)
         self._update_ui_displays(
             pat_state=pat_state,
             detection_res=detection_res,
@@ -1322,6 +1399,7 @@ class LiveScreenView(QWidget):
             cmd_tilt_rate=cmd_tilt_rate,
             latency_ms=latency_ms,
         )
+
 
     # --------------------------------------------------------------------------
     # Real Telemetry & Frame Display Updates
@@ -1340,6 +1418,7 @@ class LiveScreenView(QWidget):
         clean_frame = self._engine.get_clean_frame() if self._engine else None
         dist_frame = self._engine.get_disturbed_frame() if self._engine else None
         camera = self._engine.camera if self._engine else None
+        self._update_source_info_display()
 
         # 1. Update Clean Frame Viewport (Pure Uncorrupted Camera Observation)
         if clean_frame is not None:
@@ -1379,6 +1458,18 @@ class LiveScreenView(QWidget):
             )
 
         # 4. Update Telemetry Readout Panels
+        in_fov = False
+        u_true, v_true = 0.0, 0.0
+        if state is not None and camera is not None:
+            _, _, u_true, v_true, in_fov = camera.project_target(state.x, state.y)
+            self._lbl_time.setText(f"{state.timestamp:.3f} s")
+            self._lbl_frame.setText(str(self._engine.clock.current_frame if self._engine else 0))
+            self._lbl_pos.setText(f"X: {state.x:.2f} | Y: {state.y:.2f} px")
+            self._lbl_vel.setText(f"Vx: {state.vx:+.2f} | Vy: {state.vy:+.2f} px/s")
+            self._lbl_cam_pixel.setText(f"u: {u_true:+.2f} | v: {v_true:+.2f} px")
+            self._lbl_fov_status.setText("INSIDE FOV" if in_fov else "OUTSIDE FOV")
+            self._lbl_fov_status.setStyleSheet(f"font-family: {FONT_TELEMETRY}; color: {COLOR_CONFIRM_GREEN if in_fov else COLOR_LOST_RED}; font-weight: bold;")
+
         if pat_state is not None:
             self._lbl_pat_mode.setText(pat_state.mode.value)
             self._lbl_pat_quality.setText(f"{pat_state.track_quality * 100.0:.1f}%")
@@ -1398,31 +1489,44 @@ class LiveScreenView(QWidget):
             self._lbl_est_latency.setText(f"{estimate.processing_time_ms:.1f} ms")
 
         if detection_res is not None:
-            self._lbl_perc_lock.setText("LOCKED" if detection_res.detected else "SEARCHING")
-            self._lbl_perc_lock.setStyleSheet(f"font-family: {FONT_TELEMETRY}; color: {COLOR_CONFIRM_GREEN if detection_res.detected else COLOR_LOST_RED}; font-weight: bold;")
+            # Physically truthful lock state
+            if not in_fov:
+                self._lbl_perc_lock.setText("LOST (OUT OF FOV)")
+                self._lbl_perc_lock.setStyleSheet(f"font-family: {FONT_TELEMETRY}; color: {COLOR_LOST_RED}; font-weight: bold;")
+            elif pat_state is not None:
+                if pat_state.mode == PATMode.TRACK:
+                    self._lbl_perc_lock.setText("LOCKED")
+                    self._lbl_perc_lock.setStyleSheet(f"font-family: {FONT_TELEMETRY}; color: {COLOR_CONFIRM_GREEN}; font-weight: bold;")
+                elif pat_state.mode == PATMode.ACQUIRE:
+                    self._lbl_perc_lock.setText("ACQUIRING")
+                    self._lbl_perc_lock.setStyleSheet(f"font-family: {FONT_TELEMETRY}; color: {COLOR_DISTURBANCE_AMBER}; font-weight: bold;")
+                elif pat_state.mode in (PATMode.DEGRADED, PATMode.REACQUIRE):
+                    self._lbl_perc_lock.setText(pat_state.mode.value)
+                    self._lbl_perc_lock.setStyleSheet(f"font-family: {FONT_TELEMETRY}; color: {COLOR_DISTURBANCE_AMBER}; font-weight: bold;")
+                else:
+                    self._lbl_perc_lock.setText("SEARCHING")
+                    self._lbl_perc_lock.setStyleSheet(f"font-family: {FONT_TELEMETRY}; color: {COLOR_LOST_RED}; font-weight: bold;")
+            else:
+                self._lbl_perc_lock.setText("LOCKED" if detection_res.detected else "SEARCHING")
+                self._lbl_perc_lock.setStyleSheet(f"font-family: {FONT_TELEMETRY}; color: {COLOR_CONFIRM_GREEN if detection_res.detected else COLOR_LOST_RED}; font-weight: bold;")
+
             if detection_res.centroid:
                 u, v = detection_res.centroid
                 self._lbl_perc_centroid.setText(f"u: {u:.2f} | v: {v:.2f} px")
             else:
                 self._lbl_perc_centroid.setText("u: N/A | v: N/A px")
 
-            if isinstance(detection_res.diagnostics, dict):
-                subpix_err = detection_res.diagnostics.get("subpixel_error_gt", 0.0)
+            # Dynamic Ground-Truth Subpixel Error (diagnostic evaluation only)
+            if not in_fov:
+                self._lbl_perc_error.setText("N/A (OUTSIDE FOV)")
+            elif detection_res.detected and detection_res.centroid:
+                subpix_err = math.hypot(detection_res.centroid[0] - u_true, detection_res.centroid[1] - v_true)
+                self._lbl_perc_error.setText(f"{subpix_err:.3f} px")
             else:
-                subpix_err = getattr(detection_res.diagnostics, "subpixel_error_gt", 0.0)
-            self._lbl_perc_error.setText(f"{subpix_err:.3f} px")
+                self._lbl_perc_error.setText("N/A (NO DETECTION)")
+
             self._lbl_perc_conf.setText(f"{detection_res.confidence * 100.0:.1f}%")
             self._lbl_perc_latency.setText(f"{detection_res.processing_time_ms:.1f} ms ({self._current_fps:.1f} FPS)")
-
-        if state is not None and camera is not None:
-            _, _, u_true, v_true, in_fov = camera.project_target(state.x, state.y)
-            self._lbl_time.setText(f"{state.timestamp:.3f} s")
-            self._lbl_frame.setText(str(self._engine.clock.current_frame if self._engine else 0))
-            self._lbl_pos.setText(f"X: {state.x:.2f} | Y: {state.y:.2f} px")
-            self._lbl_vel.setText(f"Vx: {state.vx:+.2f} | Vy: {state.vy:+.2f} px/s")
-            self._lbl_cam_pixel.setText(f"u: {u_true:+.2f} | v: {v_true:+.2f} px")
-            self._lbl_fov_status.setText("INSIDE FOV" if in_fov else "OUTSIDE FOV")
-            self._lbl_fov_status.setStyleSheet(f"font-family: {FONT_TELEMETRY}; color: {COLOR_CONFIRM_GREEN if in_fov else COLOR_LOST_RED}; font-weight: bold;")
 
         # Update Disturbance telemetry labels from engine telemetry object
         telem = self._engine.last_disturbance_telemetry if self._engine else None

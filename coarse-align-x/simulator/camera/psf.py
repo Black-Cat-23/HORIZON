@@ -29,6 +29,7 @@ import math
 from dataclasses import dataclass
 from typing import Optional
 
+import cv2
 import numpy as np
 
 
@@ -41,23 +42,31 @@ class PSFConfig:
     """Point Spread Function configuration for beacon rendering.
 
     Attributes:
-        model: PSF model name — "box" (default) or "gaussian".
+        model: PSF model name — "box" (default), "gaussian", "airy", or "zernike".
         spot_sigma_px: Gaussian sigma in pixels. 0.0 = delta function (very sharp).
                        Only used when model="gaussian". Default 1.5 px.
         amplitude: Peak amplitude scale factor (1.0 = full input intensity).
                    Default 1.0.
         background_adu: Constant background ADU offset added to PSF region.
                         0.0 = no background pedestal. Default 0.0.
+        zernike_defocus: Coefficient for Z4 defocus aberration (rad). Default 0.0.
+        zernike_astigmatism: Coefficient for Z5/Z6 astigmatism aberration (rad). Default 0.0.
+        zernike_coma: Coefficient for Z7/Z8 coma aberration (rad). Default 0.0.
+        zernike_spherical: Coefficient for Z11 spherical aberration (rad). Default 0.0.
     """
     model: str = "box"
     spot_sigma_px: float = 1.5
     amplitude: float = 1.0
     background_adu: float = 0.0
+    zernike_defocus: float = 0.0
+    zernike_astigmatism: float = 0.0
+    zernike_coma: float = 0.0
+    zernike_spherical: float = 0.0
 
     def __post_init__(self) -> None:
-        if self.model not in ("box", "gaussian"):
+        if self.model not in ("box", "gaussian", "airy", "zernike"):
             raise ValueError(
-                f"PSF model must be 'box' or 'gaussian', got '{self.model}'"
+                f"PSF model must be 'box', 'gaussian', 'airy', or 'zernike', got '{self.model}'"
             )
         if self.spot_sigma_px < 0.0:
             raise ValueError(
@@ -118,6 +127,10 @@ class PointSpreadFunction:
             self._apply_box(frame, x, y, intensity, size_px)
         elif self._config.model == "gaussian":
             self._apply_gaussian(frame, x, y, intensity, size_px)
+        elif self._config.model == "airy":
+            self._apply_airy(frame, x, y, intensity, size_px)
+        elif self._config.model == "zernike":
+            self._apply_zernike(frame, x, y, intensity, size_px)
 
     def _apply_box(
         self,
@@ -215,6 +228,98 @@ class PointSpreadFunction:
         # Blend with existing frame (don't go below background or above 255)
         current_region = frame[row_start:row_end, col_start:col_end].astype(np.float64)
         blended = np.maximum(current_region, g)  # Gaussian on top of background
+        frame[row_start:row_end, col_start:col_end] = np.clip(blended, 0, 255).astype(np.uint8)
+
+    def _apply_airy(
+        self,
+        frame: np.ndarray,
+        x: float,
+        y: float,
+        intensity: int,
+        size_px: float,
+    ) -> None:
+        """Airy disk diffraction PSF model using Bessel function J1(x)/x."""
+        from scipy.special import j1
+        h, w = frame.shape[:2]
+        w0 = max(1.0, self._config.spot_sigma_px * 1.5)
+        render_radius = max(size_px / 2.0, 4.0 * w0)
+        col_start = max(0, int(math.floor(x - render_radius)))
+        col_end = min(w, int(math.ceil(x + render_radius)))
+        row_start = max(0, int(math.floor(y - render_radius)))
+        row_end = min(h, int(math.ceil(y + render_radius)))
+
+        if col_start >= col_end or row_start >= row_end:
+            return
+
+        cols = np.arange(col_start, col_end, dtype=np.float64) + 0.5
+        rows = np.arange(row_start, row_end, dtype=np.float64) + 0.5
+        dc = cols - x
+        dr = rows - y
+        r = np.sqrt(dc[np.newaxis, :] ** 2 + dr[:, np.newaxis] ** 2)
+
+        # Airy intensity: (2 * J1(pi * r / w0) / (pi * r / w0))^2
+        arg = np.pi * r / w0
+        with np.errstate(divide="ignore", invalid="ignore"):
+            airy_val = np.where(arg < 1e-6, 1.0, (2.0 * j1(arg) / arg) ** 2)
+
+        val = self._config.amplitude * float(intensity) * airy_val + self._config.background_adu
+        current_region = frame[row_start:row_end, col_start:col_end].astype(np.float64)
+        blended = np.maximum(current_region, val)
+        frame[row_start:row_end, col_start:col_end] = np.clip(blended, 0, 255).astype(np.uint8)
+
+    def _apply_zernike(
+        self,
+        frame: np.ndarray,
+        x: float,
+        y: float,
+        intensity: int,
+        size_px: float,
+    ) -> None:
+        """Zernike aberration optical PSF computed via pupil Phase 2D FFT."""
+        h, w = frame.shape[:2]
+        grid_size = 64
+        render_radius = max(size_px / 2.0, 3.5 * max(1.0, self._config.spot_sigma_px))
+        col_start = max(0, int(math.floor(x - render_radius)))
+        col_end = min(w, int(math.ceil(x + render_radius)))
+        row_start = max(0, int(math.floor(y - render_radius)))
+        row_end = min(h, int(math.ceil(y + render_radius)))
+
+        if col_start >= col_end or row_start >= row_end:
+            return
+
+        # Pupil plane coordinates (normalized unit circle)
+        u_lin = np.linspace(-1.0, 1.0, grid_size)
+        u_grid, v_grid = np.meshgrid(u_lin, u_lin)
+        rho = np.sqrt(u_grid**2 + v_grid**2)
+        phi = np.arctan2(v_grid, u_grid)
+        aperture = (rho <= 1.0).astype(np.float64)
+
+        # Zernike expansion
+        W = (
+            self._config.zernike_defocus * (2.0 * rho**2 - 1.0)
+            + self._config.zernike_astigmatism * (rho**2 * np.cos(2.0 * phi))
+            + self._config.zernike_coma * ((3.0 * rho**3 - 2.0 * rho) * np.cos(phi))
+            + self._config.zernike_spherical * (6.0 * rho**4 - 6.0 * rho**2 + 1.0)
+        )
+        pupil = aperture * np.exp(1j * W)
+        psf_complex = np.fft.fftshift(np.fft.fft2(pupil))
+        psf_intensity = np.abs(psf_complex) ** 2
+        psf_intensity /= (np.max(psf_intensity) + 1e-12)
+
+        # Resize pupil PSF to local window shape
+        sub_h = row_end - row_start
+        sub_w = col_end - col_start
+        if sub_w <= 0 or sub_h <= 0:
+            return
+        psf_resized = cv2.resize(psf_intensity.astype(np.float32), (sub_w, sub_h), interpolation=cv2.INTER_CUBIC)
+        psf_max = float(np.max(psf_resized))
+        if psf_max > 1e-9:
+            psf_resized = psf_resized / psf_max
+        psf_resized = np.clip(psf_resized, 0.0, 1.0).astype(np.float64)
+
+        val = self._config.amplitude * float(intensity) * psf_resized + self._config.background_adu
+        current_region = frame[row_start:row_end, col_start:col_end].astype(np.float64)
+        blended = np.maximum(current_region, val)
         frame[row_start:row_end, col_start:col_end] = np.clip(blended, 0, 255).astype(np.uint8)
 
     def summary(self) -> str:

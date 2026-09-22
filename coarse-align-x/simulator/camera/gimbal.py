@@ -24,7 +24,7 @@ class CameraGimbal:
     def __init__(
         self,
         rate_limit_deg_s: float = 20.0,
-        accel_limit_deg_s2: Optional[float] = 50.0,
+        accel_limit_deg_s2: Optional[float] = 300.0,
         initial_pan_deg: float = 0.0,
         initial_tilt_deg: float = 0.0,
     ) -> None:

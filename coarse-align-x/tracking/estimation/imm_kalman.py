@@ -133,6 +133,7 @@ class InteractingMultipleModelFilter:
         timestamp: Optional[float] = None,
         gimbal_pan_rate: float = 0.0,
         gimbal_tilt_rate: float = 0.0,
+        is_sensor_step: bool = True,
     ) -> StateEstimate:
         """Execute 3-model IMM mixing, prediction, update, and probability fusion."""
         t_start = time.perf_counter()
@@ -142,7 +143,7 @@ class InteractingMultipleModelFilter:
                 ts = timestamp if timestamp is not None else 0.0
                 return self.initialize(measurement, ts)
             else:
-                return self._cv_filter.update_missing(timestamp)
+                return self._cv_filter.update_missing(timestamp, is_sensor_step=is_sensor_step)
 
         # 1. Sub-filter updates
         if measurement is not None and confidence > 0.0:
@@ -159,8 +160,14 @@ class InteractingMultipleModelFilter:
             L_ca = math.exp(-0.5 * min(d_ca_sq, 40.0)) + 1e-6
             L_man = math.exp(-0.5 * min(d_man_sq, 40.0)) + 1e-6
 
-            # Markov mixing & Bayes probability update
-            c_bar = self._trans_prob.T @ self._mode_probs
+            # Mixing probabilities (c_bar) from transition probability matrix C
+            # C = [[0.90, 0.05, 0.05], [0.08, 0.88, 0.04], [0.10, 0.10, 0.80]]
+            c_bar = np.array([
+                0.90 * self._mode_probs[0] + 0.08 * self._mode_probs[1] + 0.10 * self._mode_probs[2],
+                0.05 * self._mode_probs[0] + 0.88 * self._mode_probs[1] + 0.10 * self._mode_probs[2],
+                0.05 * self._mode_probs[0] + 0.04 * self._mode_probs[1] + 0.80 * self._mode_probs[2],
+            ], dtype=np.float64)
+
             new_probs = np.array(
                 [L_cv * c_bar[0], L_ca * c_bar[1], L_man * c_bar[2]],
                 dtype=np.float64,
@@ -175,12 +182,13 @@ class InteractingMultipleModelFilter:
             self._consecutive_misses = 0
             self._status = EstimatorStatus.TRACKING
         else:
-            est_cv = self._cv_filter.update_missing(timestamp)
-            est_ca = self._ca_filter.update_missing(timestamp)
-            est_man = self._maneuver_filter.update_missing(timestamp)
-            self._consecutive_hits = 0
-            self._consecutive_misses += 1
-            self._status = EstimatorStatus.PREDICTING
+            est_cv = self._cv_filter.update_missing(timestamp, gimbal_pan_rate, gimbal_tilt_rate, is_sensor_step=is_sensor_step)
+            est_ca = self._ca_filter.update_missing(timestamp, gimbal_pan_rate, gimbal_tilt_rate, is_sensor_step=is_sensor_step)
+            est_man = self._maneuver_filter.update_missing(timestamp, gimbal_pan_rate, gimbal_tilt_rate, is_sensor_step=is_sensor_step)
+            if is_sensor_step:
+                self._consecutive_hits = 0
+                self._consecutive_misses += 1
+                self._status = EstimatorStatus.PREDICTING
 
         # 2. Weighted Fusion of 3 IMM State Estimates
         w_cv, w_ca, w_man = self._mode_probs[0], self._mode_probs[1], self._mode_probs[2]
@@ -271,9 +279,23 @@ class InteractingMultipleModelFilter:
         """Alias for update cycle compatible with TargetKalmanFilter interface."""
         return self.step(measurement, confidence, timestamp, gimbal_pan_rate, gimbal_tilt_rate)
 
-    def update_missing(self, timestamp: Optional[float] = None) -> StateEstimate:
+    def update_missing(
+        self,
+        timestamp: Optional[float] = None,
+        gimbal_pan_rate: float = 0.0,
+        gimbal_tilt_rate: float = 0.0,
+        is_sensor_step: bool = True,
+    ) -> StateEstimate:
         """Alias for missing observation cycle compatible with TargetKalmanFilter interface."""
-        return self.step(None, confidence=0.0, timestamp=timestamp)
+        return self.step(
+            None,
+            confidence=0.0,
+            timestamp=timestamp,
+            gimbal_pan_rate=gimbal_pan_rate,
+            gimbal_tilt_rate=gimbal_tilt_rate,
+            is_sensor_step=is_sensor_step,
+        )
+
 
     def predict(
         self,
