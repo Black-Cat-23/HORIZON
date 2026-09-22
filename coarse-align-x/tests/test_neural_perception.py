@@ -36,7 +36,8 @@ class TestSyntheticDataPipeline:
         assert frame.shape == (480, 640)
         assert frame.dtype == np.uint8
         assert bbox is not None
-        cx, cy, w, h = bbox
+        assert len(bbox) >= 1
+        cx, cy, w, h = bbox[0]
         assert 0.0 <= cx <= 1.0
         assert 0.0 <= cy <= 1.0
         assert 0.0 < w <= 1.0

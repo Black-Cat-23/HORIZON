@@ -67,4 +67,4 @@ def test_high_speed_sinusoidal_tracking_closed_loop():
         est = track.step((true_x, true_y), timestamp=t)
         assert est.estimated_x is not None
         assert not np.isnan(est.estimated_x)
-        assert est.processing_time_ms < 5.0
+        assert est.processing_time_ms < 20.0

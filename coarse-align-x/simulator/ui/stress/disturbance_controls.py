@@ -176,6 +176,13 @@ class DisturbanceControlsWidget(QWidget):
         self.combo_atmo.currentTextChanged.connect(self._on_user_field_change)
         form_layout.addRow("Atmosphere Condition:", self.combo_atmo)
 
+        self.spin_atmo_severity = QDoubleSpinBox(scroll_content)
+        self.spin_atmo_severity.setRange(0.0, 1.0)
+        self.spin_atmo_severity.setSingleStep(0.1)
+        self.spin_atmo_severity.setValue(0.5)
+        self.spin_atmo_severity.valueChanged.connect(self._on_user_field_change)
+        form_layout.addRow("Atmosphere Severity:", self.spin_atmo_severity)
+
         scroll_area.setWidget(scroll_content)
         layout.addWidget(scroll_area, stretch=1)
 
@@ -199,6 +206,7 @@ class DisturbanceControlsWidget(QWidget):
                 self.spin_platform.setValue(0.0)
                 self.combo_platform_model.setCurrentText("linear")
                 self.combo_atmo.setCurrentText("clear")
+                self.spin_atmo_severity.setValue(0.5)
             else:
                 self.spin_gaussian.setValue(cfg.gaussian.sigma if cfg.gaussian.enabled else 0.0)
                 self.spin_sp.setValue(cfg.salt_pepper.probability if cfg.salt_pepper.enabled else 0.0)
@@ -207,6 +215,7 @@ class DisturbanceControlsWidget(QWidget):
                 self.spin_platform.setValue(cfg.platform_motion.velocity_x if cfg.platform_motion.enabled else 0.0)
                 self.combo_platform_model.setCurrentText(cfg.platform_motion.model if cfg.platform_motion.enabled else "linear")
                 self.combo_atmo.setCurrentText(cfg.atmosphere.condition if cfg.atmosphere.enabled else "clear")
+                self.spin_atmo_severity.setValue(cfg.atmosphere.severity if cfg.atmosphere.enabled else 0.5)
 
             self._emit_config()
         finally:
@@ -228,6 +237,7 @@ class DisturbanceControlsWidget(QWidget):
         p_vel = self.spin_platform.value()
         p_model = self.combo_platform_model.currentText()
         atmo = self.combo_atmo.currentText()
+        atmo_sev = self.spin_atmo_severity.value()
 
         enabled = (g_sig > 0 or sp_prob > 0 or p_photons < 100 or j_max > 0 or p_vel > 0 or atmo != "clear")
 
@@ -238,6 +248,6 @@ class DisturbanceControlsWidget(QWidget):
             poisson=PoissonNoiseConfig(enabled=(p_photons < 100), peak_photons=p_photons),
             camera_jitter=CameraJitterConfig(enabled=(j_max > 0), max_x_px=j_max, max_y_px=j_max),
             platform_motion=PlatformMotionConfig(enabled=(p_vel > 0), model=p_model, velocity_x=p_vel, velocity_y=p_vel*0.5),
-            atmosphere=AtmosphereConfig(enabled=(atmo != "clear"), condition=atmo),
+            atmosphere=AtmosphereConfig(enabled=(atmo != "clear"), condition=atmo, severity=atmo_sev),
         )
         self.disturbance_changed.emit(config)

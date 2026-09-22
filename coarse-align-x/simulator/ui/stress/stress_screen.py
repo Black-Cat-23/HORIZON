@@ -198,6 +198,24 @@ class StressScreenView(QWidget):
         )
         self._last_estimate = estimate
 
+        # 3.5. Compute control command & set rate on camera gimbal
+        cur_pan = self._engine.camera.gimbal.pan_deg if hasattr(self._engine.camera, 'gimbal') else 0.0
+        cur_tilt = self._engine.camera.gimbal.tilt_deg if hasattr(self._engine.camera, 'gimbal') else 0.0
+        search_pan_r, search_tilt_r = self._pat_mgr.search_manager.get_command(0.033, cur_pan, cur_tilt)
+        reacq_pan_r, reacq_tilt_r, _ = self._pat_mgr.reacquisition_manager.process_step(0.033, cur_pan, cur_tilt)
+
+        self._pat_ctrl.compute_control_command(
+            dt=0.033,
+            pat_state=pat_state,
+            search_pan_rate=search_pan_r,
+            search_tilt_rate=search_tilt_r,
+            reacquire_pan_rate=reacq_pan_r,
+            reacquire_tilt_rate=reacq_tilt_r,
+            estimated_vx_px_s=estimate.estimated_vx if estimate.estimated_vx else 0.0,
+            estimated_vy_px_s=estimate.estimated_vy if estimate.estimated_vy else 0.0,
+            gimbal=self._engine.camera.gimbal,
+        )
+
         # 4. Update Reused HeroSensorView
         search_elapsed = time.time() - self._search_start_time if pat_state.mode in [PATMode.SEARCH, PATMode.REACQUIRE] else 0.0
         self.hero_sensor_view.update_sensor_display(
@@ -242,12 +260,16 @@ class StressScreenView(QWidget):
                     detections += 1
                     if res.centroid and self._engine.current_target_state:
                         # Ground truth pos comparison for verification metric
-                        gt_x = self._engine.current_target_state.x
-                        gt_y = self._engine.current_target_state.y
-                        err = math.hypot(res.centroid[0] - gt_x, res.centroid[1] - gt_y)
-                        total_error += err
-                        max_error = max(max_error, err)
-                        error_samples += 1
+                        gt_state = self._engine.get_current_state()
+                        if gt_state is not None:
+                            _, _, gt_u, gt_v, _ = self._engine.camera.project_target(gt_state.x, gt_state.y)
+                            err = math.hypot(res.centroid[0] - gt_u, res.centroid[1] - gt_v)
+                            total_error += err
+                            max_error = max(max_error, err)
+                            error_samples += 1
+                        else:
+                            # No ground truth available – skip error accumulation
+                            pass
 
         exec_time = time.time() - start_time
         avg_fps = total_steps / exec_time if exec_time > 0 else 0.0

@@ -202,6 +202,7 @@ class SimulationEngine:
             cfg.trajectory.type,
             self._clock.dt,
         )
+        logger.info("Disturbance config: %s", cfg.disturbance)
 
     def _determine_initial_camera_pointing(self) -> Tuple[float, float]:
         """Resolve initial camera gimbal pointing (pan_deg, tilt_deg).

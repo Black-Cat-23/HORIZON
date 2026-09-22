@@ -160,7 +160,7 @@ class SystemResponsePanelWidget(PanelSurface):
                 self._last_reacq_ms = pat_state.mode_duration_s * 1000.0
 
             self.telem_quality.set_value(pat_state.track_quality * 100.0, "%")
-            err_px = float(np.hypot(pat_state.pan_error_deg, pat_state.tilt_error_deg) * 60.0)
+            err_px = float(np.hypot(pat_state.pan_error_deg, pat_state.tilt_error_deg) * 160.0)
             
             # Peak Error Logic
             if err_px > self._peak_error_px:

@@ -107,6 +107,7 @@ class DisturbancePipeline:
         self._rng_intensity = seed_mgr.get_rng("intensity_fluctuation")
         self._rng_distractor = seed_mgr.get_rng("distractor")
         self._rng_correlation = seed_mgr.get_rng("correlation")
+        self._rng_atmosphere = seed_mgr.get_rng("atmosphere")
 
         # Sub-engines
         self._jitter_engine = CameraJitterEngine(config.camera_jitter, self._rng_jitter)
@@ -203,7 +204,15 @@ class DisturbancePipeline:
             p_ox, p_oy, p_vx, p_vy = 0.0, 0.0, 0.0, 0.0
 
         # -------------------------------------------------------------
-        # Stage 2: Temporary Occlusion
+        # Stage 2: Camera Image-Plane Jitter
+        # -------------------------------------------------------------
+        if ablate_module != "camera_jitter":
+            frame, jitter_x, jitter_y = self._jitter_engine.step(frame=frame)
+        else:
+            jitter_x, jitter_y = 0.0, 0.0
+
+        # -------------------------------------------------------------
+        # Stage 3: Temporary Occlusion
         # -------------------------------------------------------------
         if ablate_module != "occlusion":
             frame, transmission = self._occlusion_engine.apply(frame, sim_time)
@@ -211,17 +220,17 @@ class DisturbancePipeline:
             transmission = 1.0
 
         # -------------------------------------------------------------
-        # Stage 3: Atmospheric Degradation
+        # Stage 4: Atmospheric Degradation
         # -------------------------------------------------------------
         if ablate_module != "atmosphere":
             frame, contrast_factor, brightness_factor = apply_atmospheric_degradation(
-                frame=frame, config=self._config.atmosphere
+                frame=frame, config=self._config.atmosphere, rng=self._rng_atmosphere
             )
         else:
             contrast_factor, brightness_factor = 1.0, 0.0
 
         # -------------------------------------------------------------
-        # Stage 4: Temporal Intensity Fluctuation
+        # Stage 5: Temporal Intensity Fluctuation
         # -------------------------------------------------------------
         if ablate_module != "intensity_fluctuation":
             frame, intensity_mult = self._intensity_engine.apply(frame, sim_time)
@@ -229,7 +238,7 @@ class DisturbancePipeline:
             intensity_mult = 1.0
 
         # -------------------------------------------------------------
-        # Stage 5: False Optical Targets (Distractors)
+        # Stage 6: False Optical Targets (Distractors)
         # -------------------------------------------------------------
         if ablate_module != "distractors":
             frame, distractor_cnt = self._distractor_engine.apply(frame, sim_dt)
@@ -237,9 +246,9 @@ class DisturbancePipeline:
             distractor_cnt = 0
 
         # -------------------------------------------------------------
-        # Stage 6: Sensor Noise Injection
+        # Stage 7: Sensor Noise Injection
         # -------------------------------------------------------------
-        # 6a. Salt & Pepper
+        # 7a. Salt & Pepper
         if ablate_module != "salt_pepper" and self._config.salt_pepper.enabled and self._config.salt_pepper.probability > 0.0:
             frame = apply_salt_and_pepper_noise(
                 frame=frame,
@@ -247,7 +256,7 @@ class DisturbancePipeline:
                 rng=self._rng_sp,
             )
 
-        # 6b. Gaussian Noise
+        # 7b. Gaussian Noise
         if ablate_module != "gaussian" and self._config.gaussian.enabled and self._config.gaussian.sigma > 0.0:
             frame = apply_gaussian_noise(
                 frame=frame,
@@ -255,21 +264,13 @@ class DisturbancePipeline:
                 rng=self._rng_gauss,
             )
 
-        # 6c. Poisson Shot Noise
+        # 7c. Poisson Shot Noise
         if ablate_module != "poisson" and self._config.poisson.enabled:
             frame = apply_poisson_noise(
                 frame=frame,
                 peak_photons=self._config.poisson.peak_photons,
                 rng=self._rng_poisson,
             )
-
-        # -------------------------------------------------------------
-        # Stage 7: Camera Image-Plane Jitter
-        # -------------------------------------------------------------
-        if ablate_module != "camera_jitter":
-            frame, jitter_x, jitter_y = self._jitter_engine.step(frame=frame)
-        else:
-            jitter_x, jitter_y = 0.0, 0.0
 
         # Ensure output invariants: strictly uint8 and 2D
         disturbed_frame = np.ascontiguousarray(frame, dtype=np.uint8)
