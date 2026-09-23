@@ -270,6 +270,8 @@ class LiveScreenView(QWidget):
         self._lbl_pat_act_rate.setStyleSheet(label_val_style)
         self._lbl_pat_sat = QLabel("NO")
         self._lbl_pat_sat.setStyleSheet(f"font-family: {FONT_TELEMETRY}; color: {COLOR_CONFIRM_GREEN}; font-weight: bold;")
+        self._lbl_pat_adrc_dist = QLabel("Pan: 0.00°/s | Tilt: 0.00°/s")
+        self._lbl_pat_adrc_dist.setStyleSheet(label_val_style)
 
         pat_form.addRow("PAT Mode:", self._lbl_pat_mode)
         pat_form.addRow("Track Quality:", self._lbl_pat_quality)
@@ -277,6 +279,7 @@ class LiveScreenView(QWidget):
         pat_form.addRow("Commanded Rates (u):", self._lbl_pat_cmd_rate)
         pat_form.addRow("Actual Gimbal Rates:", self._lbl_pat_act_rate)
         pat_form.addRow("Actuator Saturation:", self._lbl_pat_sat)
+        pat_form.addRow("ADRC Disturbance (f):", self._lbl_pat_adrc_dist)
         sidebar_layout.addWidget(pat_box)
 
         # --- 1. Phase 5 State Estimation Telemetry Box ---
@@ -297,6 +300,8 @@ class LiveScreenView(QWidget):
         self._lbl_est_inno.setStyleSheet(label_val_style)
         self._lbl_est_latency = QLabel("0.0 ms")
         self._lbl_est_latency.setStyleSheet(label_val_style)
+        self._lbl_est_imm_probs = QLabel("CV: 60% | CA: 25% | MAN: 15%")
+        self._lbl_est_imm_probs.setStyleSheet(label_val_style)
 
         est_form.addRow("Filter Status:", self._lbl_est_status)
         est_form.addRow("Estimated Position:", self._lbl_est_pos)
@@ -304,6 +309,7 @@ class LiveScreenView(QWidget):
         est_form.addRow("1-Sigma Uncertainty:", self._lbl_est_unc)
         est_form.addRow("Innovation / Gate:", self._lbl_est_inno)
         est_form.addRow("Estimator Latency:", self._lbl_est_latency)
+        est_form.addRow("IMM Mode Probs:", self._lbl_est_imm_probs)
         sidebar_layout.addWidget(est_box)
 
         # --- 2. Phase 4 Perception Telemetry Box ---
@@ -943,7 +949,23 @@ class LiveScreenView(QWidget):
         detection_res = None
         meas_pixel = None
         if hasattr(self, "_detector") and self._detector is not None:
-            detection_res = self._detector.detect(frame, timestamp=timestamp, collect_diagnostics=True)
+            v_est_pred = (self._last_estimate.predicted_x, self._last_estimate.predicted_y) if (
+                self._last_estimate and self._last_estimate.track_age > 2 and getattr(self._pat_mgr.state, "mode", None) in (PATMode.TRACK, PATMode.DEGRADED)
+            ) else None
+            v_est_cov = self._last_estimate.covariance[:2, :2] if (v_est_pred and hasattr(self._last_estimate, "covariance")) else None
+            v_vel_hint = math.hypot(self._last_estimate.estimated_vx, self._last_estimate.estimated_vy) if v_est_pred else 0.0
+
+            detection_res = self._detector.detect(
+                frame,
+                timestamp=timestamp,
+                collect_diagnostics=True,
+                estimator_prediction=v_est_pred,
+                prediction_covariance=v_est_cov,
+                velocity_hint_px_s=v_vel_hint,
+                pat_mode=self._pat_mgr.state.mode.value if (hasattr(self, "_pat_mgr") and self._pat_mgr) else "SEARCH",
+                track_quality=self._pat_mgr.state.track_quality if (hasattr(self, "_pat_mgr") and self._pat_mgr) else 0.0,
+                consecutive_hits=self._pat_mgr.state.consecutive_hits if (hasattr(self, "_pat_mgr") and self._pat_mgr) else 0,
+            )
             if detection_res and detection_res.detected:
                 meas_pixel = detection_res.centroid
 
@@ -1279,6 +1301,9 @@ class LiveScreenView(QWidget):
                 estimator_prediction=est_pred,
                 prediction_covariance=est_cov,
                 velocity_hint_px_s=vel_hint,
+                pat_mode=self._pat_mgr.state.mode.value if (hasattr(self, "_pat_mgr") and self._pat_mgr) else "SEARCH",
+                track_quality=self._pat_mgr.state.track_quality if (hasattr(self, "_pat_mgr") and self._pat_mgr) else 0.0,
+                consecutive_hits=self._pat_mgr.state.consecutive_hits if (hasattr(self, "_pat_mgr") and self._pat_mgr) else 0,
             )
             is_measurement_accepted = (
                 detection_res.detected
@@ -1352,6 +1377,7 @@ class LiveScreenView(QWidget):
             estimated_vx_px_s=estimate.estimated_vx,
             estimated_vy_px_s=estimate.estimated_vy,
             gimbal=camera.gimbal,
+            measured_latency_s=detection_res.processing_time_ms / 1000.0 if detection_res else None,
         )
 
         # Wire gimbal rate command explicitly so camera physically tracks
@@ -1478,6 +1504,9 @@ class LiveScreenView(QWidget):
             if camera:
                 self._lbl_pat_act_rate.setText(f"Pan: {camera.gimbal.actual_pan_rate:+.2f}°/s | Tilt: {camera.gimbal.actual_tilt_rate:+.2f}°/s")
             self._lbl_pat_sat.setText("YES" if pat_state.is_saturated else "NO")
+            if hasattr(self, "_pat_ctrl") and hasattr(self._pat_ctrl, "get_estimated_disturbance"):
+                dist_pan, dist_tilt = self._pat_ctrl.get_estimated_disturbance()
+                self._lbl_pat_adrc_dist.setText(f"Pan: {dist_pan:+.2f}°/s | Tilt: {dist_tilt:+.2f}°/s")
 
         if estimate is not None:
             self._lbl_est_status.setText(estimate.filter_status.value)
@@ -1487,6 +1516,9 @@ class LiveScreenView(QWidget):
             inno_norm = float(np.linalg.norm(estimate.innovation)) if estimate.innovation is not None else 0.0
             self._lbl_est_inno.setText(f"||y||: {inno_norm:.2f} px | d²: {estimate.mahalanobis_distance**2:.2f}")
             self._lbl_est_latency.setText(f"{estimate.processing_time_ms:.1f} ms")
+            if estimate.estimator_health and estimate.estimator_health.model_probabilities:
+                p_cv, p_ca, p_man = estimate.estimator_health.model_probabilities
+                self._lbl_est_imm_probs.setText(f"CV: {p_cv*100:.0f}% | CA: {p_ca*100:.0f}% | MAN: {p_man*100:.0f}%")
 
         if detection_res is not None:
             # Physically truthful lock state
@@ -1525,8 +1557,8 @@ class LiveScreenView(QWidget):
             else:
                 self._lbl_perc_error.setText("N/A (NO DETECTION)")
 
-            self._lbl_perc_conf.setText(f"{detection_res.confidence * 100.0:.1f}%")
-            self._lbl_perc_latency.setText(f"{detection_res.processing_time_ms:.1f} ms ({self._current_fps:.1f} FPS)")
+            mode_tag = "FAST" if "FAST" in getattr(detection_res, "detector_source", "") else "FULL"
+            self._lbl_perc_latency.setText(f"{detection_res.processing_time_ms:.1f} ms [{mode_tag}] ({self._current_fps:.1f} FPS)")
 
         # Update Disturbance telemetry labels from engine telemetry object
         telem = self._engine.last_disturbance_telemetry if self._engine else None
