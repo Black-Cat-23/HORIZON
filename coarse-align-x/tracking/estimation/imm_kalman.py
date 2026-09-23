@@ -33,10 +33,15 @@ logger = logging.getLogger(__name__)
 class InteractingMultipleModelFilter:
     """Interacting Multiple Model (IMM-EKF) Filter for maneuver-resilient optical tracking.
 
-    Phase 5 Upgrade — 3 Motion Models:
-      1. Constant Velocity (CV)  — Low-noise kinematic drift (sigma_a = 200.0 px/s^2)
-      2. Constant Acceleration (CA) — Steady maneuvering (sigma_a = 800.0 px/s^2)
-      3. Sudden Maneuver         — Extreme dynamic turns / jitter (sigma_a = 2500.0 px/s^2)
+    Implements Bar-Shalom's canonical 4-step IMM framework:
+      1. Interaction / State Mixing across 3 models:
+         - Constant Velocity (CV)   — Low-noise kinematic drift (sigma_a = 200.0 px/s^2)
+         - Constant Acceleration (CA)— Steady maneuvering (sigma_a = 800.0 px/s^2)
+         - Sudden Maneuver          — High-G dynamic turns / jitter (sigma_a = 2500.0 px/s^2)
+      2. Model-Conditioned Predictions with camera gimbal motion compensation.
+      3. Maneuver-Adaptive Gating: Fused prediction covariance expanded by the
+         spread-of-the-means term, eliminating maneuver-induced gate drops.
+      4. Dynamic Bayesian Likelihood & Mode Probability Updates with Joseph-form fusion.
 
     Parameters:
         config: Optional KalmanFilterConfig.
@@ -46,18 +51,23 @@ class InteractingMultipleModelFilter:
         self._config = config or KalmanFilterConfig(accel_noise_sigma=200.0)
 
         # Instantiate 3 sub-filters with adaptive motion blur covariance
+        # Model 0: Non-maneuvering / Constant Velocity (low process noise for extreme smoothing & jitter rejection)
+        # Model 1: Moderate Maneuvering / Constant Acceleration (absorbs tactical turns and dynamic flight)
+        # Model 2: High-G Evasive Maneuver / Jerk (absorbs sudden platform shocks and break turns without gating loss)
         self._cv_filter = TargetKalmanFilter(
             KalmanFilterConfig(
-                accel_noise_sigma=200.0,
+                accel_noise_sigma=20.0,
                 base_measurement_sigma_px=self._config.base_measurement_sigma_px,
                 adaptive_motion_noise=True,
+                adaptive_process_noise=False,
             )
         )
         self._ca_filter = TargetKalmanFilter(
             KalmanFilterConfig(
-                accel_noise_sigma=800.0,
+                accel_noise_sigma=600.0,
                 base_measurement_sigma_px=self._config.base_measurement_sigma_px,
                 adaptive_motion_noise=True,
+                adaptive_process_noise=False,
             )
         )
         self._maneuver_filter = TargetKalmanFilter(
@@ -65,22 +75,27 @@ class InteractingMultipleModelFilter:
                 accel_noise_sigma=2500.0,
                 base_measurement_sigma_px=self._config.base_measurement_sigma_px,
                 adaptive_motion_noise=True,
+                adaptive_process_noise=False,
             )
         )
+        self._filters = [self._cv_filter, self._ca_filter, self._maneuver_filter]
+        self._num_models = 3
 
         # Model probabilities [CV, CA, MANEUVER]: sum = 1.0
         self._mode_probs = np.array([0.60, 0.25, 0.15], dtype=np.float64)
 
         # 3×3 Markov Transition Probability Matrix: P_ij = P(mode_j | mode_i)
+        # Row i is origin mode, Col j is destination mode
         self._trans_prob = np.array(
             [
-                [0.92, 0.05, 0.03],
-                [0.08, 0.87, 0.05],
-                [0.05, 0.15, 0.80],
+                [0.78, 0.18, 0.04],
+                [0.05, 0.88, 0.07],
+                [0.03, 0.12, 0.85],
             ],
             dtype=np.float64,
         )
 
+        # Operational status and lifecycle counters
         self._status: EstimatorStatus = EstimatorStatus.UNINITIALIZED
         self._last_timestamp: float = 0.0
         self._track_age: int = 0
@@ -88,13 +103,25 @@ class InteractingMultipleModelFilter:
         self._consecutive_misses: int = 0
         self._last_estimate: Optional[StateEstimate] = None
 
+        # Fused states
+        self._fused_x: Optional[np.ndarray] = None
+        self._fused_P: Optional[np.ndarray] = None
+        self._fused_x_pred: Optional[np.ndarray] = None
+        self._fused_P_pred: Optional[np.ndarray] = None
+
+        # Prediction cache to prevent double-propagation when predict() is called before update()
+        self._has_prediction: bool = False
+        self._c_bar: Optional[np.ndarray] = None
+        self._sub_preds_x: Optional[List[np.ndarray]] = None
+        self._sub_preds_P: Optional[List[np.ndarray]] = None
+
     @property
     def status(self) -> EstimatorStatus:
         return self._status
 
     @property
     def is_initialized(self) -> bool:
-        return self._cv_filter.is_initialized
+        return self._status not in (EstimatorStatus.UNINITIALIZED, EstimatorStatus.RESET)
 
     @property
     def mode_probabilities(self) -> Tuple[float, float, float]:
@@ -105,13 +132,27 @@ class InteractingMultipleModelFilter:
             float(self._mode_probs[2]),
         )
 
+    @property
+    def state_vector(self) -> Optional[np.ndarray]:
+        """Returns the current fused 4×1 state vector [px, py, vx, vy]^T."""
+        if self._fused_x is not None:
+            return self._fused_x.copy()
+        return self._cv_filter.state_vector
+
+    @property
+    def covariance_matrix(self) -> Optional[np.ndarray]:
+        """Returns the current fused 4×4 state covariance matrix."""
+        if self._fused_P is not None:
+            return self._fused_P.copy()
+        return self._cv_filter.covariance_matrix
+
     def initialize(
         self,
         measurement: Tuple[float, float],
         timestamp: float,
         initial_velocity: Tuple[float, float] = (0.0, 0.0),
     ) -> StateEstimate:
-        """Initialize all 3 IMM sub-filters from initial measurement."""
+        """Initialize all 3 IMM sub-filters and fused state from initial measurement."""
         est_cv = self._cv_filter.initialize(measurement, timestamp, initial_velocity)
         self._ca_filter.initialize(measurement, timestamp, initial_velocity)
         self._maneuver_filter.initialize(measurement, timestamp, initial_velocity)
@@ -123,8 +164,113 @@ class InteractingMultipleModelFilter:
         self._consecutive_hits = 1
         self._consecutive_misses = 0
 
+        self._fused_x = np.array(
+            [[measurement[0]], [measurement[1]], [initial_velocity[0]], [initial_velocity[1]]],
+            dtype=np.float64,
+        )
+        self._fused_P = self._cv_filter.covariance_matrix
+        self._fused_x_pred = self._fused_x.copy()
+        self._fused_P_pred = self._fused_P.copy() if self._fused_P is not None else None
+        self._has_prediction = False
+
         self._last_estimate = est_cv
         return est_cv
+
+    def _compute_interaction_mixing(self) -> Tuple[np.ndarray, List[np.ndarray], List[np.ndarray]]:
+        """
+        Step 1 of IMM: Computes predicted mode probabilities c_j and mixed states (x_0j, P_0j).
+        Returns: (c_bar, mixed_x, mixed_P)
+        """
+        # Predicted mode probabilities: c_bar[j] = \sum_i P_ij * mu_i
+        c_bar = self._trans_prob.T @ self._mode_probs
+        c_bar = np.where(c_bar <= 0, 1e-12, c_bar)
+        sum_c = np.sum(c_bar)
+        c_bar = c_bar / sum_c if sum_c > 0 else np.array([0.34, 0.33, 0.33], dtype=np.float64)
+
+        # Mixing probabilities: mu_{i|j} = (P_ij * mu_i) / c_bar[j]
+        mu_mix = np.zeros((self._num_models, self._num_models), dtype=np.float64)
+        for i in range(self._num_models):
+            for j in range(self._num_models):
+                mu_mix[i, j] = (self._trans_prob[i, j] * self._mode_probs[i]) / c_bar[j]
+
+        # Extract current states of the 3 sub-filters
+        x_sub = [f.state_vector for f in self._filters]
+        P_sub = [f.covariance_matrix for f in self._filters]
+
+        # Mix state and covariance for each destination model j
+        mixed_x = []
+        mixed_P = []
+        for j in range(self._num_models):
+            x_0j = np.zeros((4, 1), dtype=np.float64)
+            for i in range(self._num_models):
+                x_0j += mu_mix[i, j] * x_sub[i]
+            mixed_x.append(x_0j)
+
+            P_0j = np.zeros((4, 4), dtype=np.float64)
+            for i in range(self._num_models):
+                dx = x_sub[i] - x_0j
+                P_0j += mu_mix[i, j] * (P_sub[i] + (dx @ dx.T))
+            mixed_P.append(P_0j)
+
+        return c_bar, mixed_x, mixed_P
+
+    def predict(
+        self,
+        dt: float,
+        gimbal_pan_rate: float = 0.0,
+        gimbal_tilt_rate: float = 0.0,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Executes Steps 1 and 2 of IMM:
+          1. Interaction & state mixing across all 3 models.
+          2. Model-conditioned predictions with camera gimbal motion compensation.
+          3. Fused prediction with spread-of-the-means for adaptive gating.
+
+        Returns:
+            Tuple of (fused_x_pred, fused_P_pred) suitable for multi-candidate gating.
+        """
+        if not self.is_initialized:
+            raise RuntimeError("Cannot predict uninitialized IMM filter.")
+
+        dt_eff = max(1e-4, float(dt))
+
+        # 1. Interaction / Mixing
+        c_bar, mixed_x, mixed_P = self._compute_interaction_mixing()
+        self._c_bar = c_bar
+
+        # Inject mixed initial conditions into sub-filters
+        for j in range(self._num_models):
+            self._filters[j].set_state(mixed_x[j], mixed_P[j])
+
+        # 2. Model-Conditioned Predictions
+        preds_x = []
+        preds_P = []
+        for j in range(self._num_models):
+            px, pP = self._filters[j].predict(dt_eff, gimbal_pan_rate, gimbal_tilt_rate)
+            self._filters[j]._last_timestamp = self._last_timestamp + dt_eff
+            preds_x.append(px)
+            preds_P.append(pP)
+
+        self._sub_preds_x = preds_x
+        self._sub_preds_P = preds_P
+
+        # 3. Probability-weighted fused prediction
+        fused_px = np.zeros((4, 1), dtype=np.float64)
+        for j in range(self._num_models):
+            fused_px += c_bar[j] * preds_x[j]
+
+        # Fused covariance with spread-of-the-means term:
+        # P_pred = \sum c_j * (P_pred,j + (x_pred,j - x_pred)(x_pred,j - x_pred)^T)
+        fused_pP = np.zeros((4, 4), dtype=np.float64)
+        for j in range(self._num_models):
+            dx = preds_x[j] - fused_px
+            fused_pP += c_bar[j] * (preds_P[j] + (dx @ dx.T))
+
+        self._fused_x_pred = fused_px
+        self._fused_P_pred = fused_pP
+        self._has_prediction = True
+
+        return fused_px.copy(), fused_pP.copy()
 
     def step(
         self,
@@ -135,7 +281,7 @@ class InteractingMultipleModelFilter:
         gimbal_tilt_rate: float = 0.0,
         is_sensor_step: bool = True,
     ) -> StateEstimate:
-        """Execute 3-model IMM mixing, prediction, update, and probability fusion."""
+        """Execute full IMM cycle: mixing, prediction, measurement update, and probability fusion."""
         t_start = time.perf_counter()
 
         if not self.is_initialized:
@@ -145,80 +291,113 @@ class InteractingMultipleModelFilter:
             else:
                 return self._cv_filter.update_missing(timestamp, is_sensor_step=is_sensor_step)
 
-        # 1. Sub-filter updates
+        # 1. Prediction stage: execute if not already cached from a prior predict() call
+        ts = float(timestamp) if timestamp is not None else (self._last_timestamp + 0.033)
+        dt = max(1e-4, ts - self._last_timestamp)
+
+        if not self._has_prediction or self._c_bar is None or self._sub_preds_x is None:
+            self.predict(dt, gimbal_pan_rate, gimbal_tilt_rate)
+
+        c_bar = self._c_bar
+        assert c_bar is not None and self._sub_preds_x is not None and self._sub_preds_P is not None
+
+        # 2. Measurement Update & Mode Likelihood Evaluation
+        sub_estimates: List[StateEstimate] = []
+        likelihoods = np.zeros(self._num_models, dtype=np.float64)
+
         if measurement is not None and confidence > 0.0:
-            est_cv = self._cv_filter.update(measurement, confidence, timestamp, gimbal_pan_rate, gimbal_tilt_rate)
-            est_ca = self._ca_filter.update(measurement, confidence, timestamp, gimbal_pan_rate, gimbal_tilt_rate)
-            est_man = self._maneuver_filter.update(measurement, confidence, timestamp, gimbal_pan_rate, gimbal_tilt_rate)
+            for j in range(self._num_models):
+                est_j = self._filters[j].update(
+                    measurement=measurement,
+                    confidence=confidence,
+                    timestamp=ts,
+                    gimbal_pan_rate=gimbal_pan_rate,
+                    gimbal_tilt_rate=gimbal_tilt_rate,
+                )
+                sub_estimates.append(est_j)
 
-            # Compute mode likelihoods based on innovation Mahalanobis distance
-            d_cv_sq = est_cv.mahalanobis_distance**2
-            d_ca_sq = est_ca.mahalanobis_distance**2
-            d_man_sq = est_man.mahalanobis_distance**2
+                # Innovation residual and Mahalanobis distance
+                d_j_sq = est_j.mahalanobis_distance ** 2
 
-            L_cv = math.exp(-0.5 * min(d_cv_sq, 40.0)) + 1e-6
-            L_ca = math.exp(-0.5 * min(d_ca_sq, 40.0)) + 1e-6
-            L_man = math.exp(-0.5 * min(d_man_sq, 40.0)) + 1e-6
+                # Exact innovation covariance determinant for Gaussian likelihood
+                if self._filters[j]._last_innovation is not None and self._filters[j]._last_innovation.covariance is not None:
+                    S_mat = self._filters[j]._last_innovation.covariance
+                else:
+                    P_pred_j = self._sub_preds_P[j]
+                    S_mat = P_pred_j[:2, :2] + np.eye(2) * (self._config.base_measurement_sigma_px ** 2)
 
-            # Mixing probabilities (c_bar) from transition probability matrix C
-            # C = [[0.90, 0.05, 0.05], [0.08, 0.88, 0.04], [0.10, 0.10, 0.80]]
-            c_bar = np.array([
-                0.90 * self._mode_probs[0] + 0.08 * self._mode_probs[1] + 0.10 * self._mode_probs[2],
-                0.05 * self._mode_probs[0] + 0.88 * self._mode_probs[1] + 0.10 * self._mode_probs[2],
-                0.05 * self._mode_probs[0] + 0.04 * self._mode_probs[1] + 0.80 * self._mode_probs[2],
-            ], dtype=np.float64)
+                det_S = max(1e-6, float(np.linalg.det(S_mat)))
 
-            new_probs = np.array(
-                [L_cv * c_bar[0], L_ca * c_bar[1], L_man * c_bar[2]],
-                dtype=np.float64,
-            )
-            sum_p = np.sum(new_probs)
-            if sum_p > 1e-9:
-                self._mode_probs = new_probs / sum_p
+                # Normalized Gaussian innovation likelihood
+                L_j = (1.0 / (2.0 * math.pi * math.sqrt(det_S))) * math.exp(-0.5 * min(d_j_sq, 45.0)) + 1e-12
+                likelihoods[j] = L_j
+
+            # 3. Update Mode Probabilities: mu_j = (L_j * c_bar_j) / \sum (L_m * c_bar_m)
+            unnorm_probs = likelihoods * c_bar
+            sum_prob = np.sum(unnorm_probs)
+            if sum_prob > 1e-15:
+                self._mode_probs = unnorm_probs / sum_prob
             else:
-                self._mode_probs = np.array([0.34, 0.33, 0.33], dtype=np.float64)
+                self._mode_probs = c_bar.copy()
 
             self._consecutive_hits += 1
             self._consecutive_misses = 0
             self._status = EstimatorStatus.TRACKING
+
         else:
-            est_cv = self._cv_filter.update_missing(timestamp, gimbal_pan_rate, gimbal_tilt_rate, is_sensor_step=is_sensor_step)
-            est_ca = self._ca_filter.update_missing(timestamp, gimbal_pan_rate, gimbal_tilt_rate, is_sensor_step=is_sensor_step)
-            est_man = self._maneuver_filter.update_missing(timestamp, gimbal_pan_rate, gimbal_tilt_rate, is_sensor_step=is_sensor_step)
+            # Missing observation / Coasting step
+            for j in range(self._num_models):
+                est_j = self._filters[j].update_missing(
+                    timestamp=ts,
+                    gimbal_pan_rate=gimbal_pan_rate,
+                    gimbal_tilt_rate=gimbal_tilt_rate,
+                    is_sensor_step=is_sensor_step,
+                )
+                sub_estimates.append(est_j)
+
+            # In absence of observation, mode probabilities transition according to Markov chain
+            self._mode_probs = c_bar.copy()
+
             if is_sensor_step:
                 self._consecutive_hits = 0
                 self._consecutive_misses += 1
                 self._status = EstimatorStatus.PREDICTING
 
-        # 2. Weighted Fusion of 3 IMM State Estimates
-        w_cv, w_ca, w_man = self._mode_probs[0], self._mode_probs[1], self._mode_probs[2]
+        # Invalidate prediction cache for subsequent frame
+        self._has_prediction = False
 
-        fused_x = w_cv * est_cv.estimated_x + w_ca * est_ca.estimated_x + w_man * est_man.estimated_x
-        fused_y = w_cv * est_cv.estimated_y + w_ca * est_ca.estimated_y + w_man * est_man.estimated_y
-        fused_vx = w_cv * est_cv.estimated_vx + w_ca * est_ca.estimated_vx + w_man * est_man.estimated_vx
-        fused_vy = w_cv * est_cv.estimated_vy + w_ca * est_ca.estimated_vy + w_man * est_man.estimated_vy
+        # 4. Weighted Fusion of 3 IMM Sub-Filter Estimates
+        w = self._mode_probs
+        fused_x = sum(w[j] * sub_estimates[j].estimated_x for j in range(self._num_models))
+        fused_y = sum(w[j] * sub_estimates[j].estimated_y for j in range(self._num_models))
+        fused_vx = sum(w[j] * sub_estimates[j].estimated_vx for j in range(self._num_models))
+        fused_vy = sum(w[j] * sub_estimates[j].estimated_vy for j in range(self._num_models))
 
-        fused_px = w_cv * est_cv.predicted_x + w_ca * est_ca.predicted_x + w_man * est_man.predicted_x
-        fused_py = w_cv * est_cv.predicted_y + w_ca * est_ca.predicted_y + w_man * est_man.predicted_y
-        fused_pvx = w_cv * est_cv.predicted_vx + w_ca * est_ca.predicted_vx + w_man * est_man.predicted_vx
-        fused_pvy = w_cv * est_cv.predicted_vy + w_ca * est_ca.predicted_vy + w_man * est_man.predicted_vy
+        fused_px = sum(w[j] * sub_estimates[j].predicted_x for j in range(self._num_models))
+        fused_py = sum(w[j] * sub_estimates[j].predicted_y for j in range(self._num_models))
+        fused_pvx = sum(w[j] * sub_estimates[j].predicted_vx for j in range(self._num_models))
+        fused_pvy = sum(w[j] * sub_estimates[j].predicted_vy for j in range(self._num_models))
 
-        fused_cov = (w_cv * est_cv.covariance + w_ca * est_ca.covariance + w_man * est_man.covariance).copy()
-        # Rigorous IMM spread-of-the-means term: \sum \mu_j * (\hat{x}_j - \hat{x})(\hat{x}_j - \hat{x})^T
-        for w_j, est_j in [(w_cv, est_cv), (w_ca, est_ca), (w_man, est_man)]:
+        # Fused covariance with spread-of-the-means term:
+        # P = \sum w_j * (P_j + (x_j - x_fused)(x_j - x_fused)^T)
+        fused_cov = sum(w[j] * sub_estimates[j].covariance for j in range(self._num_models)).copy()
+        for j in range(self._num_models):
             dx = np.array([
-                [est_j.estimated_x - fused_x],
-                [est_j.estimated_y - fused_y],
-                [est_j.estimated_vx - fused_vx],
-                [est_j.estimated_vy - fused_vy],
+                [sub_estimates[j].estimated_x - fused_x],
+                [sub_estimates[j].estimated_y - fused_y],
+                [sub_estimates[j].estimated_vx - fused_vx],
+                [sub_estimates[j].estimated_vy - fused_vy],
             ], dtype=np.float64)
-            fused_cov += w_j * (dx @ dx.T)
+            fused_cov += w[j] * (dx @ dx.T)
+
+        self._fused_x = np.array([[fused_x], [fused_y], [fused_vx], [fused_vy]], dtype=np.float64)
+        self._fused_P = fused_cov.copy()
 
         self._track_age += 1
-        self._last_timestamp = timestamp if timestamp is not None else self._last_timestamp
+        self._last_timestamp = ts
         t_end = time.perf_counter()
 
-        nis = float(w_cv * est_cv.nis + w_ca * est_ca.nis + w_man * est_man.nis)
+        nis = float(sum(w[j] * sub_estimates[j].nis for j in range(self._num_models)))
         pos_sigma = float(np.sqrt(max(0.0, fused_cov[0, 0] + fused_cov[1, 1])))
         vel_sigma = float(np.sqrt(max(0.0, fused_cov[2, 2] + fused_cov[3, 3])))
 
@@ -233,7 +412,7 @@ class InteractingMultipleModelFilter:
             position_sigma=pos_sigma,
             velocity_sigma=vel_sigma,
             innovation_health=inno_health,
-            model_probabilities=(w_cv, w_ca, w_man),
+            model_probabilities=(float(w[0]), float(w[1]), float(w[2])),
             measurement_accepted=(measurement is not None),
             prediction_age_frames=self._consecutive_misses,
             nis=nis,
@@ -248,7 +427,7 @@ class InteractingMultipleModelFilter:
             estimated_vx=float(fused_vx),
             estimated_vy=float(fused_vy),
             covariance=fused_cov,
-            innovation=est_cv.innovation,
+            innovation=sub_estimates[0].innovation,
             predicted_x=float(fused_px),
             predicted_y=float(fused_py),
             filter_status=self._status,
@@ -296,28 +475,22 @@ class InteractingMultipleModelFilter:
             is_sensor_step=is_sensor_step,
         )
 
-
-    def predict(
-        self,
-        dt: float,
-        gimbal_pan_rate: float = 0.0,
-        gimbal_tilt_rate: float = 0.0,
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        """Predict step forward by dt seconds."""
-        return self._cv_filter.predict(dt, gimbal_pan_rate, gimbal_tilt_rate)
-
-    @property
-    def state_vector(self) -> Optional[np.ndarray]:
-        return self._cv_filter.state_vector
-
     def reset(self) -> None:
-        """Reset all IMM sub-filters."""
-        self._cv_filter.reset()
-        self._ca_filter.reset()
-        self._maneuver_filter.reset()
+        """Reset all IMM sub-filters and fused state."""
+        for f in self._filters:
+            f.reset()
+        self._mode_probs = np.array([0.60, 0.25, 0.15], dtype=np.float64)
         self._status = EstimatorStatus.RESET
         self._track_age = 0
         self._consecutive_hits = 0
         self._consecutive_misses = 0
         self._last_estimate = None
+        self._fused_x = None
+        self._fused_P = None
+        self._fused_x_pred = None
+        self._fused_P_pred = None
+        self._has_prediction = False
+        self._c_bar = None
+        self._sub_preds_x = None
+        self._sub_preds_P = None
 

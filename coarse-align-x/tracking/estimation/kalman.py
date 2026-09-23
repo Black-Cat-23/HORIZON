@@ -79,6 +79,10 @@ class KalmanFilterConfig:
     # Enable directional velocity motion blur in measurement noise R:
     adaptive_motion_noise: bool = False
 
+    # Enable NIS-driven adaptive process noise multiplier:
+    # True for single-model filters, False for IMM sub-filters where each model is a fixed hypothesis
+    adaptive_process_noise: bool = True
+
 
 class TargetKalmanFilter:
     """Discrete-time Constant-Velocity Kalman Filter for optical beacon tracking.
@@ -129,6 +133,11 @@ class TargetKalmanFilter:
     def covariance_matrix(self) -> Optional[np.ndarray]:
         """Current 4×4 state covariance matrix."""
         return self._P.copy() if self._P is not None else None
+
+    def set_state(self, x: np.ndarray, P: np.ndarray) -> None:
+        """Sets internal state vector and covariance (used for IMM mixing)."""
+        self._x = np.asarray(x, dtype=np.float64).reshape((4, 1)).copy()
+        self._P = np.asarray(P, dtype=np.float64).reshape((4, 4)).copy()
 
     def initialize(
         self,
@@ -217,8 +226,12 @@ class TargetKalmanFilter:
             model_type=self._config.process_model_type,  # type: ignore
         )
 
-        # NIS-driven process noise adaptive multiplier for maneuver recovery
-        if self._last_innovation is not None and self._last_innovation.nis > self._config.gate_chi2_threshold:
+        # NIS-driven process noise adaptive multiplier for maneuver recovery (standalone filters only)
+        if (
+            self._config.adaptive_process_noise
+            and self._last_innovation is not None
+            and self._last_innovation.nis > self._config.gate_chi2_threshold
+        ):
             q_scale = min(10.0, max(1.0, 1.0 + 0.15 * (self._last_innovation.nis - self._config.gate_chi2_threshold)))
             Q = Q * q_scale
 
@@ -266,13 +279,13 @@ class TargetKalmanFilter:
             return self.initialize(measurement, ts)
 
         # Handle time step propagation if timestamp provided
-        if timestamp is not None and timestamp > self._last_timestamp:
+        if timestamp is not None and (timestamp - self._last_timestamp) > 1e-4:
             dt = timestamp - self._last_timestamp
             self.predict(dt, gimbal_pan_rate, gimbal_tilt_rate)
             self._last_timestamp = timestamp
-        elif timestamp is not None and timestamp <= self._last_timestamp:
+        elif timestamp is not None and timestamp < self._last_timestamp - 1e-4:
             logger.warning(
-                "Non-increasing timestamp received (curr=%s, prev=%s); skipping predict",
+                "Backwards timestamp received (curr=%s, prev=%s); skipping predict",
                 timestamp,
                 self._last_timestamp,
             )
@@ -411,7 +424,7 @@ class TargetKalmanFilter:
                 processing_time_ms=(t_end - t_start) * 1000.0,
             )
 
-        if timestamp is not None and timestamp > self._last_timestamp:
+        if timestamp is not None and (timestamp - self._last_timestamp) > 1e-4:
             dt = timestamp - self._last_timestamp
             self.predict(dt, gimbal_pan_rate=gimbal_pan_rate, gimbal_tilt_rate=gimbal_tilt_rate)
             self._last_timestamp = timestamp
