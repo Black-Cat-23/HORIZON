@@ -75,6 +75,11 @@ class HybridBeaconDetector:
             velocity_scale_factor=getattr(self._fusion_cfg, "velocity_scale_factor", 60.0),
             max_matching_distance_cap=getattr(self._fusion_cfg, "max_matching_distance_cap", 80.0),
         )
+        self._frames_since_full_hybrid: int = 0
+
+    def reset_scheduler(self) -> None:
+        """Reset the adaptive perception scheduling frame counter."""
+        self._frames_since_full_hybrid = 0
 
     @property
     def config(self) -> DetectorConfig:
@@ -96,6 +101,9 @@ class HybridBeaconDetector:
         estimator_prediction: Optional[Tuple[float, float]] = None,
         prediction_covariance: Optional[np.ndarray] = None,
         velocity_hint_px_s: float = 0.0,
+        pat_mode: Optional[str] = None,
+        track_quality: float = 0.0,
+        consecutive_hits: int = 0,
     ) -> DetectionResult:
         """Process optical sensor frame using configured perception mode (CLASSICAL, NEURAL, or HYBRID).
 
@@ -106,6 +114,9 @@ class HybridBeaconDetector:
             estimator_prediction: Optional predicted beacon position from Phase 5 estimator.
             prediction_covariance: Optional (2,2) prediction covariance matrix.
             velocity_hint_px_s: Optional estimated beacon velocity magnitude (px/s).
+            pat_mode: Optional PAT state machine mode (e.g. "TRACK", "SEARCH", "DEGRADED").
+            track_quality: Current track quality metric (0.0 to 1.0).
+            consecutive_hits: Consecutive measurement hits count.
 
         Returns:
             DetectionResult dataclass with detection status, refined centroid, and telemetry.
@@ -120,6 +131,68 @@ class HybridBeaconDetector:
             logger.warning("Unknown perception_mode %s; falling back to HYBRID", mode)
 
         # Mode == "HYBRID"
+        sched_cfg = getattr(self._hybrid_cfg, "scheduling", None)
+        if sched_cfg is not None and getattr(sched_cfg, "enabled", False) and pat_mode is not None:
+            # 1. Eligibility Check
+            needs_full_hybrid = False
+            if pat_mode.upper() in [m.upper() for m in sched_cfg.always_full_modes]:
+                needs_full_hybrid = True
+            elif track_quality < sched_cfg.high_quality_threshold:
+                needs_full_hybrid = True
+            elif consecutive_hits < sched_cfg.min_stable_hits:
+                needs_full_hybrid = True
+            elif sched_cfg.recalibration_period_frames <= 1 or self._frames_since_full_hybrid >= sched_cfg.recalibration_period_frames:
+                needs_full_hybrid = True
+
+            if needs_full_hybrid:
+                self._frames_since_full_hybrid = 0
+                return self._detect_hybrid(
+                    frame, timestamp, collect_diagnostics, estimator_prediction, prediction_covariance, velocity_hint_px_s
+                )
+
+            # 2. Fast Path Attempt (Classical Only)
+            t_fast_start = time.perf_counter()
+            res_c = self._classical_detector.detect(frame, timestamp, collect_diagnostics)
+
+            # 3. Escalation Evaluation
+            escalate = False
+            escalation_reason = ""
+            if not res_c.detected:
+                escalate = True
+                escalation_reason = "Classical fast-path found no candidate"
+            elif sched_cfg.escalate_on_low_confidence and res_c.confidence < sched_cfg.classical_escalation_confidence:
+                escalate = True
+                escalation_reason = f"Classical confidence {res_c.confidence:.2f} < {sched_cfg.classical_escalation_confidence:.2f}"
+            elif sched_cfg.escalate_on_multiple_candidates and res_c.candidate_count > 1:
+                escalate = True
+                escalation_reason = f"Multiple candidates ({res_c.candidate_count}) in scene"
+            elif estimator_prediction is not None and res_c.centroid is not None:
+                is_valid_est, d2_est, _ = compute_estimator_consistency(
+                    res_c.centroid, estimator_prediction, prediction_covariance, velocity_hint_px_s=velocity_hint_px_s
+                )
+                if not is_valid_est:
+                    escalate = True
+                    escalation_reason = f"Fast-path candidate failed Kalman gate (d2={d2_est:.2f} > 9.21)"
+
+            if escalate:
+                self._frames_since_full_hybrid = 0
+                res_hybrid = self._detect_hybrid(
+                    frame, timestamp, collect_diagnostics, estimator_prediction, prediction_covariance, velocity_hint_px_s
+                )
+                res_hybrid.decision_reason = f"ESCALATED: {escalation_reason} | {res_hybrid.decision_reason}"
+                return res_hybrid
+
+            # Fast path accepted safely
+            self._frames_since_full_hybrid += 1
+            t_fast_end = time.perf_counter()
+            res_c.processing_time_ms = (t_fast_end - t_fast_start) * 1000.0
+            res_c.method_used = "classical_fast_path"
+            res_c.detector_source = "HYBRID_FAST_PATH"
+            res_c.agreement_state = "FAST_PATH_NOMINAL"
+            res_c.fused_confidence = res_c.confidence
+            res_c.decision_reason = f"Fast-path nominal track ({consecutive_hits} hits, quality={track_quality:.2f})"
+            return res_c
+
         return self._detect_hybrid(
             frame, timestamp, collect_diagnostics, estimator_prediction, prediction_covariance, velocity_hint_px_s
         )
@@ -288,7 +361,9 @@ class HybridBeaconDetector:
                 snr_ev = min(max(cand.peak_intensity - cand.background_estimate, 0.0) / 18.0, 1.0)
                 optical_strength = max(contrast_ev, snr_ev)
                 temporal_strength = s_temporal if estimator_prediction is not None else 0.5
-                penalty = float(np.clip(0.40 + 0.40 * optical_strength + 0.20 * temporal_strength, 0.40, 1.0))
+                # Modulate penalty by appearance agreement so irregular glints / noise clusters are penalized
+                appearance_strength = s_appearance
+                penalty = float(np.clip((0.30 + 0.35 * optical_strength + 0.20 * temporal_strength) * appearance_strength, 0.15, 1.0))
 
             if estimator_prediction is not None:
                 base_score = (
@@ -361,9 +436,9 @@ class HybridBeaconDetector:
             )
 
             if estimator_prediction is not None:
-                fused_score = float(np.clip((0.40 * c_neur + 0.60 * s_temporal) * s_est, 0.0, 1.0))
+                fused_score = float(np.clip((0.50 * c_neur + 0.50 * s_temporal) * s_est, 0.0, 1.0))
             else:
-                fused_score = float(np.clip(0.70 * c_neur * s_appearance, 0.0, 1.0))
+                fused_score = float(np.clip(c_neur * (0.50 + 0.50 * s_appearance), 0.0, 1.0))
 
             reason = (
                 f"Candidate selected via neural bounding box detection (confidence={c_neur:.2f}, "
@@ -408,13 +483,22 @@ class HybridBeaconDetector:
         scored_candidates.sort(key=lambda x: (x[1].valid, x[0]), reverse=True)
         top_score, top_candidate, top_agr, top_reason = scored_candidates[0]
 
-        # 5. Acceptance Gate & Fallback Handling (HC-03)
-        # Strong optical emitter proposals (high detector confidence >= 0.55) are verified beacons
-        # and should not be dropped solely because a newly-initialized or lagging estimator gate failed.
+        # 5. Acceptance Gate & Fallback Handling (Championship Rule)
+        # Dual-source matched candidates (BOTH) carry semantic verification and can tolerate temporary estimator lag.
+        # Single-source candidates (CLASSICAL only) MUST strictly satisfy the estimator Mahalanobis gate when tracking.
         cand_optical_strong = (
             top_candidate.detector_confidence is not None and top_candidate.detector_confidence >= 0.55
         )
-        is_candidate_valid = top_candidate.valid or cand_optical_strong
+        if estimator_prediction is not None:
+            if top_candidate.source == CandidateSource.BOTH:
+                is_candidate_valid = top_candidate.valid or cand_optical_strong
+            else:
+                # Single-source (Classical-only or Neural-only) MUST strictly satisfy estimator gate
+                is_candidate_valid = top_candidate.valid
+        else:
+            # Cold search acquisition without prior tracking: allow strong emitter
+            is_candidate_valid = top_candidate.valid or cand_optical_strong
+
         is_accepted = (top_score >= self._fusion_cfg.acceptance_threshold) and is_candidate_valid
         partial_thresh = getattr(self._fusion_cfg, "partial_confidence_threshold", 0.20)
         is_partial = (
@@ -426,6 +510,12 @@ class HybridBeaconDetector:
 
         if not is_accepted and not is_partial:
             t_end = time.perf_counter()
+            agr_state = "REJECTED_ESTIMATOR_GATE" if not is_candidate_valid else "REJECTED_LOW_CONFIDENCE"
+            rej_reason = (
+                f"Candidate rejected because Mahalanobis gate failed under tracking (valid={top_candidate.valid})"
+                if not is_candidate_valid
+                else f"Candidate rejected because top confidence {top_score:.3f} below acceptance threshold {self._fusion_cfg.acceptance_threshold:.3f}"
+            )
             return DetectionResult(
                 detected=False,
                 centroid=None,
@@ -437,9 +527,9 @@ class HybridBeaconDetector:
                 timestamp=timestamp,
                 detector_source="HYBRID",
                 centroid_source="NONE",
-                agreement_state="REJECTED_LOW_CONFIDENCE",
+                agreement_state=agr_state,
                 fused_confidence=top_score,
-                decision_reason=f"Candidate rejected because top confidence {top_score:.3f} below acceptance threshold {self._fusion_cfg.acceptance_threshold:.3f}",
+                decision_reason=rej_reason,
             )
 
         if is_partial:
