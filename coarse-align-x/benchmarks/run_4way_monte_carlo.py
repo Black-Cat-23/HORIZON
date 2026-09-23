@@ -92,7 +92,6 @@ def main():
 
     # Export JSON
     export_data = {
-        "timestamp": datetime.utcnow().isoformat() + "Z",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "totalTrials": args.trials,
         "trialDurationSeconds": args.duration,
