@@ -1,7 +1,7 @@
 {
-  "timestamp": "2026-09-05T18:10:00.642564+00:00",
-  "totalTrials": 30,
-  "trialDurationSeconds": 6.0,
+  "timestamp": "2026-09-23T20:27:09.939684+00:00",
+  "totalTrials": 50,
+  "trialDurationSeconds": 5.0,
   "evaluatedAlgorithms": [
     "B0",
     "B1",
@@ -10,68 +10,68 @@
   ],
   "tier1_and_tier2_metrics": {
     "B0": {
-      "acquisition_success_pct": 66.66666666666666,
-      "median_time_to_lock_s": 0.256,
-      "p95_time_to_lock_s": 1.0512000000000006,
-      "worst_time_to_lock_s": 1.872,
-      "mean_tracking_error_deg": 1.2753695421137283,
-      "p95_tracking_error_deg": 3.726656820267132,
-      "p99_tracking_error_deg": 4.898509932991082,
-      "max_tracking_error_deg": 5.4197748401352515,
-      "lock_retention_pct": 53.67111111111116,
-      "reacquisition_time_s": 0.16538753138464182,
-      "false_lock_rate_pct": 23.333333333333332,
-      "lock_break_frequency_per_1000s": 2277.777777777778,
-      "mean_processing_time_us": 68.29394666710868,
-      "achieved_fps": 14642.586185191343
+      "acquisition_success_pct": 57.99999999999999,
+      "median_time_to_lock_s": 0.20800000000000002,
+      "p95_time_to_lock_s": 0.7007999999999996,
+      "worst_time_to_lock_s": 3.7600000000000002,
+      "mean_tracking_error_deg": 1.2857209954526965,
+      "p95_tracking_error_deg": 3.2585678557794053,
+      "p99_tracking_error_deg": 3.925595409456357,
+      "max_tracking_error_deg": 4.330707958041058,
+      "lock_retention_pct": 42.75840000000003,
+      "reacquisition_time_s": 0.2769000578229959,
+      "false_lock_rate_pct": 26.0,
+      "lock_break_frequency_per_1000s": 2016.0,
+      "mean_processing_time_us": 82.90013439767063,
+      "achieved_fps": 12062.706620028091
     },
     "B1": {
-      "acquisition_success_pct": 66.66666666666666,
-      "median_time_to_lock_s": 0.28,
-      "p95_time_to_lock_s": 0.42640000000000017,
-      "worst_time_to_lock_s": 0.624,
-      "mean_tracking_error_deg": 1.2521532737019216,
-      "p95_tracking_error_deg": 3.717677308298232,
-      "p99_tracking_error_deg": 4.854911160956082,
-      "max_tracking_error_deg": 5.380866221321275,
-      "lock_retention_pct": 50.080000000000034,
-      "reacquisition_time_s": 0.17506069715724887,
-      "false_lock_rate_pct": 30.0,
-      "lock_break_frequency_per_1000s": 2261.111111111111,
-      "mean_processing_time_us": 67.67816889332607,
-      "achieved_fps": 14775.813476516985
+      "acquisition_success_pct": 66.0,
+      "median_time_to_lock_s": 0.20800000000000002,
+      "p95_time_to_lock_s": 0.8127999999999999,
+      "worst_time_to_lock_s": 1.024,
+      "mean_tracking_error_deg": 1.149303876931607,
+      "p95_tracking_error_deg": 2.8468483822772304,
+      "p99_tracking_error_deg": 3.6436026834372632,
+      "max_tracking_error_deg": 4.237992141430237,
+      "lock_retention_pct": 48.652800000000035,
+      "reacquisition_time_s": 0.24337112092151542,
+      "false_lock_rate_pct": 24.0,
+      "lock_break_frequency_per_1000s": 2500.0,
+      "mean_processing_time_us": 89.16047999449074,
+      "achieved_fps": 11215.731454808121
     },
     "B2": {
-      "acquisition_success_pct": 66.66666666666666,
+      "acquisition_success_pct": 64.0,
       "median_time_to_lock_s": 0.112,
-      "p95_time_to_lock_s": 0.12960000000000002,
-      "worst_time_to_lock_s": 0.16,
-      "mean_tracking_error_deg": 0.47960600726235997,
-      "p95_tracking_error_deg": 1.0083557891396708,
-      "p99_tracking_error_deg": 1.3489825478304338,
-      "max_tracking_error_deg": 4.292550586888268,
-      "lock_retention_pct": 54.24888888888893,
-      "reacquisition_time_s": 0.6280144574426186,
-      "false_lock_rate_pct": 30.0,
-      "lock_break_frequency_per_1000s": 350.0,
-      "mean_processing_time_us": 68.62630222199691,
-      "achieved_fps": 14571.672487396068
+      "p95_time_to_lock_s": 0.26719999999999994,
+      "worst_time_to_lock_s": 0.672,
+      "mean_tracking_error_deg": 0.5651581091772032,
+      "p95_tracking_error_deg": 1.0754069619144293,
+      "p99_tracking_error_deg": 1.3250183507309925,
+      "max_tracking_error_deg": 3.3340127222283296,
+      "lock_retention_pct": 59.06560000000004,
+      "reacquisition_time_s": 0.5218098537054249,
+      "false_lock_rate_pct": 26.0,
+      "lock_break_frequency_per_1000s": 368.0,
+      "mean_processing_time_us": 90.53600000590086,
+      "achieved_fps": 11045.33003374153
     },
     "OURS": {
-      "acquisition_success_pct": 96.66666666666667,
+      "acquisition_success_pct": 84.0,
       "median_time_to_lock_s": 0.112,
-      "p95_time_to_lock_s": 0.15679999999999988,
-      "worst_time_to_lock_s": 0.432,
-      "mean_tracking_error_deg": 0.4142317185990601,
-      "p95_tracking_error_deg": 0.7995372563710408,
-      "p99_tracking_error_deg": 1.1355223962884304,
-      "max_tracking_error_deg": 1.4371080112251975,
-      "lock_retention_pct": 86.51555555555562,
-      "reacquisition_time_s": 0.6204137931034484,
+      "p95_time_to_lock_s": 0.34719999999999956,
+      "worst_time_to_lock_s": 0.8,
+      "mean_tracking_error_deg": 0.33943797144818244,
+      "p95_tracking_error_deg": 0.7663934134895226,
+      "p99_tracking_error_deg": 1.1447962339346551,
+      "max_tracking_error_deg": 1.46490121602201,
+      "lock_retention_pct": 72.68480000000005,
+      "reacquisition_time_s": 0.6085714285714287,
       "false_lock_rate_pct": 0.0,
-      "lock_break_frequency_per_1000s": 166.66666666666666,
-      "mean_processing_time_us": 535.7374488867612,
-      "achieved_fps": 1866.5859593686348
+      "lock_break_frequency_per_1000s": 188.0,
+      "mean_processing_time_us": 440.2767359986901,
+      "achieved_fps": 2271.2987497094896
     }
   },
   "tier3_robustness_envelopes": {
@@ -91,13 +91,13 @@
         1.6
       ],
       "boundary_envelope": {
-        "0.5": 0.8,
-        "1.0": 0.8,
-        "1.5": 0.8,
-        "2.0": 0.8,
-        "3.0": 0.5
+        "0.5": 1.2,
+        "1.0": 1.2,
+        "1.5": 1.2,
+        "2.0": 1.2,
+        "3.0": 1.2
       },
-      "operable_area_score": 0.56
+      "operable_area_score": 0.8
     },
     "B1": {
       "speeds_deg_s": [
@@ -115,13 +115,13 @@
         1.6
       ],
       "boundary_envelope": {
-        "0.5": 0.8,
-        "1.0": 0.8,
-        "1.5": 0.8,
-        "2.0": 0.8,
-        "3.0": 0.8
+        "0.5": 1.2,
+        "1.0": 1.2,
+        "1.5": 1.2,
+        "2.0": 1.2,
+        "3.0": 1.2
       },
-      "operable_area_score": 0.6
+      "operable_area_score": 0.8
     },
     "B2": {
       "speeds_deg_s": [
@@ -141,11 +141,11 @@
       "boundary_envelope": {
         "0.5": 1.6,
         "1.0": 1.6,
-        "1.5": 0.8,
-        "2.0": 0.8,
-        "3.0": 1.2
+        "1.5": 1.6,
+        "2.0": 1.6,
+        "3.0": 1.6
       },
-      "operable_area_score": 0.8
+      "operable_area_score": 1.0
     },
     "OURS": {
       "speeds_deg_s": [
