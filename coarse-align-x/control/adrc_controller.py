@@ -35,56 +35,78 @@ def fal(e: float, alpha: float = 0.5, delta: float = 0.05) -> float:
 
 class ADRCAxisController:
     """
-    Single-axis Active Disturbance Rejection Controller for velocity-commanded gimbals.
-    Uses a 2nd-order Linear Extended State Observer (LESO) with Hurwitz bandwidth parameterization.
+    Single-axis Active Disturbance Rejection Controller for velocity-commanded optical tracking gimbals.
+    Upgraded to a 2nd-order Non-Linear Extended State Observer (NLESO) with Han's fal() error compression
+    and actuator anti-windup rate feedback.
     """
 
     def __init__(
         self,
         b0: float = 1.0,
-        omega_o: float = 10.0,
-        omega_c: float = 2.5,
+        omega_o: float = 12.0,
+        omega_c: float = 2.8,
         output_limit: float = 20.0,
+        alpha1: float = 0.75,
+        alpha2: float = 0.50,
+        delta: float = 0.05,
     ):
         """
         Args:
             b0: System input gain estimate (deg/s per unit rate command).
-            omega_o: Observer bandwidth (rad/s). Tuned for discrete 60Hz stability.
+            omega_o: Observer bandwidth (rad/s). Tuned for discrete 60Hz stability (< Nyquist / 10).
             omega_c: Controller bandwidth (rad/s). Sets closed-loop error response speed.
             output_limit: Maximum allowed rate command output in deg/s.
+            alpha1: Non-linear position error exponent for NLESO z1 state (0 < alpha1 < 1).
+            alpha2: Non-linear disturbance error exponent for NLESO z2 state (0 < alpha2 < 1).
+            delta: Linear threshold boundary in degrees (fine boresight region).
         """
-        self.b0 = b0
-        self.omega_o = omega_o
-        self.omega_c = omega_c
-        self.output_limit = output_limit
+        self.b0 = float(b0)
+        self.omega_o = float(omega_o)
+        self.omega_c = float(omega_c)
+        self.output_limit = float(output_limit)
+        self.alpha1 = float(alpha1)
+        self.alpha2 = float(alpha2)
+        self.delta = float(delta)
 
-        # 1st-order system LESO observer gains: (s + omega_o)^2 = s^2 + 2*w_o*s + w_o^2
-        self.beta1 = 2.0 * omega_o
-        self.beta2 = omega_o ** 2
+        # 1st-order system NLESO observer gains: (s + omega_o)^2 = s^2 + 2*w_o*s + w_o^2
+        self.beta1 = 2.0 * self.omega_o
+        self.beta2 = self.omega_o ** 2
 
         # State feedback proportional gain via bandwidth parameterization
-        self.kp = omega_c
+        self.kp = self.omega_c
 
-        # Internal state vector: z1 = estimate of pointing error, z2 = estimate of total disturbance rate f
+        # Internal state vector:
+        # z1 = estimate of pointing error (deg)
+        # z2 = estimate of total lumped disturbance rate f (deg/s)
         self.z1 = 0.0
         self.z2 = 0.0
         self.last_u = 0.0
+        self.u_act = 0.0
+        self.tau_actuator = 0.0167  # Physical motor acceleration lag (~16.7 ms)
         self.initialized = False
 
     def reset(self) -> None:
         self.z1 = 0.0
         self.z2 = 0.0
         self.last_u = 0.0
+        self.u_act = 0.0
         self.initialized = False
 
-    def compute(self, error: float, dt: float, gain_scale: float = 1.0) -> float:
+    def compute(
+        self,
+        error: float,
+        dt: float,
+        gain_scale: float = 1.0,
+        actual_rate: Optional[float] = None,
+    ) -> float:
         """
-        Computes rate control command using ADRC with active disturbance rejection.
+        Computes rate control command using NLESO-based Active Disturbance Rejection.
 
         Args:
             error: Current position error (deg).
             dt: Timestep (seconds).
             gain_scale: Scale factor for controller bandwidth (from GainScheduler).
+            actual_rate: Optional measured gimbal angular velocity (deg/s) for anti-windup.
 
         Returns:
             Commanded angular velocity rate (deg/s).
@@ -96,15 +118,32 @@ class ADRCAxisController:
             self.z1 = float(error)
             self.z2 = 0.0
             self.last_u = 0.0
+            self.u_act = float(actual_rate) if actual_rate is not None else 0.0
             self.initialized = True
 
-        # 1. Update Linear Extended State Observer (LESO)
-        # Clamp is wide (±15°) to allow convergence from large initial pointing errors
+        # Actuator Anti-Windup: use actual physical gimbal velocity if available,
+        # otherwise propagate internal 1st-order rate-lag model with saturation
+        if actual_rate is not None:
+            u_plant = float(actual_rate)
+            self.u_act = u_plant
+        else:
+            du = (self.last_u - self.u_act) * (dt / max(1e-4, self.tau_actuator))
+            self.u_act = float(np.clip(self.u_act + du, -self.output_limit, self.output_limit))
+            u_plant = self.u_act
+
+        # 1. Update Non-Linear Extended State Observer (NLESO)
+        # Bound innovation to prevent numerical overflow under extreme glitches
         obs_err = float(np.clip(error - self.z1, -15.0, 15.0))
 
-        # 1st-order plant dynamics: dz1 = -b0 * u + z2 + beta1 * obs_err
-        dz1 = -self.b0 * self.last_u + self.z2 + self.beta1 * obs_err
-        dz2 = self.beta2 * obs_err
+        # Han's fal() non-linear error compression
+        fal1 = fal(obs_err, alpha=self.alpha1, delta=self.delta)
+        fal2 = fal(obs_err, alpha=self.alpha2, delta=self.delta)
+
+        # 1st-order plant dynamics with physical plant feedback:
+        # dz1 = -b0 * u_plant + z2 + beta1 * fal1
+        # dz2 = beta2 * fal2
+        dz1 = -self.b0 * u_plant + self.z2 + self.beta1 * fal1
+        dz2 = self.beta2 * fal2
 
         self.z1 = float(np.clip(self.z1 + dz1 * dt, -20.0, 20.0))
         self.z2 = float(np.clip(self.z2 + dz2 * dt, -100.0, 100.0))
@@ -123,13 +162,14 @@ class ADRCAxisController:
         return u_clamped
 
     def get_estimated_disturbance(self) -> float:
-        """Returns the real-time estimated lumped disturbance f(t)."""
+        """Returns the real-time estimated lumped disturbance f(t) in deg/s."""
         return self.z2
 
 
 class DualAxisADRCController:
     """
     Dual-axis (Pan / Tilt) Active Disturbance Rejection Controller for optical tracking gimbals.
+    Equipped with 2-axis NLESO observers and real-time disturbance estimation telemetry.
     """
 
     def __init__(
@@ -137,11 +177,30 @@ class DualAxisADRCController:
         max_pan_rate_deg_s: float = 20.0,
         max_tilt_rate_deg_s: float = 20.0,
         b0: float = 1.0,
-        omega_o: float = 10.0,
-        omega_c: float = 2.5,
+        omega_o: float = 12.0,
+        omega_c: float = 2.8,
+        alpha1: float = 0.75,
+        alpha2: float = 0.50,
+        delta: float = 0.05,
     ):
-        self.pan_adrc = ADRCAxisController(b0=b0, omega_o=omega_o, omega_c=omega_c, output_limit=max_pan_rate_deg_s)
-        self.tilt_adrc = ADRCAxisController(b0=b0, omega_o=omega_o, omega_c=omega_c, output_limit=max_tilt_rate_deg_s)
+        self.pan_adrc = ADRCAxisController(
+            b0=b0,
+            omega_o=omega_o,
+            omega_c=omega_c,
+            output_limit=max_pan_rate_deg_s,
+            alpha1=alpha1,
+            alpha2=alpha2,
+            delta=delta,
+        )
+        self.tilt_adrc = ADRCAxisController(
+            b0=b0,
+            omega_o=omega_o,
+            omega_c=omega_c,
+            output_limit=max_tilt_rate_deg_s,
+            alpha1=alpha1,
+            alpha2=alpha2,
+            delta=delta,
+        )
 
     def reset(self) -> None:
         self.pan_adrc.reset()
@@ -153,10 +212,34 @@ class DualAxisADRCController:
         tilt_error_deg: float,
         dt: float,
         gain_scale: float = 1.0,
+        actual_pan_rate: Optional[float] = None,
+        actual_tilt_rate: Optional[float] = None,
     ) -> Tuple[float, float]:
         """
-        Computes pan and tilt angular velocity commands with disturbance rejection.
+        Computes pan and tilt angular velocity commands with active disturbance rejection.
+
+        Args:
+            pan_error_deg: Pointing error along pan axis in degrees.
+            tilt_error_deg: Pointing error along tilt axis in degrees.
+            dt: Timestep in seconds.
+            gain_scale: Bandwidth scaling factor from GainScheduler.
+            actual_pan_rate: Optional physical gimbal pan velocity for anti-windup.
+            actual_tilt_rate: Optional physical gimbal tilt velocity for anti-windup.
+
+        Returns:
+            Tuple of (cmd_pan, cmd_tilt) in deg/s.
         """
-        cmd_pan = self.pan_adrc.compute(pan_error_deg, dt, gain_scale=gain_scale)
-        cmd_tilt = self.tilt_adrc.compute(tilt_error_deg, dt, gain_scale=gain_scale)
+        cmd_pan = self.pan_adrc.compute(
+            pan_error_deg, dt, gain_scale=gain_scale, actual_rate=actual_pan_rate
+        )
+        cmd_tilt = self.tilt_adrc.compute(
+            tilt_error_deg, dt, gain_scale=gain_scale, actual_rate=actual_tilt_rate
+        )
         return cmd_pan, cmd_tilt
+
+    def get_estimated_disturbances(self) -> Tuple[float, float]:
+        """Returns the real-time estimated lumped disturbances (pan, tilt) in deg/s."""
+        return (
+            self.pan_adrc.get_estimated_disturbance(),
+            self.tilt_adrc.get_estimated_disturbance(),
+        )
