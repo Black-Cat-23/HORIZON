@@ -17,6 +17,7 @@ Strict Invariant: Zero ground-truth leakage or dependencies.
 
 from __future__ import annotations
 
+from dataclasses import replace
 import logging
 import math
 import time
@@ -181,19 +182,23 @@ class HybridBeaconDetector:
                 res_hybrid = self._detect_hybrid(
                     frame, timestamp, collect_diagnostics, estimator_prediction, prediction_covariance, velocity_hint_px_s, roi=roi
                 )
-                res_hybrid.decision_reason = f"ESCALATED: {escalation_reason} | {res_hybrid.decision_reason}"
-                return res_hybrid
+                return replace(
+                    res_hybrid,
+                    decision_reason=f"ESCALATED: {escalation_reason} | {res_hybrid.decision_reason}"
+                )
 
             # Fast path accepted safely
             self._frames_since_full_hybrid += 1
             t_fast_end = time.perf_counter()
-            res_c.processing_time_ms = (t_fast_end - t_fast_start) * 1000.0
-            res_c.method_used = "classical_fast_path"
-            res_c.detector_source = "HYBRID_FAST_PATH"
-            res_c.agreement_state = "FAST_PATH_NOMINAL"
-            res_c.fused_confidence = res_c.confidence
-            res_c.decision_reason = f"Fast-path nominal track ({consecutive_hits} hits, quality={track_quality:.2f})"
-            return res_c
+            return replace(
+                res_c,
+                processing_time_ms=(t_fast_end - t_fast_start) * 1000.0,
+                method_used="classical_fast_path",
+                detector_source="HYBRID_FAST_PATH",
+                agreement_state="FAST_PATH_NOMINAL",
+                fused_confidence=res_c.confidence,
+                decision_reason=f"Fast-path nominal track ({consecutive_hits} hits, quality={track_quality:.2f})"
+            )
 
         return self._detect_hybrid(
             frame, timestamp, collect_diagnostics, estimator_prediction, prediction_covariance, velocity_hint_px_s, roi=roi
