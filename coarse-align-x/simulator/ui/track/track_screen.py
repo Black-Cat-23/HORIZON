@@ -14,11 +14,14 @@ Strict Ground-Truth Firewall: Ground-truth marker appears ONLY in Evaluation Mod
 """
 
 from __future__ import annotations
+import logging
 import math
 import time
 from typing import List, Optional, Tuple
 import cv2
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
@@ -492,37 +495,57 @@ class TrackScreenView(QWidget):
 
         # 6. Append to Time-Series History Buffers & Update Analytics Graphs
         try:
-            if pat_state is not None and estimate is not None:
+            t_curr = float(sim_time)
+
+            if pat_state is not None:
                 err_px = float(np.hypot(pat_state.pan_error_deg, pat_state.tilt_error_deg) * 60.0)
                 quality = float(pat_state.track_quality * 100.0)
-                innov = float(np.linalg.norm(estimate.innovation)) if estimate.innovation is not None else 0.0
-                conf = float(detection_res.confidence * 100.0) if (detection_res and detection_res.detected) else 0.0
+                pan_err = float(pat_state.pan_error_deg)
+                tilt_err = float(pat_state.tilt_error_deg)
+            elif ground_truth_pos and detection_res and detection_res.detected and detection_res.centroid:
+                err_px = float(np.hypot(detection_res.centroid[0] - ground_truth_pos[0], detection_res.centroid[1] - ground_truth_pos[1]))
+                quality = float(detection_res.confidence * 100.0)
+                pan_err = float(detection_res.centroid[0] - 320.0) / 60.0
+                tilt_err = float(detection_res.centroid[1] - 240.0) / 60.0
+            elif detection_res and detection_res.detected and detection_res.centroid:
+                err_px = float(np.hypot(detection_res.centroid[0] - 320.0, detection_res.centroid[1] - 240.0))
+                quality = float(detection_res.confidence * 100.0)
+                pan_err = float(detection_res.centroid[0] - 320.0) / 60.0
+                tilt_err = float(detection_res.centroid[1] - 240.0) / 60.0
+            else:
+                err_px = 0.0
+                quality = 0.0
+                pan_err = 0.0
+                tilt_err = 0.0
 
-                self._history_times.append(sim_time)
-                self._history_errors_px.append(err_px)
-                self._history_qualities.append(quality)
-                self._history_innovations.append(innov)
-                self._history_pan_errors.append(pat_state.pan_error_deg)
-                self._history_tilt_errors.append(pat_state.tilt_error_deg)
-                self._history_confidences.append(conf)
+            innov = float(np.linalg.norm(estimate.innovation)) if (estimate and estimate.innovation is not None) else 0.0
+            conf = float(detection_res.confidence * 100.0) if (detection_res and detection_res.detected) else 0.0
 
-                if len(self._history_times) > self._max_history:
-                    self._history_times.pop(0)
-                    self._history_errors_px.pop(0)
-                    self._history_qualities.pop(0)
-                    self._history_innovations.pop(0)
-                    self._history_pan_errors.pop(0)
-                    self._history_tilt_errors.pop(0)
-                    self._history_confidences.pop(0)
+            self._history_times.append(t_curr)
+            self._history_errors_px.append(err_px)
+            self._history_qualities.append(quality)
+            self._history_innovations.append(innov)
+            self._history_pan_errors.append(pan_err)
+            self._history_tilt_errors.append(tilt_err)
+            self._history_confidences.append(conf)
 
-                self.analytics_panel.update_analytics(
-                    times=self._history_times,
-                    errors_px=self._history_errors_px,
-                    qualities=self._history_qualities,
-                    innovations=self._history_innovations,
-                    pan_errors=self._history_pan_errors,
-                    tilt_errors=self._history_tilt_errors,
-                    confidences=self._history_confidences,
-                )
-        except Exception:
-            pass
+            if len(self._history_times) > self._max_history:
+                self._history_times.pop(0)
+                self._history_errors_px.pop(0)
+                self._history_qualities.pop(0)
+                self._history_innovations.pop(0)
+                self._history_pan_errors.pop(0)
+                self._history_tilt_errors.pop(0)
+                self._history_confidences.pop(0)
+
+            self.analytics_panel.update_analytics(
+                times=self._history_times,
+                errors_px=self._history_errors_px,
+                qualities=self._history_qualities,
+                innovations=self._history_innovations,
+                pan_errors=self._history_pan_errors,
+                tilt_errors=self._history_tilt_errors,
+                confidences=self._history_confidences,
+            )
+        except Exception as ex:
+            logger.debug("Analytics update error: %s", ex)
