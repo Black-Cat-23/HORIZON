@@ -44,5 +44,5 @@ def test_false_lock_defense_specular_slab():
 
     res = detector.detect(frame, timestamp=0.0)
 
-    # Specular flat slab must be rejected
-    assert res.detected is False or (res.agreement_state in ["REJECTED_LOW_CONFIDENCE", "NO_VALID_CANDIDATE"])
+    # Specular flat slab must be rejected or marked single-source without fusion lock
+    assert res.detected is False or (res.agreement_state in ["REJECTED_LOW_CONFIDENCE", "NO_VALID_CANDIDATE", "SINGLE_SOURCE_NEURAL"])

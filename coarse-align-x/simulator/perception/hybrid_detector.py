@@ -46,7 +46,7 @@ from simulator.perception.consistency_features import (
     compute_spatial_agreement,
     compute_temporal_agreement,
 )
-from simulator.perception.detector import ClassicalBeaconDetector, DetectionResult
+from simulator.perception.detector import ClassicalBeaconDetector, DetectionQuality, DetectionResult
 from simulator.perception.hybrid_candidate import CandidateSource, UnifiedCandidate
 from simulator.perception.neural_detector import NeuralBeaconDetector
 from simulator.perception.preprocessing import validate_input_frame
@@ -104,6 +104,7 @@ class HybridBeaconDetector:
         pat_mode: Optional[str] = None,
         track_quality: float = 0.0,
         consecutive_hits: int = 0,
+        roi: Optional[Union[Any, Tuple[int, int, int, int]]] = None,
     ) -> DetectionResult:
         """Process optical sensor frame using configured perception mode (CLASSICAL, NEURAL, or HYBRID).
 
@@ -117,6 +118,7 @@ class HybridBeaconDetector:
             pat_mode: Optional PAT state machine mode (e.g. "TRACK", "SEARCH", "DEGRADED").
             track_quality: Current track quality metric (0.0 to 1.0).
             consecutive_hits: Consecutive measurement hits count.
+            roi: Optional DynamicROI or (x1, y1, x2, y2) bounding region of interest.
 
         Returns:
             DetectionResult dataclass with detection status, refined centroid, and telemetry.
@@ -124,9 +126,9 @@ class HybridBeaconDetector:
         mode = self._config.perception_mode.upper()
 
         if mode == "CLASSICAL":
-            return self._classical_detector.detect(frame, timestamp, collect_diagnostics)
+            return self._classical_detector.detect(frame, timestamp, collect_diagnostics, roi=roi)
         elif mode == "NEURAL":
-            return self._neural_detector.detect(frame, timestamp, collect_diagnostics)
+            return self._neural_detector.detect(frame, timestamp, collect_diagnostics, roi=roi)
         elif mode != "HYBRID":
             logger.warning("Unknown perception_mode %s; falling back to HYBRID", mode)
 
@@ -147,12 +149,12 @@ class HybridBeaconDetector:
             if needs_full_hybrid:
                 self._frames_since_full_hybrid = 0
                 return self._detect_hybrid(
-                    frame, timestamp, collect_diagnostics, estimator_prediction, prediction_covariance, velocity_hint_px_s
+                    frame, timestamp, collect_diagnostics, estimator_prediction, prediction_covariance, velocity_hint_px_s, roi=roi
                 )
 
             # 2. Fast Path Attempt (Classical Only)
             t_fast_start = time.perf_counter()
-            res_c = self._classical_detector.detect(frame, timestamp, collect_diagnostics)
+            res_c = self._classical_detector.detect(frame, timestamp, collect_diagnostics, roi=roi)
 
             # 3. Escalation Evaluation
             escalate = False
@@ -177,7 +179,7 @@ class HybridBeaconDetector:
             if escalate:
                 self._frames_since_full_hybrid = 0
                 res_hybrid = self._detect_hybrid(
-                    frame, timestamp, collect_diagnostics, estimator_prediction, prediction_covariance, velocity_hint_px_s
+                    frame, timestamp, collect_diagnostics, estimator_prediction, prediction_covariance, velocity_hint_px_s, roi=roi
                 )
                 res_hybrid.decision_reason = f"ESCALATED: {escalation_reason} | {res_hybrid.decision_reason}"
                 return res_hybrid
@@ -194,7 +196,7 @@ class HybridBeaconDetector:
             return res_c
 
         return self._detect_hybrid(
-            frame, timestamp, collect_diagnostics, estimator_prediction, prediction_covariance, velocity_hint_px_s
+            frame, timestamp, collect_diagnostics, estimator_prediction, prediction_covariance, velocity_hint_px_s, roi=roi
         )
 
     def _detect_hybrid(
@@ -205,6 +207,7 @@ class HybridBeaconDetector:
         estimator_prediction: Optional[Tuple[float, float]],
         prediction_covariance: Optional[np.ndarray],
         velocity_hint_px_s: float = 0.0,
+        roi: Optional[Union[Any, Tuple[int, int, int, int]]] = None,
     ) -> DetectionResult:
         t_start = time.perf_counter()
 
@@ -214,9 +217,36 @@ class HybridBeaconDetector:
             expected_height=self._config.input_height,
         )
 
-        # 1. Execute Classical and Neural Detectors Concurrently
-        res_c = self._classical_detector.detect(valid_frame, timestamp, collect_diagnostics)
-        res_n = self._neural_detector.detect(valid_frame, timestamp, collect_diagnostics)
+        # Determine ROI bbox and usage (Phase 6B)
+        is_roi = False
+        roi_bbox = None
+        if roi is not None:
+            if hasattr(roi, "x1") and hasattr(roi, "x2"):
+                is_roi = not getattr(roi, "is_full_frame", False)
+                roi_bbox = (int(roi.x1), int(roi.y1), int(roi.width), int(roi.height)) if is_roi else None
+            elif isinstance(roi, (tuple, list)) and len(roi) == 4:
+                rx1, ry1, rx2, ry2 = int(roi[0]), int(roi[1]), int(roi[2]), int(roi[3])
+                if rx2 <= rx1:
+                    rx2, ry2 = rx1 + int(roi[2]), ry1 + int(roi[3])
+                is_roi = not (rx1 <= 0 and ry1 <= 0 and rx2 >= self._config.input_width and ry2 >= self._config.input_height)
+                roi_bbox = (rx1, ry1, rx2 - rx1, ry2 - ry1) if is_roi else None
+
+        # 1. Execute Classical and Neural Detectors Concurrently (within ROI if specified)
+        res_c = self._classical_detector.detect(
+            valid_frame,
+            timestamp,
+            collect_diagnostics,
+            roi=roi,
+            estimator_prediction=estimator_prediction,
+            prediction_covariance=prediction_covariance,
+        )
+        res_n = self._neural_detector.detect(
+            valid_frame,
+            timestamp,
+            collect_diagnostics,
+            roi=roi,
+            estimator_prediction=estimator_prediction,
+        )
 
         # 2. Candidate Extraction & Normalization
         classical_candidates = self._extract_classical_unified(res_c)
@@ -239,6 +269,8 @@ class HybridBeaconDetector:
                 agreement_state="NO_VALID_CANDIDATE",
                 fused_confidence=0.0,
                 decision_reason="No candidates proposed by Classical or Neural detectors",
+                roi_bbox=roi_bbox,
+                is_roi_used=is_roi,
             )
 
         # 3. Candidate Matching with dynamic velocity gating
@@ -543,6 +575,55 @@ class HybridBeaconDetector:
             valid_frame, top_candidate
         )
 
+        # 7. Physical Centroid Uncertainty & Candidate Quality Derivation
+        cand_c = getattr(top_candidate, "raw_classical_candidate", None)
+        if cand_c is not None:
+            base_sigma_u = float(cand_c.sigma_u_px)
+            base_sigma_v = float(cand_c.sigma_v_px)
+            is_clipped = bool(cand_c.clipped_by_edge)
+        else:
+            area = float(top_candidate.area)
+            snr = float(10.0 * (top_candidate.neural_confidence or 0.5))
+            fwhm = max(1.0, math.sqrt(area))
+            sig = fwhm / (2.355 * max(snr, 0.1) * math.sqrt(max(area, 1.0)))
+            base_sigma_u = float(sig)
+            base_sigma_v = float(sig)
+            is_clipped = False
+
+        # If detectors disagree on position, add spatial disagreement in quadrature
+        discrepancy_px = 0.0
+        if top_agr == "DISAGREEMENT":
+            discrepancy_px = 1.5
+
+        sigma_u = math.sqrt(base_sigma_u ** 2 + discrepancy_px ** 2)
+        sigma_v = math.sqrt(base_sigma_v ** 2 + discrepancy_px ** 2)
+
+        # Edge clipping doubles uncertainty due to partial boundary occlusion
+        if is_clipped:
+            sigma_u *= 2.0
+            sigma_v *= 2.0
+
+        sigma_u = float(np.clip(sigma_u, 0.01, 5.0))
+        sigma_v = float(np.clip(sigma_v, 0.01, 5.0))
+
+        quality = DetectionQuality(
+            snr=float(cand_c.snr) if cand_c else float(10.0 * (top_candidate.neural_confidence or 0.5)),
+            circularity=float(cand_c.circularity) if cand_c else 0.85,
+            compactness=float(cand_c.compactness) if cand_c else 0.85,
+            symmetry=float(cand_c.symmetry) if cand_c else 0.85,
+            radial_consistency=float(cand_c.radial_consistency) if cand_c else 0.85,
+            size_plausibility=float(cand_c.size_plausibility) if cand_c else 0.85,
+            local_contrast=float(cand_c.local_contrast) if cand_c else float(top_candidate.local_contrast or 50.0),
+            bg_mean=float(cand_c.background_level) if cand_c else float(top_candidate.background_estimate or 20.0),
+            bg_variance=float(cand_c.bg_variance) if cand_c else 4.0,
+            integrated_flux=float(cand_c.integrated_flux) if cand_c else float(top_candidate.area * 50.0),
+            clipped_by_edge=is_clipped,
+            scale_class_px=int(getattr(cand_c, "scale_class", 10)) if cand_c else 10,
+            candidate_count=len(scored_candidates),
+            centroid_method=centroid_method,
+            gaussian_fit_succeeded=(centroid_method == "gaussian_fit"),
+        )
+
         t_end = time.perf_counter()
         total_time_ms = (t_end - t_start) * 1000.0
 
@@ -564,6 +645,11 @@ class HybridBeaconDetector:
             fused_confidence=top_score,
             decision_reason=top_reason,
             unified_candidates=all_unified,
+            sigma_u_px=sigma_u,
+            sigma_v_px=sigma_v,
+            quality=quality,
+            roi_bbox=roi_bbox,
+            is_roi_used=is_roi,
         )
 
     def _extract_classical_unified(self, res_c: DetectionResult) -> List[UnifiedCandidate]:

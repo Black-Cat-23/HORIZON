@@ -69,9 +69,9 @@ class GroundTruthCSVAligner:
             if not reader.fieldnames:
                 return False
 
-            ts_col = next((h for h in reader.fieldnames if h.strip().lower() in ("timestamp", "time", "t_s", "t", "time_s")), None)
-            u_col = next((h for h in reader.fieldnames if h.strip().lower() in ("u", "x", "px", "true_u", "true_x", "centroid_x")), None)
-            v_col = next((h for h in reader.fieldnames if h.strip().lower() in ("v", "y", "py", "true_v", "true_y", "centroid_y")), None)
+            ts_col = next((h for h in reader.fieldnames if h.strip().lower() in ("timestamp", "time", "t_s", "t", "time_s", "timestamp_s", "time_seconds")), None)
+            u_col = next((h for h in reader.fieldnames if h.strip().lower() in ("u", "x", "px", "true_u", "true_x", "centroid_x", "ground_truth_u", "gt_u")), None)
+            v_col = next((h for h in reader.fieldnames if h.strip().lower() in ("v", "y", "py", "true_v", "true_y", "centroid_y", "ground_truth_v", "gt_v")), None)
 
             if u_col is None or v_col is None:
                 raise ValueError(f"Could not identify position columns in CSV header: {reader.fieldnames}")

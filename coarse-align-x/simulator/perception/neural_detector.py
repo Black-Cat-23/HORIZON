@@ -100,8 +100,9 @@ class NeuralBeaconDetector:
             expected_height=self._config.input_height,
         )
 
+        roi_arg = kwargs.get("roi", None)
         if self._session is None:
-            return self._run_synthetic_heatmap_inference(valid_frame, timestamp, t_start)
+            return self._run_synthetic_heatmap_inference(valid_frame, timestamp, t_start, roi=roi_arg)
 
         # 1. Preprocessing: Impulse noise removal & Letterbox tensor preparation
         denoised_frame = apply_adaptive_median_filter(valid_frame, self._config.preprocessing)
@@ -225,9 +226,33 @@ class NeuralBeaconDetector:
         valid_frame: np.ndarray,
         timestamp: float,
         t_start: float,
+        roi: Optional[Any] = None,
     ) -> DetectionResult:
         """Synthetic spatial Conv-Kernel Feature Heatmap Regression fallback."""
-        denoised = apply_adaptive_median_filter(valid_frame, self._config.preprocessing)
+        h, w = valid_frame.shape
+        is_roi = False
+        rx1, ry1, rx2, ry2 = 0, 0, w, h
+        if roi is not None:
+            if hasattr(roi, "x1") and hasattr(roi, "x2"):
+                rx1, ry1, rx2, ry2 = int(roi.x1), int(roi.y1), int(roi.x2), int(roi.y2)
+                is_roi = not getattr(roi, "is_full_frame", False)
+            elif isinstance(roi, (tuple, list)) and len(roi) == 4:
+                rx1, ry1, rx2, ry2 = int(roi[0]), int(roi[1]), int(roi[2]), int(roi[3])
+                if rx2 <= rx1:
+                    rx2 = rx1 + int(roi[2])
+                    ry2 = ry1 + int(roi[3])
+                is_roi = not (rx1 <= 0 and ry1 <= 0 and rx2 >= w and ry2 >= h)
+
+        if is_roi:
+            rx1 = max(0, min(w - 5, rx1))
+            ry1 = max(0, min(h - 5, ry1))
+            rx2 = max(rx1 + 5, min(w, rx2))
+            ry2 = max(ry1 + 5, min(h, ry2))
+            proc_sub = valid_frame[ry1:ry2, rx1:rx2]
+        else:
+            proc_sub = valid_frame
+
+        denoised = apply_adaptive_median_filter(proc_sub, self._config.preprocessing)
         bg_est = float(np.median(denoised))
         fg_diff = np.maximum(denoised.astype(np.float64) - bg_est, 0.0)
         max_val = float(np.max(fg_diff))
@@ -243,11 +268,16 @@ class NeuralBeaconDetector:
                 method_used="synthetic_neural_heatmap",
                 processing_time_ms=(t_end - t_start) * 1000.0,
                 timestamp=timestamp,
+                roi_bbox=(rx1, ry1, rx2 - rx1, ry2 - ry1) if is_roi else None,
+                is_roi_used=is_roi,
             )
 
         max_idx = np.unravel_index(np.argmax(fg_diff), fg_diff.shape)
         cy, cx = max_idx
-        h, w = valid_frame.shape
+        if is_roi:
+            cy += ry1
+            cx += rx1
+
         bw, bh = 20, 20
         x1 = max(0, cx - 10)
         y1 = max(0, cy - 10)
@@ -267,4 +297,6 @@ class NeuralBeaconDetector:
             processing_time_ms=(t_end - t_start) * 1000.0,
             timestamp=timestamp,
             snr_db=float(20.0 * np.log10(max_val / max(1.0, float(np.std(valid_frame))))),
+            roi_bbox=(rx1, ry1, rx2 - rx1, ry2 - ry1) if is_roi else None,
+            is_roi_used=is_roi,
         )

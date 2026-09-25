@@ -139,6 +139,21 @@ class TargetKalmanFilter:
         self._x = np.asarray(x, dtype=np.float64).reshape((4, 1)).copy()
         self._P = np.asarray(P, dtype=np.float64).reshape((4, 4)).copy()
 
+    @property
+    def track_age(self) -> int:
+        """Total frame count since track initialization."""
+        return self._track_age
+
+    @property
+    def consecutive_hits(self) -> int:
+        """Consecutive successful measurement updates."""
+        return self._consecutive_hits
+
+    @property
+    def consecutive_misses(self) -> int:
+        """Consecutive missed measurements."""
+        return self._consecutive_misses
+
     def initialize(
         self,
         measurement: Tuple[float, float],
@@ -258,6 +273,7 @@ class TargetKalmanFilter:
         timestamp: Optional[float] = None,
         gimbal_pan_rate: float = 0.0,
         gimbal_tilt_rate: float = 0.0,
+        spot_uncertainty: Optional[Tuple[float, float]] = None,
     ) -> StateEstimate:
         """Perform measurement update with Mahalanobis gating and Joseph-form update.
 
@@ -267,6 +283,7 @@ class TargetKalmanFilter:
             timestamp: Optional measurement timestamp.
             gimbal_pan_rate: Current camera pan rate in deg/s.
             gimbal_tilt_rate: Current camera tilt rate in deg/s.
+            spot_uncertainty: Optional (sigma_u, sigma_v) detector observation uncertainty.
 
         Returns:
             StateEstimate with updated state or rejected prediction.
@@ -292,7 +309,7 @@ class TargetKalmanFilter:
 
         z = np.array([[measurement[0]], [measurement[1]]], dtype=np.float64)
 
-        # Compute adaptive measurement noise R(confidence, velocity)
+        # Compute adaptive measurement noise R(confidence, velocity, spot_uncertainty)
         vel = None
         if self._config.adaptive_motion_noise and self._x_pred is not None:
             vx_p = float(self._x_pred[2, 0])
@@ -303,6 +320,7 @@ class TargetKalmanFilter:
             confidence=confidence,
             base_sigma_px=self._config.base_measurement_sigma_px,
             velocity_vector=vel,
+            spot_uncertainty=spot_uncertainty,
         )
 
         # Compute innovation: y = z - H * x_pred, S = H P_pred H^T + R

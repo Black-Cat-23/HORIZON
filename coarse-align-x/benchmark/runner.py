@@ -422,17 +422,19 @@ def run_video_trial(
     output_dir: str | Path = "results",
 ) -> Dict[str, Any]:
     """Execute external MP4 video file evaluation in strict Blind Mode (synthetic camera bypassed)."""
-    from benchmark.video import VideoFrameSource
+    from sources.video_pipeline import ExternalHybridPipeline
+    from sources.external_video_source import ExternalVideoSource
 
-    vsource = VideoFrameSource(video_path=video_path)
     alg_upper = algorithm.upper()
-
     if alg_upper == "B1":
         detector = HybridBeaconDetector(DetectorConfig(perception_mode="CLASSICAL"))
     elif alg_upper == "B2":
         detector = HybridBeaconDetector(DetectorConfig(perception_mode="NEURAL"))
     else:
         detector = HybridBeaconDetector(DetectorConfig(perception_mode="HYBRID"))
+
+    pipeline = ExternalHybridPipeline(video_source=video_path, detector=detector)
+    pipeline.open()
 
     estimator = TargetKalmanFilter()
     pat_mgr = PATModeManager()
@@ -442,32 +444,29 @@ def run_video_trial(
     frame_idx = 0
 
     t_start = time.perf_counter()
-    while not vsource.is_eof:
-        frame, decode_ms = vsource.read_frame_timed()
-        if frame is None:
+    while not pipeline.source.is_eof:
+        step_res = pipeline.process_frame()
+        if step_res is None:
             break
 
-        timestamp_s = vsource.current_timestamp_s
-        det_res = detector.detect(frame, timestamp=timestamp_s)
-        
-        det_x, det_y = None, None
-        detected = det_res.detected
-        if detected and det_res.centroid is not None:
-            det_x, det_y = det_res.centroid
+        rec, det_res = step_res
+        timestamp_s = rec.timestamp
+        detected = rec.detected
+        det_x, det_y = rec.centroid if (detected and rec.centroid is not None) else (None, None)
 
         est_u, est_v = None, None
         if detected and det_x is not None and det_y is not None:
             est_res = estimator.update((det_x, det_y), timestamp=timestamp_s)
             est_u, est_v = est_res.estimated_x, est_res.estimated_y
         elif estimator.is_initialized:
-            x_pred, _ = estimator.predict(dt=vsource.dt)
+            x_pred, _ = estimator.predict(dt=rec.dt)
             est_u, est_v = float(x_pred[0, 0]), float(x_pred[1, 0])
 
         pat_state = pat_mgr.process_step(
-            dt=vsource.dt,
+            dt=rec.dt,
             timestamp_s=timestamp_s,
             detection_valid=detected,
-            detection_confidence=det_res.confidence,
+            detection_confidence=rec.confidence,
             mahalanobis_d2=0.5 if detected else 10.0,
             covariance_trace=5.0,
             estimated_u_px=est_u if est_u else 320.0,
@@ -480,25 +479,26 @@ def run_video_trial(
 
         telemetry_records.append({
             "timestamp": timestamp_s,
-            "frame_idx": frame_idx,
+            "frame_idx": rec.frame_id,
             "state": pat_state.mode.name,
             "det_x": det_x,
             "det_y": det_y,
             "est_x": est_u,
             "est_y": est_v,
             "detected": detected,
-            "decode_latency_ms": decode_ms,
-            "processing_time_ms": det_res.processing_time_ms,
+            "confidence": rec.confidence,
+            "decode_latency_ms": rec.decode_latency_ms,
+            "processing_time_ms": rec.processing_latency_ms,
         })
         frame_idx += 1
 
     total_wall_s = time.perf_counter() - t_start
-    vsource.close()
+    pipeline.close()
 
     metrics = {
         "total_frames_processed": frame_idx,
-        "video_fps": vsource.fps,
-        "video_duration_s": frame_idx * vsource.dt,
+        "video_fps": pipeline.source.fps,
+        "video_duration_s": frame_idx * (pipeline.source.dt if hasattr(pipeline.source, "dt") else (1.0 / max(1.0, pipeline.source.fps))),
         "wall_time_s": total_wall_s,
         "detection_rate": float(sum(1 for r in telemetry_records if r["detected"]) / max(1, frame_idx)),
         "mean_processing_time_ms": float(np.mean([r["processing_time_ms"] for r in telemetry_records])) if telemetry_records else 0.0,

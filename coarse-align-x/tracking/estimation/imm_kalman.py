@@ -170,8 +170,10 @@ class InteractingMultipleModelFilter:
         )
         self._fused_P = self._cv_filter.covariance_matrix
         self._fused_x_pred = self._fused_x.copy()
-        self._fused_P_pred = self._fused_P.copy() if self._fused_P is not None else None
-        self._has_prediction = False
+        self._c_bar = np.array([0.60, 0.25, 0.15], dtype=np.float64)
+        self._sub_preds_x = [f.state_vector for f in self._filters]
+        self._sub_preds_P = [f.covariance_matrix for f in self._filters]
+        self._has_prediction = True
 
         self._last_estimate = est_cv
         return est_cv
@@ -280,6 +282,7 @@ class InteractingMultipleModelFilter:
         gimbal_pan_rate: float = 0.0,
         gimbal_tilt_rate: float = 0.0,
         is_sensor_step: bool = True,
+        spot_uncertainty: Optional[Tuple[float, float]] = None,
     ) -> StateEstimate:
         """Execute full IMM cycle: mixing, prediction, measurement update, and probability fusion."""
         t_start = time.perf_counter()
@@ -313,6 +316,7 @@ class InteractingMultipleModelFilter:
                     timestamp=ts,
                     gimbal_pan_rate=gimbal_pan_rate,
                     gimbal_tilt_rate=gimbal_tilt_rate,
+                    spot_uncertainty=spot_uncertainty,
                 )
                 sub_estimates.append(est_j)
 
@@ -454,9 +458,17 @@ class InteractingMultipleModelFilter:
         timestamp: Optional[float] = None,
         gimbal_pan_rate: float = 0.0,
         gimbal_tilt_rate: float = 0.0,
+        spot_uncertainty: Optional[Tuple[float, float]] = None,
     ) -> StateEstimate:
         """Alias for update cycle compatible with TargetKalmanFilter interface."""
-        return self.step(measurement, confidence, timestamp, gimbal_pan_rate, gimbal_tilt_rate)
+        return self.step(
+            measurement,
+            confidence=confidence,
+            timestamp=timestamp,
+            gimbal_pan_rate=gimbal_pan_rate,
+            gimbal_tilt_rate=gimbal_tilt_rate,
+            spot_uncertainty=spot_uncertainty,
+        )
 
     def update_missing(
         self,
@@ -475,6 +487,36 @@ class InteractingMultipleModelFilter:
             is_sensor_step=is_sensor_step,
         )
 
+    def predict(
+        self,
+        dt: float,
+        gimbal_pan_rate: float = 0.0,
+        gimbal_tilt_rate: float = 0.0,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Predict step forward by dt seconds."""
+        return self._cv_filter.predict(dt, gimbal_pan_rate, gimbal_tilt_rate)
+
+    @property
+    def health(self) -> Optional[EstimatorHealth]:
+        """Estimator health telemetry from the latest update."""
+        return self._last_estimate.estimator_health if self._last_estimate is not None else None
+
+    @property
+    def last_estimate(self) -> Optional[StateEstimate]:
+        """The latest fused StateEstimate."""
+        return self._last_estimate
+
+    @property
+    def track_age(self) -> int:
+        return self._track_age
+
+    @property
+    def consecutive_hits(self) -> int:
+        return self._consecutive_hits
+
+    @property
+    def consecutive_misses(self) -> int:
+        return self._consecutive_misses
     def reset(self) -> None:
         """Reset all IMM sub-filters and fused state."""
         for f in self._filters:

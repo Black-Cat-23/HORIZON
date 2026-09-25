@@ -8,7 +8,7 @@ Strict Invariant: Zero modification to existing Virtual Camera math or internals
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Any
 import numpy as np
 
 
@@ -40,6 +40,14 @@ class FramePacket:
     filename: Optional[str] = None
     duration: Optional[float] = None
     codec: Optional[str] = None
+    geometry: Optional[Any] = None
+    dt: float = 0.0
+    decode_latency_ms: float = 0.0
+    processing_latency_ms: float = 0.0
+    dropped_frames: int = 0
+    frame_available_t: float = 0.0
+    decode_start_t: float = 0.0
+    decode_end_t: float = 0.0
 
     def __post_init__(self) -> None:
         if self.valid and self.frame is not None:

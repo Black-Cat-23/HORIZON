@@ -23,11 +23,20 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
+import time
 from typing import Optional, Tuple
 import cv2
 import numpy as np
 
 from sources.frame_packet import FramePacket
+from sources.video_geometry import (
+    CoordinatePoint,
+    CoordinateSpace,
+    TransformationMethod,
+    TransformationParameters,
+    VideoGeometryTransformer,
+)
+from sources.video_timebase import VideoFrameTiming, VideoTimebase
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +68,12 @@ class ExternalVideoSource:
         self._frame_id: int = 0
         self._current_timestamp: float = 0.0
         self._last_packet: Optional[FramePacket] = None
+
+        # Geometry transformer (Phase 2B)
+        self._geometry_transformer: Optional[VideoGeometryTransformer] = None
+
+        # Authoritative timebase engine (Phase 3B)
+        self._timebase: Optional[VideoTimebase] = None
 
     # --------------------------------------------------------------------------
     # Public Properties
@@ -118,6 +133,40 @@ class ExternalVideoSource:
     @property
     def codec(self) -> str:
         return self._codec
+
+    @property
+    def geometry_transformer(self) -> Optional[VideoGeometryTransformer]:
+        """Return the active VideoGeometryTransformer configured for the opened video stream."""
+        return self._geometry_transformer
+
+    @property
+    def timebase(self) -> Optional[VideoTimebase]:
+        """Return the authoritative VideoTimebase manager (Phase 3B)."""
+        return self._timebase
+
+    @property
+    def dt(self) -> float:
+        """Authoritative source-frame timestep in seconds."""
+        if self._timebase is not None and self._timebase.last_timing is not None:
+            return self._timebase.last_timing.dt
+        return 1.0 / self._fps if self._fps > 0 else 0.033333
+
+    def get_geometry_transformer(
+        self,
+        target_width: int = 640,
+        target_height: int = 480,
+        method: TransformationMethod = TransformationMethod.LETTERBOX,
+    ) -> VideoGeometryTransformer:
+        """Construct and return a geometry transformer with specified target dimensions and method."""
+        w = self._native_width if self._native_width > 0 else target_width
+        h = self._native_height if self._native_height > 0 else target_height
+        return VideoGeometryTransformer(
+            orig_width=w,
+            orig_height=h,
+            proc_width=target_width,
+            proc_height=target_height,
+            method=method,
+        )
 
     def get_metadata(self):
         from sources.frame_source import VideoMetadata
@@ -227,6 +276,18 @@ class ExternalVideoSource:
         self._current_timestamp = 0.0
         self._status = "READY"
 
+        # Initialize Phase 2B geometry-preserving transformation engine
+        self._geometry_transformer = VideoGeometryTransformer(
+            orig_width=self._native_width,
+            orig_height=self._native_height,
+            proc_width=640,
+            proc_height=480,
+            method=TransformationMethod.LETTERBOX,
+        )
+
+        # Initialize Phase 3B authoritative timebase engine
+        self._timebase = VideoTimebase(source_fps=self._fps, total_frames=self._total_frames)
+
         logger.info(
             "Opened ExternalVideoSource: %s [%dx%d @ %.2f FPS, %d frames, %.2fs, codec=%s]",
             self.filename,
@@ -262,13 +323,22 @@ class ExternalVideoSource:
                 filename=self.filename,
                 duration=self._duration_seconds,
                 codec=self._codec,
+                geometry=self._geometry_transformer.params if self._geometry_transformer else None,
+                dt=self.dt,
+                decode_latency_ms=0.0,
+                dropped_frames=self._timebase.cumulative_dropped_frames if self._timebase else 0,
             )
 
         if self._is_paused and self._last_packet is not None:
             return self._last_packet
 
+        t_avail = time.perf_counter()
+        t_dec_start = time.perf_counter()
         ret, raw_frame = self._cap.read()
+
         if not ret or raw_frame is None:
+            t_dec_end = time.perf_counter()
+            dec_latency_ms = (t_dec_end - t_dec_start) * 1000.0
             self._is_eof = True
             self._status = "END_OF_STREAM"
             logger.info("Reached End of Stream for %s at frame %d", self.filename, self._frame_id)
@@ -284,6 +354,13 @@ class ExternalVideoSource:
                 filename=self.filename,
                 duration=self._duration_seconds,
                 codec=self._codec,
+                geometry=self._geometry_transformer.params if self._geometry_transformer else None,
+                dt=self.dt,
+                decode_latency_ms=dec_latency_ms,
+                dropped_frames=self._timebase.cumulative_dropped_frames if self._timebase else 0,
+                frame_available_t=t_avail,
+                decode_start_t=t_dec_start,
+                decode_end_t=t_dec_end,
             )
 
         # Convert to single-channel uint8 grayscale
@@ -300,8 +377,26 @@ class ExternalVideoSource:
         if gray_frame.dtype != np.uint8:
             gray_frame = np.clip(gray_frame, 0, 255).astype(np.uint8)
 
+        t_dec_end = time.perf_counter()
+        dec_latency_ms = (t_dec_end - t_dec_start) * 1000.0
+
         current_id = self._frame_id
-        timestamp_s = current_id / self._fps if self._fps > 0 else 0.0
+        pos_msec = float(self._cap.get(cv2.CAP_PROP_POS_MSEC))
+
+        # Authoritative timebase derivation (Phase 3B)
+        if self._timebase is not None:
+            timing = self._timebase.compute_frame_timing(
+                raw_frame_id=current_id,
+                container_pos_msec=pos_msec,
+                decode_duration_ms=dec_latency_ms,
+            )
+            timestamp_s = timing.timestamp
+            dt_s = timing.dt
+            dropped_cnt = timing.cumulative_dropped_frames
+        else:
+            timestamp_s = current_id / self._fps if self._fps > 0 else 0.0
+            dt_s = 1.0 / self._fps if self._fps > 0 else 0.033333
+            dropped_cnt = 0
 
         self._frame_id += 1
         self._current_timestamp = timestamp_s
@@ -319,9 +414,75 @@ class ExternalVideoSource:
             filename=self.filename,
             duration=self._duration_seconds,
             codec=self._codec,
+            geometry=self._geometry_transformer.params if self._geometry_transformer else None,
+            dt=dt_s,
+            decode_latency_ms=dec_latency_ms,
+            dropped_frames=dropped_cnt,
+            frame_available_t=t_avail,
+            decode_start_t=t_dec_start,
+            decode_end_t=t_dec_end,
         )
         self._last_packet = packet
         return packet
+
+    def read_processing_frame(
+        self,
+        target_width: int = 640,
+        target_height: int = 480,
+        method: TransformationMethod = TransformationMethod.LETTERBOX,
+        border_value: int = 0,
+    ) -> Tuple[FramePacket, TransformationParameters]:
+        """Decode next frame and apply geometry-preserving transformation.
+
+        Returns:
+            Tuple of (processing_packet, transformation_parameters) where processing_packet.frame
+            has exact shape (target_height, target_width).
+        """
+        raw_packet = self.read_frame()
+        transformer = self.get_geometry_transformer(target_width, target_height, method=method)
+
+        if not raw_packet.valid or raw_packet.frame is None:
+            empty_packet = FramePacket(
+                frame=None,
+                frame_id=raw_packet.frame_id,
+                timestamp=raw_packet.timestamp,
+                width=target_width,
+                height=target_height,
+                source_type="EXTERNAL_VIDEO",
+                source_fps=self._fps,
+                valid=False,
+                filename=self.filename,
+                duration=self._duration_seconds,
+                codec=self._codec,
+                geometry=transformer.params,
+                frame_available_t=raw_packet.frame_available_t,
+                decode_start_t=raw_packet.decode_start_t,
+                decode_end_t=raw_packet.decode_end_t,
+            )
+            return empty_packet, transformer.params
+
+        proc_frame = transformer.transform_frame(raw_packet.frame, border_value=border_value)
+        proc_packet = FramePacket(
+            frame=proc_frame,
+            frame_id=raw_packet.frame_id,
+            timestamp=raw_packet.timestamp,
+            width=target_width,
+            height=target_height,
+            source_type="EXTERNAL_VIDEO",
+            source_fps=self._fps,
+            valid=True,
+            filename=self.filename,
+            duration=self._duration_seconds,
+            codec=self._codec,
+            geometry=transformer.params,
+            dt=raw_packet.dt,
+            decode_latency_ms=raw_packet.decode_latency_ms,
+            dropped_frames=raw_packet.dropped_frames,
+            frame_available_t=raw_packet.frame_available_t,
+            decode_start_t=raw_packet.decode_start_t,
+            decode_end_t=raw_packet.decode_end_t,
+        )
+        return proc_packet, transformer.params
 
     # --------------------------------------------------------------------------
     # Sequence Controls
@@ -350,6 +511,8 @@ class ExternalVideoSource:
         self._is_paused = False
         self._last_packet = None
         self._status = "READY"
+        if self._timebase is not None:
+            self._timebase.reset()
         logger.info("Reset ExternalVideoSource: %s to frame 0", self.filename)
 
     def seek(self, target_frame_idx: int) -> bool:
@@ -364,6 +527,8 @@ class ExternalVideoSource:
             self._current_timestamp = clamped_idx / self._fps if self._fps > 0 else 0.0
             self._is_eof = False
             self._last_packet = None
+            if self._timebase is not None:
+                self._timebase.seek(clamped_idx)
             logger.debug("Seeked %s to frame %d", self.filename, clamped_idx)
         return success
 
@@ -373,6 +538,8 @@ class ExternalVideoSource:
             self._cap.release()
             self._cap = None
         self._is_open = False
+        self._geometry_transformer = None
+        self._timebase = None
         self._status = "CLOSED"
         logger.info("Closed ExternalVideoSource: %s", self.filename)
 

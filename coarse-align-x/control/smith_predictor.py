@@ -29,6 +29,7 @@ class SmithPredictorConfig:
     rate_limit_deg_s: float = 20.0  # Matches CameraGimbal rate limit [deg/s]
     accel_limit_deg_s2: float = 300.0  # Matches CameraGimbal accel limit [deg/s^2]
     max_history_seconds: float = 0.50  # Up to 500 ms historical state buffer
+    buffer_dt_s: float = 0.01        # Timestep interval for historical state buffer
 
 
 class SmithPredictor:

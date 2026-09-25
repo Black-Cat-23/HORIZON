@@ -30,13 +30,13 @@ class TestSyntheticDataPipeline:
     """Tests for synthetic dataset generation and validation."""
 
     def test_render_synthetic_sample_bounds(self):
-        frame, bbox = render_synthetic_sample(
+        frame, bboxes = render_synthetic_sample(
             u_center=320.0, v_center=240.0, size_px=10.0, disturbance_preset="NOMINAL", seed=42
         )
         assert frame.shape == (480, 640)
         assert frame.dtype == np.uint8
-        assert bbox is not None
-        cx, cy, w, h = bbox
+        assert bboxes is not None and len(bboxes) >= 1
+        cx, cy, w, h = bboxes[0]
         assert 0.0 <= cx <= 1.0
         assert 0.0 <= cy <= 1.0
         assert 0.0 < w <= 1.0

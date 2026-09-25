@@ -349,7 +349,7 @@ def extract_candidates(
         cx = int(x + bw // 2)
         cy = int(y + bh // 2)
         inner_r = max(int(math.ceil(math.sqrt(bw ** 2 + bh ** 2) / 2.0)), 2)
-        outer_r = min(inner_r * 2 + 4, max(H, W) // 4)
+        outer_r = max(inner_r + 3, min(inner_r * 2 + 4, max(H, W) // 4))
 
         local_bg_mean, local_bg_var, local_contrast = estimate_local_background(
             frame, cx, cy, inner_r, outer_r

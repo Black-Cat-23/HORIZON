@@ -57,6 +57,8 @@ from sources import (
     FramePacket,
     VirtualCameraFrameAdapter,
     VideoFrameSource,
+    DynamicROI,
+    DynamicROIManager,
 )
 
 from simulator.core.config import (
@@ -152,6 +154,7 @@ class LiveScreenView(QWidget):
 
         # Tracker & PAT Subsystems
         self._track = Track(track_id=1, filter_type="IMM_ADAPTIVE_EKF")
+        self._roi_mgr = DynamicROIManager()
         self._pat_mgr = PATModeManager()
         self._pat_ctrl = PATCameraController(controller_type="PID")
 
@@ -172,6 +175,13 @@ class LiveScreenView(QWidget):
         self._video_log_records: List[Dict[str, Any]] = []
         self._video_last_frame: Optional[np.ndarray] = None
         self._video_gt_data: Dict[int, Tuple[float, float]] = {}
+        # Video World Overview Tracking State (2000x2000 macro space)
+        self._video_cam_x: float = 1000.0
+        self._video_cam_y: float = 1000.0
+        self._video_world_target_trail: List[Tuple[float, float]] = []
+        self._video_estimate_trail: List[Tuple[float, float]] = []
+        self._video_trail_max_len: int = 300  # ~10 s at 30 FPS
+
 
         # Real-time update timer
         self._sim_timer = QTimer(self)
@@ -666,6 +676,9 @@ class LiveScreenView(QWidget):
         if self._input_source == "EXTERNAL_VIDEO" and self._external_video is not None:
             self._external_video.reset()
             self._video_log_records.clear()
+            self._video_cam_x = 1000.0
+            self._video_cam_y = 1000.0
+            self._video_world_target_trail.clear()
             self.event_timeline.clear_events()
             self.event_timeline.add_event(0.0, "SEARCH", f"Video stream reset to frame 0 ({self._external_video.filename})")
             packet = self._external_video.read_frame()
@@ -677,6 +690,20 @@ class LiveScreenView(QWidget):
                 self._render_opencv_to_label(disp_clean, self._dist_cam_label)
                 self._lbl_frame.setText("0")
                 self._lbl_time.setText("0.000 s")
+
+            if hasattr(self, "world_panel") and self.world_panel is not None:
+                world_canvas = np.full((2000, 2000, 3), (10, 14, 20), dtype=np.uint8)
+                for g in range(200, 2000, 200):
+                    cv2.line(world_canvas, (g, 0), (g, 2000), (22, 28, 38), 1)
+                    cv2.line(world_canvas, (0, g), (2000, g), (22, 28, 38), 1)
+                self.world_panel.update_world_display(
+                    world_frame=world_canvas,
+                    target_pos=(1000.0, 1000.0),
+                    boresight_pos=(1000.0, 1000.0),
+                    path_history=[],
+                    pat_state=None,
+                )
+
             self._lbl_status.setText(f"Status: Video Reset (Frame 0: {self._external_video.filename})")
             self._update_source_info_display()
             return
@@ -771,12 +798,19 @@ class LiveScreenView(QWidget):
         """Update Source Info UI with dynamic metadata according to Phase 1B Step 3."""
         if self._input_source == "EXTERNAL_VIDEO" and self._external_video is not None and self._external_video.is_open:
             v = self._external_video
+            tb = v.timebase
+            proc_fps = tb.get_processing_fps() if tb else v.fps
+            drops = tb.cumulative_dropped_frames if tb else 0
+            dec_lat = tb.get_average_decode_latency_ms() if tb else 0.0
+            proc_lat = tb.get_average_processing_latency_ms() if tb else 0.0
             info_text = (
                 f"File: {v.filename}\n"
                 f"Resolution: {v.width}x{v.height}\n"
-                f"FPS: {v.fps:.2f} FPS\n"
-                f"Duration: {v.duration:.2f}s\n"
-                f"Frames: {v.frame_count}\n"
+                f"Source FPS: {v.fps:.2f} FPS\n"
+                f"Processing FPS: {proc_fps:.1f} FPS\n"
+                f"Duration: {v.duration:.2f}s ({v.frame_count} frames)\n"
+                f"Frame: {v.frame_id} | Time: {v.timestamp:.3f}s (dt={v.dt*1000.0:.1f}ms)\n"
+                f"Drops: {drops} | Latency: dec={dec_lat:.1f}ms, proc={proc_lat:.1f}ms\n"
                 f"Status: {v.status}"
             )
             if self._video_gt_data:
@@ -884,6 +918,10 @@ class LiveScreenView(QWidget):
                 f"Loaded test video: {vsource.filename} ({vsource.frame_count} frames @ {vsource.fps:.1f} FPS)",
             )
 
+            self._video_cam_x = 1000.0
+            self._video_cam_y = 1000.0
+            self._video_world_target_trail = []
+
             # Read first frame to prime the viewports without running tracking
             packet = self._external_video.read_frame()
             if packet.valid and packet.frame is not None:
@@ -894,6 +932,19 @@ class LiveScreenView(QWidget):
                 self._render_opencv_to_label(disp_clean, self._dist_cam_label)
                 self._lbl_frame.setText("0")
                 self._lbl_time.setText("0.000 s")
+
+            if hasattr(self, "world_panel") and self.world_panel is not None:
+                world_canvas = np.full((2000, 2000, 3), (10, 14, 20), dtype=np.uint8)
+                for g in range(200, 2000, 200):
+                    cv2.line(world_canvas, (g, 0), (g, 2000), (22, 28, 38), 1)
+                    cv2.line(world_canvas, (0, g), (2000, g), (22, 28, 38), 1)
+                self.world_panel.update_world_display(
+                    world_frame=world_canvas,
+                    target_pos=(1000.0, 1000.0),
+                    boresight_pos=(1000.0, 1000.0),
+                    path_history=[],
+                    pat_state=None,
+                )
 
             self._is_paused = True
             self._btn_play.setText("▶ Resume")
@@ -945,47 +996,115 @@ class LiveScreenView(QWidget):
         self._lbl_time.setText(f"{timestamp:.3f} s")
         self._lbl_frame.setText(str(frame_idx))
 
-        # 1. Optical Detection (if detector active)
+        # Benchmark-2 Phase 3B/9B Pipeline: video frame -> preprocessing -> HYBRID -> estimator -> PAT -> controller
+        proc_start_t = time.perf_counter()
+        t_prep_start = proc_start_t
+        dt_step = packet.dt  # Authoritative source-frame timestep (NEVER UI timer or wall-clock)
+
+        # Dynamic ROI derivation from existing estimator prediction (Phase 6B)
+        video_dynamic_roi = None
+        if hasattr(self, "_roi_mgr") and hasattr(self, "_track") and self._track and self._track.filter.is_initialized:
+            try:
+                x_p, P_p = self._track.filter.predict(dt_step)
+                p_u = float(x_p[0, 0]) if x_p.ndim == 2 else float(x_p[0])
+                p_v = float(x_p[1, 0]) if x_p.ndim == 2 else float(x_p[1])
+                video_dynamic_roi = self._roi_mgr.compute_roi(
+                    predicted_position=(p_u, p_v),
+                    covariance=P_p,
+                    image_shape=(480, 640),
+                    confidence=float(self._track.filter.health.track_health) if hasattr(self._track.filter, "health") else 1.0,
+                    track_age=self._track.filter.track_age,
+                    consecutive_misses=self._track.filter.consecutive_misses,
+                    filter_status=self._track.status,
+                )
+            except Exception:
+                video_dynamic_roi = None
+
+        t_prep_end = time.perf_counter()
+
+        # 1. Optical Detection (HYBRID Perception)
+        t_hyb_start = time.perf_counter()
         detection_res = None
         meas_pixel = None
+        meas_pixel_proc = None
         if hasattr(self, "_detector") and self._detector is not None:
             v_est_pred = (self._last_estimate.predicted_x, self._last_estimate.predicted_y) if (
                 self._last_estimate and self._last_estimate.track_age > 2 and getattr(self._pat_mgr.state, "mode", None) in (PATMode.TRACK, PATMode.DEGRADED)
             ) else None
             v_est_cov = self._last_estimate.covariance[:2, :2] if (v_est_pred and hasattr(self._last_estimate, "covariance")) else None
             v_vel_hint = math.hypot(self._last_estimate.estimated_vx, self._last_estimate.estimated_vy) if v_est_pred else 0.0
+            pat_m = self._pat_mgr.state.mode.value if (hasattr(self, "_pat_mgr") and self._pat_mgr) else "SEARCH"
+            pat_q = self._pat_mgr.state.track_quality if (hasattr(self, "_pat_mgr") and self._pat_mgr) else 0.0
+            pat_h = self._pat_mgr.state.consecutive_hits if (hasattr(self, "_pat_mgr") and self._pat_mgr) else 0
 
-            detection_res = self._detector.detect(
-                frame,
-                timestamp=timestamp,
-                collect_diagnostics=True,
-                estimator_prediction=v_est_pred,
-                prediction_covariance=v_est_cov,
-                velocity_hint_px_s=v_vel_hint,
-                pat_mode=self._pat_mgr.state.mode.value if (hasattr(self, "_pat_mgr") and self._pat_mgr) else "SEARCH",
-                track_quality=self._pat_mgr.state.track_quality if (hasattr(self, "_pat_mgr") and self._pat_mgr) else 0.0,
-                consecutive_hits=self._pat_mgr.state.consecutive_hits if (hasattr(self, "_pat_mgr") and self._pat_mgr) else 0,
-            )
-            if detection_res and detection_res.detected:
-                meas_pixel = detection_res.centroid
+            if self._external_video and self._external_video.geometry_transformer is not None:
+                transformer = self._external_video.geometry_transformer
+                proc_frame = transformer.transform_frame(frame)
+                detection_res = self._detector.detect(
+                    proc_frame,
+                    timestamp=timestamp,
+                    collect_diagnostics=True,
+                    estimator_prediction=v_est_pred,
+                    prediction_covariance=v_est_cov,
+                    velocity_hint_px_s=v_vel_hint,
+                    pat_mode=pat_m,
+                    track_quality=pat_q,
+                    consecutive_hits=pat_h,
+                    roi=video_dynamic_roi,
+                )
+                if not detection_res.detected and video_dynamic_roi and not video_dynamic_roi.is_full_frame:
+                    det_full = self._detector.detect(proc_frame, timestamp=timestamp, collect_diagnostics=True)
+                    if det_full.detected:
+                        detection_res = det_full
+                if detection_res and detection_res.detected and detection_res.centroid:
+                    meas_pixel_proc = detection_res.centroid
+                    meas_pixel = transformer.processing_to_original(meas_pixel_proc[0], meas_pixel_proc[1])
+            else:
+                detection_res = self._detector.detect(
+                    frame,
+                    timestamp=timestamp,
+                    collect_diagnostics=True,
+                    estimator_prediction=v_est_pred,
+                    prediction_covariance=v_est_cov,
+                    velocity_hint_px_s=v_vel_hint,
+                    pat_mode=pat_m,
+                    track_quality=pat_q,
+                    consecutive_hits=pat_h,
+                    roi=video_dynamic_roi,
+                )
+                if not detection_res.detected and video_dynamic_roi and not video_dynamic_roi.is_full_frame:
+                    det_full = self._detector.detect(frame, timestamp=timestamp, collect_diagnostics=True)
+                    if det_full.detected:
+                        detection_res = det_full
+                if detection_res and detection_res.detected:
+                    meas_pixel = detection_res.centroid
+        t_hyb_end = time.perf_counter()
 
-        # 2. Kalman Filter Estimation Step (no physical gimbal moving, rates=0)
+        # 2. Kalman Filter Estimation Step
+        t_est_start = time.perf_counter()
         estimate = None
+        spot_unc = (
+            (float(detection_res.sigma_u_px), float(detection_res.sigma_v_px))
+            if detection_res is not None
+            else None
+        )
+        meas_for_est = meas_pixel_proc if meas_pixel_proc is not None else meas_pixel
         if hasattr(self, "_track") and self._track is not None:
             estimate = self._track.step(
-                measurement=meas_pixel if not self._suppress_detection_test else None,
+                measurement=meas_for_est if not self._suppress_detection_test else None,
                 confidence=detection_res.confidence if (detection_res and not self._suppress_detection_test) else 0.0,
                 timestamp=timestamp,
                 gimbal_pan_rate=0.0,
                 gimbal_tilt_rate=0.0,
+                spot_uncertainty=spot_unc,
             )
             self._last_estimate = estimate
+        t_est_end = time.perf_counter()
 
         # 3. PAT Mode Manager Step
+        t_pat_start = time.perf_counter()
         pat_state = None
         if hasattr(self, "_pat_mgr") and self._pat_mgr is not None and estimate is not None:
-            fps = max(self._external_video.fps, 1.0)
-            dt_step = 1.0 / fps
             cov_trace = float(estimate.position_uncertainty**2)
             is_measurement_accepted = (
                 detection_res is not None
@@ -1005,23 +1124,77 @@ class LiveScreenView(QWidget):
                 estimated_v_px=estimate.estimated_y,
                 estimated_vx_px_s=estimate.estimated_vx,
                 estimated_vy_px_s=estimate.estimated_vy,
-                current_pan_deg=0.0,
-                current_tilt_deg=0.0,
+                current_pan_deg=(self._video_cam_x - 1000.0) / 160.0,
+                current_tilt_deg=(self._video_cam_y - 1000.0) / 160.0,
                 suppress_detection=self._suppress_detection_test,
             )
+        t_pat_end = time.perf_counter()
 
-        # 4. Pointing Error & Centroid Error calculation
+        # 4. Controller Output Computation (Phase 8B Shadow Pointing)
+        t_ctrl_start = time.perf_counter()
+        cmd_pan_rate, cmd_tilt_rate = 0.0, 0.0
+        is_saturated = False
+        if hasattr(self, "_pat_ctrl") and self._pat_ctrl is not None and pat_state is not None:
+            cmd_pan_rate, cmd_tilt_rate, _, _, _, _, is_saturated = self._pat_ctrl.compute_control_command(
+                dt=dt_step,
+                pat_state=pat_state,
+                search_pan_rate=0.0,
+                search_tilt_rate=0.0,
+                reacquire_pan_rate=pat_state.reacquire_pan_rate if hasattr(pat_state, "reacquire_pan_rate") else 0.0,
+                reacquire_tilt_rate=pat_state.reacquire_tilt_rate if hasattr(pat_state, "reacquire_tilt_rate") else 0.0,
+                estimated_vx_px_s=estimate.estimated_vx if estimate else 0.0,
+                estimated_vy_px_s=estimate.estimated_vy if estimate else 0.0,
+            )
+        t_ctrl_end = time.perf_counter()
+        t_cmd_avail = t_ctrl_end
+
+        # Stage Latency breakdown (Phase 9B Direct Monotonic Measurement)
+        lat_dec_ms = float(packet.decode_latency_ms)
+        lat_prep_ms = max(0.0, (t_prep_end - t_prep_start) * 1000.0)
+        lat_hyb_ms = max(0.0, (t_hyb_end - t_hyb_start) * 1000.0)
+        lat_est_ms = max(0.0, (t_est_end - t_est_start) * 1000.0)
+        lat_pat_ms = max(0.0, (t_pat_end - t_pat_start) * 1000.0)
+        lat_ctrl_ms = max(0.0, (t_ctrl_end - t_ctrl_start) * 1000.0)
+        t_dec_origin = packet.decode_start_t if packet.decode_start_t > 0 else proc_start_t
+        lat_total_ms = max(0.0, (t_cmd_avail - t_dec_origin) * 1000.0)
+
+        # End-to-end pipeline latency tracking
+        proc_latency_ms = (time.perf_counter() - proc_start_t) * 1000.0
+        if self._external_video and self._external_video.timebase:
+            self._external_video.timebase.record_processing_latency(proc_latency_ms)
+
+        # 5. Pointing Error & Centroid Error calculation
         gt_pixel = self._video_gt_data.get(frame_idx, None)
         pixel_error = None
         if gt_pixel and meas_pixel:
             pixel_error = math.hypot(meas_pixel[0] - gt_pixel[0], meas_pixel[1] - gt_pixel[1])
 
         latency_ms = (time.perf_counter() - step_start_t) * 1000.0
+        tb = self._external_video.timebase if self._external_video else None
+        proc_fps = tb.get_processing_fps() if tb else self._current_fps
+        dropped_cnt = tb.cumulative_dropped_frames if tb else 0
 
-        # 5. Append record to video log
+        # 6. Append comprehensive record to video log
         rec = {
             "frame_idx": frame_idx,
             "timestamp_s": round(timestamp, 4),
+            "dt_s": round(packet.dt, 5),
+            "source_fps": round(packet.source_fps, 2),
+            "processing_fps": round(proc_fps, 1),
+            "dropped_frames": dropped_cnt,
+            "decode_latency_ms": round(lat_dec_ms, 3),
+            "preprocessing_latency_ms": round(lat_prep_ms, 3),
+            "hybrid_latency_ms": round(lat_hyb_ms, 3),
+            "estimation_latency_ms": round(lat_est_ms, 3),
+            "pat_latency_ms": round(lat_pat_ms, 3),
+            "controller_latency_ms": round(lat_ctrl_ms, 3),
+            "total_latency_ms": round(lat_total_ms, 3),
+            "processing_latency_ms": round(proc_latency_ms, 2),
+            "cmd_pan_rate": round(float(cmd_pan_rate), 4),
+            "cmd_tilt_rate": round(float(cmd_tilt_rate), 4),
+            "pan_error_deg": round(float(pat_state.pan_error_deg), 4) if pat_state else 0.0,
+            "tilt_error_deg": round(float(pat_state.tilt_error_deg), 4) if pat_state else 0.0,
+            "is_saturated": 1 if is_saturated else 0,
             "detected": 1 if (detection_res and detection_res.detected) else 0,
             "centroid_u": round(float(meas_pixel[0]), 3) if meas_pixel else "",
             "centroid_v": round(float(meas_pixel[1]), 3) if meas_pixel else "",
@@ -1033,6 +1206,11 @@ class LiveScreenView(QWidget):
             "ground_truth_v": round(float(gt_pixel[1]), 3) if gt_pixel else "",
             "centroid_error_px": round(float(pixel_error), 3) if pixel_error is not None else "",
             "confidence": round(float(detection_res.confidence), 4) if detection_res else 0.0,
+            "sigma_u_px": round(float(detection_res.sigma_u_px), 3) if detection_res else "",
+            "sigma_v_px": round(float(detection_res.sigma_v_px), 3) if detection_res else "",
+            "innovation_u": round(float(estimate.innovation[0, 0]), 3) if (estimate and estimate.innovation is not None) else "",
+            "innovation_v": round(float(estimate.innovation[1, 0]), 3) if (estimate and estimate.innovation is not None) else "",
+            "innovation_mahalanobis": round(float(estimate.mahalanobis_distance), 3) if estimate else "",
             "snr_db": round(float(getattr(detection_res, "snr_db", 0.0)), 2) if detection_res else 0.0,
             "pat_mode": pat_state.mode.value if pat_state else "SEARCH",
             "latency_ms": round(latency_ms, 2),
@@ -1042,8 +1220,10 @@ class LiveScreenView(QWidget):
 
         # 6. Render Viewports
         disp_clean = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR) if frame.ndim == 2 else frame.copy()
-        cv2.line(disp_clean, (320 - 15, 240), (320 + 15, 240), (180, 160, 100), 1)
-        cv2.line(disp_clean, (320, 240 - 15), (320, 240 + 15), (180, 160, 100), 1)
+        fw_clean, fh_clean = disp_clean.shape[1], disp_clean.shape[0]
+        cx_clean, cy_clean = fw_clean // 2, fh_clean // 2
+        cv2.line(disp_clean, (cx_clean - 15, cy_clean), (cx_clean + 15, cy_clean), (180, 160, 100), 1)
+        cv2.line(disp_clean, (cx_clean, cy_clean - 15), (cx_clean, cy_clean + 15), (180, 160, 100), 1)
         if gt_pixel:
             cv2.circle(disp_clean, (int(gt_pixel[0]), int(gt_pixel[1])), 8, (0, 255, 0), 1)
             cv2.putText(disp_clean, "GT", (int(gt_pixel[0]) + 10, int(gt_pixel[1]) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
@@ -1067,15 +1247,51 @@ class LiveScreenView(QWidget):
             measurement_pos=meas_pixel,
             detection_result=detection_res,
         )
+        if detection_res and detection_res.is_roi_used and detection_res.roi_bbox:
+            rx, ry, rw, rh = detection_res.roi_bbox
+            if self._external_video and self._external_video.geometry_transformer is not None:
+                p1 = self._external_video.geometry_transformer.processing_to_original(rx, ry)
+                p2 = self._external_video.geometry_transformer.processing_to_original(rx + rw, ry + rh)
+                cv2.rectangle(annotated_frame, (int(round(p1[0])), int(round(p1[1]))), (int(round(p2[0])), int(round(p2[1]))), (0, 215, 255), 1)
+                cv2.putText(annotated_frame, f"ROI {rw}x{rh}", (int(round(p1[0])), max(14, int(round(p1[1])) - 4)), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 215, 255), 1)
+            else:
+                cv2.rectangle(annotated_frame, (rx, ry), (rx + rw, ry + rh), (0, 215, 255), 1)
+                cv2.putText(annotated_frame, f"ROI {rw}x{rh}", (rx, max(14, ry - 4)), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 215, 255), 1)
         self._render_opencv_to_label(annotated_frame, self._dist_cam_label)
 
-        # Telemetry readouts
+        # Telemetry readouts (Phase 8B Shadow Pointing)
         if pat_state is not None:
             self._lbl_pat_mode.setText(pat_state.mode.value)
             self._lbl_pat_quality.setText(f"{pat_state.track_quality * 100.0:.1f}%")
             self._lbl_pat_error.setText(f"Pan: {pat_state.pan_error_deg:+.2f}° | Tilt: {pat_state.tilt_error_deg:+.2f}°")
+            self._lbl_pat_cmd_rate.setText(f"Pan: {cmd_pan_rate:+.2f}°/s | Tilt: {cmd_tilt_rate:+.2f}°/s")
+            self._lbl_pat_act_rate.setText("Pan: 0.00°/s | Tilt: 0.00°/s (SHADOW)")
+            self._lbl_pat_sat.setText("YES" if is_saturated else "NO")
+            self._lbl_pat_sat.setStyleSheet(
+                f"font-family: {FONT_TELEMETRY}; color: {COLOR_LOST_RED if is_saturated else COLOR_CONFIRM_GREEN}; font-weight: bold;"
+            )
         else:
             self._lbl_pat_mode.setText("SEARCH")
+            self._lbl_pat_quality.setText("0.0%")
+            self._lbl_pat_error.setText("Pan: 0.00° | Tilt: 0.00°")
+            self._lbl_pat_cmd_rate.setText("Pan: 0.00°/s | Tilt: 0.00°/s")
+            self._lbl_pat_act_rate.setText("Pan: 0.00°/s | Tilt: 0.00°/s (SHADOW)")
+            self._lbl_pat_sat.setText("NO")
+            self._lbl_pat_sat.setStyleSheet(
+                f"font-family: {FONT_TELEMETRY}; color: {COLOR_CONFIRM_GREEN}; font-weight: bold;"
+            )
+
+        if estimate is not None:
+            self._lbl_est_status.setText(estimate.filter_status.value)
+            self._lbl_est_pos.setText(f"u: {estimate.estimated_x:.2f} | v: {estimate.estimated_y:.2f} px")
+            self._lbl_est_vel.setText(f"Vu: {estimate.estimated_vx:.2f} | Vv: {estimate.estimated_vy:.2f} px/s")
+            self._lbl_est_unc.setText(f"pos: ±{estimate.position_uncertainty:.2f} px | vel: ±{estimate.velocity_uncertainty:.2f} px/s")
+            if estimate.innovation is not None:
+                inno_norm = math.hypot(estimate.innovation[0, 0], estimate.innovation[1, 0])
+                self._lbl_est_inno.setText(f"||y||: {inno_norm:.2f} px | d²: {estimate.mahalanobis_distance**2:.2f}")
+            else:
+                self._lbl_est_inno.setText("||y||: 0.00 px | d²: 0.00")
+            self._lbl_est_latency.setText(f"{proc_latency_ms:.1f} ms")
 
         if detection_res is not None:
             self._lbl_perc_lock.setText("LOCKED" if detection_res.detected else "SEARCHING")
@@ -1084,6 +1300,10 @@ class LiveScreenView(QWidget):
                 self._lbl_perc_centroid.setText(f"u: {meas_pixel[0]:.2f} | v: {meas_pixel[1]:.2f} px")
             else:
                 self._lbl_perc_centroid.setText("u: N/A | v: N/A px")
+            if pixel_error is not None:
+                self._lbl_perc_error.setText(f"{pixel_error:.3f} px")
+            else:
+                self._lbl_perc_error.setText("N/A")
             self._lbl_perc_conf.setText(f"{detection_res.confidence * 100.0:.1f}%")
             self._lbl_perc_latency.setText(f"{detection_res.processing_time_ms:.1f} ms")
 
@@ -1092,6 +1312,69 @@ class LiveScreenView(QWidget):
         fps_display = self._current_fps if self._current_fps > 0 else packet.source_fps
         self._lbl_status.setText(f"External Video: Frame {frame_idx}/{self._external_video.frame_count} | {fps_display:.1f} FPS | Latency: {total_latency:.1f} ms")
         self._update_source_info_display()
+
+        # ── Macro World Overview Update (2000×2000 space) ──────────────────────
+        if hasattr(self, "world_panel") and self.world_panel is not None:
+            dt_step = packet.dt
+            # Frame center coordinates (dynamic, derived from frame dimensions)
+            fw_proc = frame.shape[1] if frame is not None else 640
+            fh_proc = frame.shape[0] if frame is not None else 480
+            cx_proc = fw_proc / 2.0
+            cy_proc = fh_proc / 2.0
+
+            # 1. Closed-loop camera boresight movement in 2000x2000 world space
+            # Driven strictly by PAT controller command rates (cmd_pan_rate, cmd_tilt_rate)
+            # 1 deg pan/tilt = 160 px on 2000x2000 world canvas
+            dx_cam = float(cmd_pan_rate) * 160.0 * dt_step
+            dy_cam = float(cmd_tilt_rate) * 160.0 * dt_step
+
+            self._video_cam_x = float(np.clip(self._video_cam_x + dx_cam, cx_proc, 2000.0 - cx_proc))
+            self._video_cam_y = float(np.clip(self._video_cam_y + dy_cam, cy_proc, 2000.0 - cy_proc))
+
+            # 2. Target position in 2000x2000 world space relative to camera boresight
+            target_w_x = None
+            target_w_y = None
+            if estimate is not None:
+                target_w_x = self._video_cam_x + (float(estimate.estimated_x) - cx_proc)
+                target_w_y = self._video_cam_y + (float(estimate.estimated_y) - cy_proc)
+            elif meas_pixel is not None:
+                target_w_x = self._video_cam_x + (float(meas_pixel[0]) - cx_proc)
+                target_w_y = self._video_cam_y + (float(meas_pixel[1]) - cy_proc)
+
+            if target_w_x is not None and target_w_y is not None:
+                self._video_world_target_trail.append((target_w_x, target_w_y))
+                if len(self._video_world_target_trail) > 500:
+                    self._video_world_target_trail.pop(0)
+
+            # 3. Build 2000x2000 dark canvas with fine grid
+            world_canvas = np.full((2000, 2000, 3), (10, 14, 20), dtype=np.uint8)
+            for g in range(200, 2000, 200):
+                cv2.line(world_canvas, (g, 0), (g, 2000), (22, 28, 38), 1)
+                cv2.line(world_canvas, (0, g), (2000, g), (22, 28, 38), 1)
+
+            # 4. Render updated 2000x2000 macro view onto world_panel
+            self.world_panel.update_world_display(
+                world_frame=world_canvas,
+                target_pos=(target_w_x, target_w_y) if (target_w_x is not None and target_w_y is not None) else None,
+                boresight_pos=(self._video_cam_x, self._video_cam_y),
+                path_history=list(self._video_world_target_trail),
+                pat_state=pat_state,
+            )
+
+        # Push live telemetry to Track Diagnostics screen.
+        # Mirrors _execute_sim_step: emit after every processed frame so Track tab
+        # graphs receive real detection / estimation / PAT data from the video pipeline.
+        # gt_pixel is None when no reference CSV is loaded — Track screen handles None safely.
+        self.track_data_ready.emit(
+            annotated_frame,   # disturbed+annotated frame (equivalent to dist_cam_frame in sim path)
+            detection_res,     # live HYBRID detection result
+            estimate,          # live IMM-EKF state estimate (may be None before filter initializes)
+            pat_state,         # live PAT state (None iff estimate is None)
+            gt_pixel if gt_pixel else None,  # ground-truth centroid from reference CSV, or None
+            float(timestamp),  # authoritative video presentation timestamp
+        )
+
+
 
     def _on_export_centroid_csv_clicked(self) -> None:
         """Export frame-by-frame centroid tracking and error log to CSV."""
@@ -1280,6 +1563,7 @@ class LiveScreenView(QWidget):
         # Only provide estimator prediction to perception once track is firmly established
         # in TRACK or DEGRADED mode with age > 2, so uninitialized / zero-velocity states
         # do not falsely reject the true optical beacon during initial search and acquisition.
+        sim_dynamic_roi = None
         if (
             self._last_estimate
             and self._last_estimate.track_age > 2
@@ -1288,6 +1572,16 @@ class LiveScreenView(QWidget):
             est_pred = (self._last_estimate.predicted_x, self._last_estimate.predicted_y)
             est_cov = self._last_estimate.covariance[:2, :2] if hasattr(self._last_estimate, "covariance") else None
             vel_hint = math.hypot(self._last_estimate.estimated_vx, self._last_estimate.estimated_vy)
+            if hasattr(self, "_roi_mgr"):
+                sim_dynamic_roi = self._roi_mgr.compute_roi(
+                    predicted_position=est_pred,
+                    covariance=est_cov,
+                    image_shape=(480, 640),
+                    confidence=float(self._pat_mgr.state.track_quality),
+                    track_age=self._last_estimate.track_age,
+                    consecutive_misses=self._last_estimate.consecutive_misses,
+                    filter_status=self._track.status,
+                )
         else:
             est_pred = None
             est_cov = None
@@ -1304,7 +1598,16 @@ class LiveScreenView(QWidget):
                 pat_mode=self._pat_mgr.state.mode.value if (hasattr(self, "_pat_mgr") and self._pat_mgr) else "SEARCH",
                 track_quality=self._pat_mgr.state.track_quality if (hasattr(self, "_pat_mgr") and self._pat_mgr) else 0.0,
                 consecutive_hits=self._pat_mgr.state.consecutive_hits if (hasattr(self, "_pat_mgr") and self._pat_mgr) else 0,
+                roi=sim_dynamic_roi,
             )
+            if not detection_res.detected and sim_dynamic_roi and not sim_dynamic_roi.is_full_frame:
+                det_full = self._detector.detect(
+                    dist_cam_frame,
+                    timestamp=state.timestamp,
+                    collect_diagnostics=True,
+                )
+                if det_full.detected:
+                    detection_res = det_full
             is_measurement_accepted = (
                 detection_res.detected
                 and not self._suppress_detection_test
