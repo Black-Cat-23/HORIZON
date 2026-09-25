@@ -96,33 +96,119 @@ def validate_trial_result(data: Dict[str, Any]) -> Tuple[bool, List[str]]:
 
 
 def audit_trials_directory(trials_dir: Any) -> Dict[str, Any]:
-    """Scan and audit all trial result files in a directory hierarchy."""
+    """Scan and audit all trial result files in a directory hierarchy.
+
+    Step 1 — Data Integrity:
+    1. Duplicate seed detection
+    2. Missing / corrupted data detection
+    3. Incomplete trial detection
+    4. Configuration hash mismatch verification
+    """
     import json
     from pathlib import Path
     path = Path(trials_dir)
     if not path.exists():
-        return {"total_files": 0, "valid_count": 0, "corrupted_count": 0, "valid_trials": [], "issues": []}
+        return {
+            "total_files": 0,
+            "valid_count": 0,
+            "corrupted_count": 0,
+            "duplicate_count": 0,
+            "incomplete_count": 0,
+            "config_mismatch_count": 0,
+            "valid_trials": [],
+            "audit_issues": [],
+            "integrity_summary": {
+                "duplicates_found": 0,
+                "missing_data_count": 0,
+                "invalid_data_count": 0,
+                "incomplete_trials": 0,
+                "config_mismatches": 0,
+            },
+        }
 
     trial_files = [f for f in path.glob("**/*.json") if f.name != "checkpoint.json"]
     valid_trials: List[Dict[str, Any]] = []
     audit_report: List[Dict[str, Any]] = []
 
+    seen_trial_keys: Dict[tuple, str] = {}
+    config_hashes_by_alg: Dict[str, Dict[str, List[str]]] = {}
+
+    duplicate_count = 0
+    incomplete_count = 0
+    missing_data_count = 0
+    invalid_data_count = 0
+    config_mismatch_count = 0
+
     for f_path in trial_files:
         try:
             with open(f_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
+
             is_valid, issues = validate_trial_result(data)
+
+            # Duplicate seed check: key = (algorithm, scenario_id, seed)
+            alg = str(data.get("algorithm", "UNKNOWN"))
+            scen = str(data.get("scenario_id", "default"))
+            seed = int(data.get("seed", -1))
+            t_key = (alg, scen, seed)
+
+            if t_key in seen_trial_keys:
+                duplicate_count += 1
+                issues.append(f"Duplicate trial key (alg={alg}, scenario={scen}, seed={seed})")
+                is_valid = False
+            else:
+                seen_trial_keys[t_key] = str(f_path)
+
+            # Config hash consistency check
+            cfg_hash = (
+                data.get("algorithm_config_hash")
+                or data.get("resolved_configuration", {}).get("config_hash")
+            )
+            if cfg_hash:
+                config_hashes_by_alg.setdefault(alg, {}).setdefault(cfg_hash, []).append(str(f_path))
+
+            # Classify issue types
+            for issue in issues:
+                if "Missing" in issue or "Null" in issue:
+                    missing_data_count += 1
+                elif "Non-finite" in issue or "Invalid" in issue or "NaN" in issue:
+                    invalid_data_count += 1
+                elif "Incomplete" in issue or "incomplete" in issue:
+                    incomplete_count += 1
+
             if is_valid:
                 valid_trials.append(data)
             else:
                 audit_report.append({"file": str(f_path), "issues": issues})
+
         except Exception as e:
+            invalid_data_count += 1
             audit_report.append({"file": str(f_path), "issues": [f"JSON Parse Exception: {str(e)}"]})
+
+    # Config hash consistency verification
+    for alg, hashes in config_hashes_by_alg.items():
+        if len(hashes) > 1:
+            config_mismatch_count += len(hashes) - 1
+            audit_report.append({
+                "file": f"[Config Audit] Algorithm '{alg}'",
+                "issues": [f"Configuration mismatch: {len(hashes)} distinct config hashes detected: {list(hashes.keys())}"]
+            })
 
     return {
         "total_files": len(trial_files),
         "valid_count": len(valid_trials),
         "corrupted_count": len(audit_report),
+        "duplicate_count": duplicate_count,
+        "incomplete_count": incomplete_count,
+        "config_mismatch_count": config_mismatch_count,
         "valid_trials": valid_trials,
         "audit_issues": audit_report,
+        "integrity_summary": {
+            "duplicates_found": duplicate_count,
+            "missing_data_count": missing_data_count,
+            "invalid_data_count": invalid_data_count,
+            "incomplete_trials": incomplete_count,
+            "config_mismatches": config_mismatch_count,
+        },
     }
+

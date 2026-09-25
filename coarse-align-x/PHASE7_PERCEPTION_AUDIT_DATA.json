@@ -1,0 +1,213 @@
+{
+  "multiscale_robustness": [
+    {
+      "target_size_px": 3,
+      "detection_rate_pct": 100.0,
+      "mean_subpixel_error_px": 0.059,
+      "p95_subpixel_error_px": 0.145,
+      "avg_latency_ms": 1.63
+    },
+    {
+      "target_size_px": 5,
+      "detection_rate_pct": 100.0,
+      "mean_subpixel_error_px": 0.026,
+      "p95_subpixel_error_px": 0.053,
+      "avg_latency_ms": 1.33
+    },
+    {
+      "target_size_px": 8,
+      "detection_rate_pct": 100.0,
+      "mean_subpixel_error_px": 0.017,
+      "p95_subpixel_error_px": 0.033,
+      "avg_latency_ms": 1.26
+    },
+    {
+      "target_size_px": 10,
+      "detection_rate_pct": 100.0,
+      "mean_subpixel_error_px": 0.027,
+      "p95_subpixel_error_px": 0.054,
+      "avg_latency_ms": 1.35
+    },
+    {
+      "target_size_px": 15,
+      "detection_rate_pct": 100.0,
+      "mean_subpixel_error_px": 0.019,
+      "p95_subpixel_error_px": 0.047,
+      "avg_latency_ms": 1.21
+    },
+    {
+      "target_size_px": 20,
+      "detection_rate_pct": 100.0,
+      "mean_subpixel_error_px": 0.019,
+      "p95_subpixel_error_px": 0.03,
+      "avg_latency_ms": 1.31
+    },
+    {
+      "target_size_px": 25,
+      "detection_rate_pct": 100.0,
+      "mean_subpixel_error_px": 0.019,
+      "p95_subpixel_error_px": 0.04,
+      "avg_latency_ms": 1.23
+    },
+    {
+      "target_size_px": 30,
+      "detection_rate_pct": 100.0,
+      "mean_subpixel_error_px": 0.009,
+      "p95_subpixel_error_px": 0.016,
+      "avg_latency_ms": 1.43
+    }
+  ],
+  "disturbance_robustness": [
+    {
+      "disturbance_condition": "CLEAN_BASELINE",
+      "detection_rate_pct": 100.0,
+      "mean_centroid_error_px": 0.03,
+      "mean_confidence": 0.964
+    },
+    {
+      "disturbance_condition": "GAUSSIAN_NOISE (sigma=20)",
+      "detection_rate_pct": 100.0,
+      "mean_centroid_error_px": 0.172,
+      "mean_confidence": 0.856
+    },
+    {
+      "disturbance_condition": "SALT_AND_PEPPER (5%)",
+      "detection_rate_pct": 100.0,
+      "mean_centroid_error_px": 0.05,
+      "mean_confidence": 0.793
+    },
+    {
+      "disturbance_condition": "POISSON_SHOT_NOISE",
+      "detection_rate_pct": 100.0,
+      "mean_centroid_error_px": 0.032,
+      "mean_confidence": 0.962
+    },
+    {
+      "disturbance_condition": "MOTION_BLUR (angle=45, len=15)",
+      "detection_rate_pct": 100.0,
+      "mean_centroid_error_px": 0.507,
+      "mean_confidence": 0.934
+    },
+    {
+      "disturbance_condition": "ATMOSPHERIC_FOG",
+      "detection_rate_pct": 100.0,
+      "mean_centroid_error_px": 0.035,
+      "mean_confidence": 0.952
+    },
+    {
+      "disturbance_condition": "ATMOSPHERIC_HAZE",
+      "detection_rate_pct": 100.0,
+      "mean_centroid_error_px": 0.032,
+      "mean_confidence": 0.962
+    },
+    {
+      "disturbance_condition": "ATMOSPHERIC_RAIN",
+      "detection_rate_pct": 92.0,
+      "mean_centroid_error_px": 0.081,
+      "mean_confidence": 0.799
+    },
+    {
+      "disturbance_condition": "LOW_LIGHT_SNR (intensity=45)",
+      "detection_rate_pct": 100.0,
+      "mean_centroid_error_px": 0.194,
+      "mean_confidence": 0.677
+    },
+    {
+      "disturbance_condition": "PARTIAL_OCCLUSION (50%)",
+      "detection_rate_pct": 52.0,
+      "mean_centroid_error_px": 0.209,
+      "mean_confidence": 0.493
+    },
+    {
+      "disturbance_condition": "ADVERSARIAL_COMPOUND",
+      "detection_rate_pct": 100.0,
+      "mean_centroid_error_px": 0.154,
+      "mean_confidence": 0.661
+    }
+  ],
+  "false_target_defense": [
+    {
+      "scenario": "SINGLE_DISTRACTOR (elongated glint)",
+      "trials": 20,
+      "false_alarms": 0,
+      "false_alarm_rate_pct": 0.0,
+      "correct_rejection_rate_pct": 100.0
+    },
+    {
+      "scenario": "MULTI_DISTRACTORS (4 glints)",
+      "trials": 20,
+      "false_alarms": 0,
+      "false_alarm_rate_pct": 0.0,
+      "correct_rejection_rate_pct": 100.0
+    },
+    {
+      "scenario": "NOISE_CLUSTERS (isolated Gaussian blobs)",
+      "trials": 20,
+      "false_alarms": 0,
+      "false_alarm_rate_pct": 0.0,
+      "correct_rejection_rate_pct": 100.0
+    },
+    {
+      "scenario": "SPECULAR_REFLECTION (flat high-intensity slab)",
+      "trials": 20,
+      "false_alarms": 0,
+      "false_alarm_rate_pct": 0.0,
+      "correct_rejection_rate_pct": 100.0
+    },
+    {
+      "scenario": "BLACK_EMPTY_FRAME (no beacon)",
+      "trials": 20,
+      "false_alarms": 0,
+      "false_alarm_rate_pct": 0.0,
+      "correct_rejection_rate_pct": 100.0
+    }
+  ],
+  "confidence_calibration": {
+    "expected_calibration_error": 0.0325,
+    "maximum_calibration_error": 0.0691,
+    "brier_score": 0.0017,
+    "bin_confidences": [
+      0.069,
+      0.15,
+      0.25,
+      0.35,
+      0.45,
+      0.55,
+      0.65,
+      0.75,
+      0.85,
+      0.986
+    ],
+    "bin_accuracies": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "bin_counts": [
+      50,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      100
+    ]
+  },
+  "latency_breakdown": {
+    "video_frame_decode_ms": 1.118,
+    "frame_preprocessing_ms": 0.24,
+    "candidate_extraction_ms": 0.555,
+    "subpixel_centroid_refinement_ms": 0.078,
+    "total_perception_e2e_ms": 1.138
+  }
+}

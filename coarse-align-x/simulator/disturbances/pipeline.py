@@ -4,12 +4,17 @@ HORIZON Disturbance Pipeline
 Central orchestrator for the Phase 3 disturbance engine.
 Enforces an explicit, testable, deterministic sequence of optical and sensor degradations:
   1. Platform Motion Stage (Continuous, stateful translation)
-  2. Atmospheric Degradation Stage (Contrast & brightness reduction)
-  3. Sensor Noise Injection Stage:
+  2. Temporary Target Occlusion Stage (Partial / Complete cloud/structure blockage)
+  3. Atmospheric Degradation Stage (Contrast & brightness reduction with continuous severity)
+  4. Temporal Intensity Fluctuation Stage (Slow envelope + fast scintillation)
+  5. False Optical Target Distractor Stage (Small spots, blobs, reflections, clusters)
+  6. Sensor Noise Injection Stage:
      - Salt & Pepper impulse noise
      - Additive Gaussian noise (sigma <= 20 px)
      - Poisson photon shot noise
-  4. Camera Jitter Stage (Zero-mean image-plane displacement <= ±20 px)
+  7. Camera Jitter Stage (Zero-mean image-plane displacement <= ±20 px)
+  8. Injection Scheduler Stage (Immediate, Ramped, Pulsed, Scheduled gain)
+  9. Counterfactual Ablation (Seed-exact single-channel removal for ablation analysis)
 
 All operations preserve the original clean sensor frame and never mutate
 ground truth state.
@@ -18,18 +23,23 @@ ground truth state.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 import numpy as np
 
 from simulator.core.seed_manager import SeedManager
 from simulator.disturbances.atmosphere import apply_atmospheric_degradation
 from simulator.disturbances.config import DisturbanceConfig, validate_disturbance_config
+from simulator.disturbances.correlation import DisturbanceCorrelationEngine
+from simulator.disturbances.distractor import FalseTargetDistractorEngine
+from simulator.disturbances.injection_scheduler import InjectionSchedulerEngine
+from simulator.disturbances.intensity_fluctuation import IntensityFluctuationEngine
 from simulator.disturbances.jitter import CameraJitterEngine
 from simulator.disturbances.noise import (
     apply_gaussian_noise,
     apply_poisson_noise,
     apply_salt_and_pepper_noise,
 )
+from simulator.disturbances.occlusion import TemporaryOcclusionEngine
 from simulator.disturbances.platform import PlatformMotionEngine
 
 
@@ -57,15 +67,22 @@ class DisturbanceTelemetry:
     contrast_factor: float
     brightness_factor: float
     # Link‑budget telemetry (observer only)
-    link_budget_enabled: bool
-    pointing_loss_dB: float
-    geometric_loss_dB: float
-    atm_loss_dB: float
-    received_power_W: float
-    snr_linear: float
-    ber: float
-    link_margin_dB: float
-    link_status: str
+    link_budget_enabled: bool = False
+    pointing_loss_dB: float = 0.0
+    geometric_loss_dB: float = 0.0
+    atm_loss_dB: float = 0.0
+    received_power_W: float = 0.0
+    snr_linear: float = 0.0
+    ber: float = 0.0
+    link_margin_dB: float = 0.0
+    link_status: str = "DISABLED"
+    # Phase 3 Extensions
+    injection_gain: float = 1.0
+    intensity_multiplier: float = 1.0
+    occlusion_transmission: float = 1.0
+    distractor_count: int = 0
+    ablated_module: Optional[str] = None
+
 
 
 class DisturbancePipeline:
@@ -87,17 +104,26 @@ class DisturbancePipeline:
         self._rng_poisson = seed_mgr.get_rng("poisson")
         self._rng_jitter = seed_mgr.get_rng("jitter")
         self._rng_platform = seed_mgr.get_rng("platform")
+        self._rng_intensity = seed_mgr.get_rng("intensity_fluctuation")
+        self._rng_distractor = seed_mgr.get_rng("distractor")
+        self._rng_correlation = seed_mgr.get_rng("correlation")
+        self._rng_atmosphere = seed_mgr.get_rng("atmosphere")
 
         # Sub-engines
         self._jitter_engine = CameraJitterEngine(config.camera_jitter, self._rng_jitter)
         self._platform_engine = PlatformMotionEngine(config.platform_motion, self._rng_platform)
+        self._intensity_engine = IntensityFluctuationEngine(config.intensity_fluctuation, self._rng_intensity)
+        self._occlusion_engine = TemporaryOcclusionEngine(config.occlusion)
+        self._distractor_engine = FalseTargetDistractorEngine(config.distractors, self._rng_distractor)
+        self._correlation_engine = DisturbanceCorrelationEngine(config.correlation, self._rng_correlation)
+        self._scheduler_engine = InjectionSchedulerEngine(config.injection_schedule)
 
     @property
     def config(self) -> DisturbanceConfig:
         return self._config
 
     def reset(self) -> None:
-        """Reset stateful disturbance engines (e.g. platform motion)."""
+        """Reset stateful disturbance engines."""
         self._platform_engine.reset()
 
     def apply(
@@ -105,6 +131,7 @@ class DisturbancePipeline:
         clean_frame: np.ndarray,
         sim_time: float,
         sim_dt: float,
+        ablate_module: Optional[str] = None,
     ) -> Tuple[np.ndarray, DisturbanceTelemetry]:
         """Execute the disturbance pipeline on a clean 640×480 sensor frame.
 
@@ -112,14 +139,16 @@ class DisturbancePipeline:
             clean_frame: Uncorrupted 640×480 uint8 camera frame.
             sim_time: Current simulation time in seconds.
             sim_dt: Timestep duration in seconds.
+            ablate_module: Optional module name to skip for counterfactual ablation analysis.
 
         Returns:
-            Tuple of:
-              - disturbed_frame: 640×480 uint8 degraded frame
-              - telemetry: DisturbanceTelemetry instance with exact metadata applied
+            Tuple of (disturbed_frame, telemetry).
         """
-        # If overall disturbance is disabled, return clean copy with neutral telemetry
-        if not self._config.enabled:
+        # Compute injection gain from scheduler
+        injection_gain = self._scheduler_engine.compute_gain(sim_time)
+
+        # If overall disturbance is disabled or injection gain is zero, return clean copy
+        if not self._config.enabled or injection_gain <= 0.0:
             telemetry = DisturbanceTelemetry(
                 disturbance_enabled=False,
                 salt_pepper_enabled=False,
@@ -141,6 +170,8 @@ class DisturbancePipeline:
                 atmosphere_condition=self._config.atmosphere.condition,
                 contrast_factor=1.0,
                 brightness_factor=0.0,
+                injection_gain=injection_gain,
+                ablated_module=ablate_module,
                 # Link‑budget defaults (will be overwritten if enabled)
                 link_budget_enabled=self._config.link_budget.enabled,
                 pointing_loss_dB=0.0,
@@ -163,50 +194,83 @@ class DisturbancePipeline:
         frame = clean_frame.copy()
 
         # -------------------------------------------------------------
-        # Stage 1: Platform Motion (Continuous Stateful Image Displacement)
+        # Stage 1: Platform Motion
         # -------------------------------------------------------------
-        frame, p_ox, p_oy, p_vx, p_vy = self._platform_engine.step(
-            frame=frame, dt=sim_dt, sim_time=sim_time
-        )
+        if ablate_module != "platform_motion":
+            frame, p_ox, p_oy, p_vx, p_vy = self._platform_engine.step(
+                frame=frame, dt=sim_dt, sim_time=sim_time
+            )
+        else:
+            p_ox, p_oy, p_vx, p_vy = 0.0, 0.0, 0.0, 0.0
 
         # -------------------------------------------------------------
-        # Stage 2: Atmospheric Degradation (Contrast & Brightness Reduction)
+        # Stage 2: Camera Image-Plane Jitter
         # -------------------------------------------------------------
-        frame, contrast_factor, brightness_factor = apply_atmospheric_degradation(
-            frame=frame, config=self._config.atmosphere
-        )
+        if ablate_module != "camera_jitter":
+            frame, jitter_x, jitter_y = self._jitter_engine.step(frame=frame)
+        else:
+            jitter_x, jitter_y = 0.0, 0.0
 
         # -------------------------------------------------------------
-        # Stage 3: Sensor Noise Injection
+        # Stage 3: Temporary Occlusion
         # -------------------------------------------------------------
-        # 3a. Salt & Pepper
-        if self._config.salt_pepper.enabled and self._config.salt_pepper.probability > 0.0:
+        if ablate_module != "occlusion":
+            frame, transmission = self._occlusion_engine.apply(frame, sim_time)
+        else:
+            transmission = 1.0
+
+        # -------------------------------------------------------------
+        # Stage 4: Atmospheric Degradation
+        # -------------------------------------------------------------
+        if ablate_module != "atmosphere":
+            frame, contrast_factor, brightness_factor = apply_atmospheric_degradation(
+                frame=frame, config=self._config.atmosphere, rng=self._rng_atmosphere
+            )
+        else:
+            contrast_factor, brightness_factor = 1.0, 0.0
+
+        # -------------------------------------------------------------
+        # Stage 5: Temporal Intensity Fluctuation
+        # -------------------------------------------------------------
+        if ablate_module != "intensity_fluctuation":
+            frame, intensity_mult = self._intensity_engine.apply(frame, sim_time)
+        else:
+            intensity_mult = 1.0
+
+        # -------------------------------------------------------------
+        # Stage 6: False Optical Targets (Distractors)
+        # -------------------------------------------------------------
+        if ablate_module != "distractors":
+            frame, distractor_cnt = self._distractor_engine.apply(frame, sim_dt)
+        else:
+            distractor_cnt = 0
+
+        # -------------------------------------------------------------
+        # Stage 7: Sensor Noise Injection
+        # -------------------------------------------------------------
+        # 7a. Salt & Pepper
+        if ablate_module != "salt_pepper" and self._config.salt_pepper.enabled and self._config.salt_pepper.probability > 0.0:
             frame = apply_salt_and_pepper_noise(
                 frame=frame,
-                probability=self._config.salt_pepper.probability,
+                probability=self._config.salt_pepper.probability * injection_gain,
                 rng=self._rng_sp,
             )
 
-        # 3b. Gaussian Noise (Additive N(0, sigma^2))
-        if self._config.gaussian.enabled and self._config.gaussian.sigma > 0.0:
+        # 7b. Gaussian Noise
+        if ablate_module != "gaussian" and self._config.gaussian.enabled and self._config.gaussian.sigma > 0.0:
             frame = apply_gaussian_noise(
                 frame=frame,
-                sigma=self._config.gaussian.sigma,
+                sigma=self._config.gaussian.sigma * injection_gain,
                 rng=self._rng_gauss,
             )
 
-        # 3c. Poisson Shot Noise
-        if self._config.poisson.enabled:
+        # 7c. Poisson Shot Noise
+        if ablate_module != "poisson" and self._config.poisson.enabled:
             frame = apply_poisson_noise(
                 frame=frame,
                 peak_photons=self._config.poisson.peak_photons,
                 rng=self._rng_poisson,
             )
-
-        # -------------------------------------------------------------
-        # Stage 4: Camera Image-Plane Jitter (Zero-mean high frequency)
-        # -------------------------------------------------------------
-        frame, jitter_x, jitter_y = self._jitter_engine.step(frame=frame)
 
         # Ensure output invariants: strictly uint8 and 2D
         disturbed_frame = np.ascontiguousarray(frame, dtype=np.uint8)
@@ -232,6 +296,11 @@ class DisturbancePipeline:
             atmosphere_condition=self._config.atmosphere.condition,
             contrast_factor=contrast_factor,
             brightness_factor=brightness_factor,
+            injection_gain=injection_gain,
+            intensity_multiplier=intensity_mult,
+            occlusion_transmission=transmission,
+            distractor_count=distractor_cnt,
+            ablated_module=ablate_module,
             # Link‑budget telemetry (observer only)
             link_budget_enabled=self._config.link_budget.enabled,
             pointing_loss_dB=0.0,

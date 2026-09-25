@@ -1,0 +1,22 @@
+{
+  "dataset_type": "Synthetic Scenario Engine Dataset",
+  "total_samples": 900,
+  "annotated_samples": 807,
+  "class_names": [
+    "beacon"
+  ],
+  "num_classes": 1,
+  "samples_per_preset": {
+    "NOMINAL": 100,
+    "GAUSSIAN": 100,
+    "SALT_PEPPER": 100,
+    "POISSON": 100,
+    "FOG": 100,
+    "RAIN": 100,
+    "LOW_LIGHT": 100,
+    "DISTRACTOR": 100,
+    "SEVERE": 100
+  },
+  "image_width": 640,
+  "image_height": 480
+}

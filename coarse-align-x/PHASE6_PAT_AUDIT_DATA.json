@@ -1,0 +1,208 @@
+{
+  "trajectory_dynamics": [
+    {
+      "trajectory": "figure8",
+      "disturbance": "NOMINAL",
+      "steady_state_error_px": 1927.31,
+      "steady_state_error_deg": 12.0457,
+      "max_error_px": 2916.8,
+      "overshoot_pct": 98949047.08,
+      "settling_time_s": 0.0,
+      "oscillation_count": 4,
+      "saturation_duration_s": 0.0,
+      "peak_pan_rate_deg_s": 4.68,
+      "peak_tilt_rate_deg_s": 3.68,
+      "hunting_index_deg_s2": 19.54,
+      "avg_measurement_latency_ms": 34.532,
+      "avg_estimation_latency_ms": 0.347,
+      "avg_control_latency_ms": 0.071
+    },
+    {
+      "trajectory": "sinusoidal",
+      "disturbance": "NOMINAL",
+      "steady_state_error_px": 384.29,
+      "steady_state_error_deg": 2.4018,
+      "max_error_px": 3521.19,
+      "overshoot_pct": 313690100.95,
+      "settling_time_s": 0.0,
+      "oscillation_count": 30,
+      "saturation_duration_s": 0.083,
+      "peak_pan_rate_deg_s": 20.0,
+      "peak_tilt_rate_deg_s": 19.64,
+      "hunting_index_deg_s2": 61.68,
+      "avg_measurement_latency_ms": 36.036,
+      "avg_estimation_latency_ms": 0.384,
+      "avg_control_latency_ms": 0.077
+    },
+    {
+      "trajectory": "circular",
+      "disturbance": "NOMINAL",
+      "steady_state_error_px": 2049.32,
+      "steady_state_error_deg": 12.8083,
+      "max_error_px": 3453.38,
+      "overshoot_pct": 468.02,
+      "settling_time_s": 0.0,
+      "oscillation_count": 11,
+      "saturation_duration_s": 0.0,
+      "peak_pan_rate_deg_s": 4.29,
+      "peak_tilt_rate_deg_s": 5.58,
+      "hunting_index_deg_s2": 25.52,
+      "avg_measurement_latency_ms": 37.145,
+      "avg_estimation_latency_ms": 0.408,
+      "avg_control_latency_ms": 0.078
+    },
+    {
+      "trajectory": "straight",
+      "disturbance": "NOMINAL",
+      "steady_state_error_px": 668.91,
+      "steady_state_error_deg": 4.1807,
+      "max_error_px": 1416.95,
+      "overshoot_pct": 74804357.52,
+      "settling_time_s": 0.0,
+      "oscillation_count": 6,
+      "saturation_duration_s": 0.0,
+      "peak_pan_rate_deg_s": 1.97,
+      "peak_tilt_rate_deg_s": 3.03,
+      "hunting_index_deg_s2": 29.37,
+      "avg_measurement_latency_ms": 37.957,
+      "avg_estimation_latency_ms": 0.436,
+      "avg_control_latency_ms": 0.08
+    },
+    {
+      "trajectory": "spiral",
+      "disturbance": "NOMINAL",
+      "steady_state_error_px": 332.62,
+      "steady_state_error_deg": 2.0789,
+      "max_error_px": 1016.34,
+      "overshoot_pct": 1367.41,
+      "settling_time_s": 0.0,
+      "oscillation_count": 7,
+      "saturation_duration_s": 0.0,
+      "peak_pan_rate_deg_s": 4.0,
+      "peak_tilt_rate_deg_s": 4.6,
+      "hunting_index_deg_s2": 28.78,
+      "avg_measurement_latency_ms": 38.003,
+      "avg_estimation_latency_ms": 0.435,
+      "avg_control_latency_ms": 0.082
+    }
+  ],
+  "disturbance_response": [
+    {
+      "trajectory": "figure8",
+      "disturbance": "NOMINAL",
+      "steady_state_error_px": 1927.31,
+      "steady_state_error_deg": 12.0457,
+      "max_error_px": 2916.8,
+      "overshoot_pct": 98949047.08,
+      "settling_time_s": 0.0,
+      "oscillation_count": 4,
+      "saturation_duration_s": 0.0,
+      "peak_pan_rate_deg_s": 4.68,
+      "peak_tilt_rate_deg_s": 3.68,
+      "hunting_index_deg_s2": 19.54,
+      "avg_measurement_latency_ms": 38.162,
+      "avg_estimation_latency_ms": 0.41,
+      "avg_control_latency_ms": 0.078
+    },
+    {
+      "trajectory": "figure8",
+      "disturbance": "DIFFICULT",
+      "steady_state_error_px": 646.59,
+      "steady_state_error_deg": 4.0412,
+      "max_error_px": 841.63,
+      "overshoot_pct": 4663.13,
+      "settling_time_s": 0.0,
+      "oscillation_count": 9,
+      "saturation_duration_s": 0.0,
+      "peak_pan_rate_deg_s": 6.03,
+      "peak_tilt_rate_deg_s": 10.36,
+      "hunting_index_deg_s2": 15.1,
+      "avg_measurement_latency_ms": 40.303,
+      "avg_estimation_latency_ms": 0.347,
+      "avg_control_latency_ms": 0.072
+    },
+    {
+      "trajectory": "figure8",
+      "disturbance": "SEVERE",
+      "steady_state_error_px": 46.13,
+      "steady_state_error_deg": 0.2883,
+      "max_error_px": 317.3,
+      "overshoot_pct": 27117102.27,
+      "settling_time_s": 0.0,
+      "oscillation_count": 2,
+      "saturation_duration_s": 0.0,
+      "peak_pan_rate_deg_s": 1.81,
+      "peak_tilt_rate_deg_s": 1.5,
+      "hunting_index_deg_s2": 5.77,
+      "avg_measurement_latency_ms": 38.305,
+      "avg_estimation_latency_ms": 0.046,
+      "avg_control_latency_ms": 0.098
+    },
+    {
+      "trajectory": "figure8",
+      "disturbance": "ADVERSARIAL",
+      "steady_state_error_px": 266.87,
+      "steady_state_error_deg": 1.6679,
+      "max_error_px": 329.14,
+      "overshoot_pct": 391.74,
+      "settling_time_s": 0.0,
+      "oscillation_count": 45,
+      "saturation_duration_s": 0.0,
+      "peak_pan_rate_deg_s": 5.19,
+      "peak_tilt_rate_deg_s": 6.56,
+      "hunting_index_deg_s2": 23.68,
+      "avg_measurement_latency_ms": 67.165,
+      "avg_estimation_latency_ms": 0.348,
+      "avg_control_latency_ms": 0.076
+    }
+  ],
+  "recovery_dynamics": {
+    "blackout_duration_s": 1.5,
+    "recovery_successful": false,
+    "time_to_reacquire_s": null,
+    "transition_sequence": [
+      [
+        0.0,
+        "INIT",
+        "ACQUIRE"
+      ],
+      [
+        0.05,
+        "ACQUIRE",
+        "TRACK"
+      ],
+      [
+        1.483,
+        "TRACK",
+        "DEGRADED"
+      ],
+      [
+        1.533,
+        "DEGRADED",
+        "REACQUIRE"
+      ],
+      [
+        9.55,
+        "REACQUIRE",
+        "SEARCH"
+      ]
+    ]
+  },
+  "search_efficiency": {
+    "SPIRAL": {
+      "mean_search_time_s": 12.56,
+      "median_search_time_s": 18.35,
+      "success_rate_pct": 93.3
+    },
+    "RASTER": {
+      "mean_search_time_s": 20.01,
+      "median_search_time_s": 25.0,
+      "success_rate_pct": 20.0
+    },
+    "BELIEF_MAP": {
+      "mean_search_time_s": 10.41,
+      "median_search_time_s": 3.7,
+      "success_rate_pct": 66.7
+    }
+  }
+}

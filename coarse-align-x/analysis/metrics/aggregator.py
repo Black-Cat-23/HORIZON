@@ -75,6 +75,7 @@ class DistributionAggregator:
         err_percentiles = compute_percentiles(errors)
         rmse_percentiles = compute_percentiles(rmse_errors)
         latency_percentiles = compute_percentiles(latencies)
+        lock_percentiles = compute_percentiles(locks)
 
         return {
             "total_trials": total_trials,
@@ -88,6 +89,7 @@ class DistributionAggregator:
                 "median_ci95": [med_ci_lo, med_ci_hi],
                 "std": float(np.std(errors)) if errors else 0.0,
                 "rmse": float(np.sqrt(np.mean(np.array(errors)**2))) if errors else 0.0,
+                "min": err_percentiles["min"],
                 "p50": err_percentiles["p50"],
                 "p95": err_percentiles["p95"],
                 "p99": err_percentiles["p99"],
@@ -95,31 +97,51 @@ class DistributionAggregator:
             },
             "rmse_tracking_error": {
                 "mean": float(np.mean(rmse_errors)) if rmse_errors else 0.0,
+                "median": rmse_percentiles["median"],
+                "p50": rmse_percentiles["p50"],
                 "p95": rmse_percentiles["p95"],
                 "p99": rmse_percentiles["p99"],
+                "min": rmse_percentiles["min"],
+                "max": rmse_percentiles["max"],
             },
             "lock_retention_rate": {
                 "mean": mean_lock,
                 "mean_ci95": [lock_ci_lo, lock_ci_hi],
+                "median": lock_percentiles["median"],
                 "std": float(np.std(locks)) if locks else 0.0,
-                "min": float(np.min(locks)) if locks else 0.0,
-                "max": float(np.max(locks)) if locks else 0.0,
+                "p50": lock_percentiles["p50"],
+                "p95": lock_percentiles["p95"],
+                "p99": lock_percentiles["p99"],
+                "min": lock_percentiles["min"],
+                "max": lock_percentiles["max"],
             },
             "latency_ms": {
                 "mean": float(np.mean(latencies)) if latencies else 0.0,
+                "median": latency_percentiles["median"],
+                "p50": latency_percentiles["p50"],
                 "p95": latency_percentiles["p95"],
                 "p99": latency_percentiles["p99"],
+                "min": latency_percentiles["min"],
+                "max": latency_percentiles["max"],
             },
             "acquisition_time_s": {
                 "count": len(acq_times),
                 "mean": float(np.mean(acq_times)) if acq_times else None,
                 "median": float(np.median(acq_times)) if acq_times else None,
+                "p50": float(np.percentile(acq_times, 50)) if acq_times else None,
                 "p95": float(np.percentile(acq_times, 95)) if acq_times else None,
+                "p99": float(np.percentile(acq_times, 99)) if acq_times else None,
+                "min": float(np.min(acq_times)) if acq_times else None,
+                "max": float(np.max(acq_times)) if acq_times else None,
             },
             "reacquisition_time_s": {
                 "count": len(reacq_times),
                 "mean": float(np.mean(reacq_times)) if reacq_times else None,
                 "median": float(np.median(reacq_times)) if reacq_times else None,
+                "p50": float(np.percentile(reacq_times, 50)) if reacq_times else None,
                 "p95": float(np.percentile(reacq_times, 95)) if reacq_times else None,
+                "p99": float(np.percentile(reacq_times, 99)) if reacq_times else None,
+                "min": float(np.min(reacq_times)) if reacq_times else None,
+                "max": float(np.max(reacq_times)) if reacq_times else None,
             },
         }

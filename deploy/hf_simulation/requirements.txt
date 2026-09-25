@@ -1,0 +1,10 @@
+numpy>=1.26,<2.0
+opencv-python-headless>=4.9,<5.0
+PySide6>=6.6,<7.0
+scipy>=1.11,<1.15
+matplotlib>=3.8,<4.0
+pyqtgraph>=0.13,<0.14
+PyYAML>=6.0,<7.0
+pandas>=2.0,<3.0
+reportlab>=3.6,<4.0
+filterpy>=1.4

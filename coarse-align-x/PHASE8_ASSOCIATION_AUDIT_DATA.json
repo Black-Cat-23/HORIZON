@@ -1,0 +1,74 @@
+{
+  "timestamp": "2026-09-09 03:50:34",
+  "audit_duration_s": 290.387,
+  "false_lock_prevention": {
+    "BRIGHT_DISTRACTOR": {
+      "trials": 25,
+      "beacon_lock_rate": 100.0,
+      "false_lock_rate": 0.0,
+      "mean_subpixel_err": 0.7376,
+      "status": "PASS"
+    },
+    "MULTI_DISTRACTORS": {
+      "trials": 25,
+      "beacon_lock_rate": 72.0,
+      "false_lock_rate": 28.0,
+      "mean_subpixel_err": 0.7288,
+      "status": "FAIL"
+    },
+    "MOVING_DISTRACTOR": {
+      "trials": 25,
+      "beacon_lock_rate": 100.0,
+      "false_lock_rate": 0.0,
+      "mean_subpixel_err": 2.0854,
+      "status": "PASS"
+    },
+    "NOISE_BURST": {
+      "trials": 25,
+      "beacon_lock_rate": 100.0,
+      "false_lock_rate": 0.0,
+      "mean_subpixel_err": 0.74,
+      "status": "PASS"
+    },
+    "REFLECTION_SLAB": {
+      "trials": 25,
+      "beacon_lock_rate": 100.0,
+      "false_lock_rate": 0.0,
+      "mean_subpixel_err": 0.7137,
+      "status": "PASS"
+    }
+  },
+  "disagreement_analysis": {
+    "counterexamples": {
+      "classical_correct_neural_wrong": 0,
+      "neural_correct_classical_wrong": 0,
+      "both_correct": 60,
+      "both_wrong": 20,
+      "fusion_improves": 0,
+      "fusion_harms": 0
+    },
+    "disagreement_matrix": {
+      "total_disagreement_trials": 0,
+      "correct_selection_rate": 0.0,
+      "rejection_rate": 0.0,
+      "false_lock_rate": 0.0
+    }
+  },
+  "ablation_comparison": {
+    "CLASSICAL_ONLY": {
+      "accuracy_pct": 100.0,
+      "false_alarm_pct": 0.0,
+      "mean_centroid_err_px": 0.7252
+    },
+    "NEURAL_ONLY": {
+      "accuracy_pct": 82.0,
+      "false_alarm_pct": 0.0,
+      "mean_centroid_err_px": 0.689
+    },
+    "EVIDENCE_GATED_HYBRID": {
+      "accuracy_pct": 82.0,
+      "false_alarm_pct": 0.0,
+      "mean_centroid_err_px": 0.7044
+    }
+  }
+}

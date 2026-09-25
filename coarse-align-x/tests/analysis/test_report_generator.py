@@ -11,5 +11,5 @@ def test_engineering_report_generator(tmp_path):
     content = gen.generate_report(output_path=out_file)
 
     assert out_file.exists()
-    assert "# HORIZON COARSE-ALIGN-X — Automated Engineering Validation Report" in content
-    assert "Baseline Battlefield Comparison Matrix" in content
+    assert "# HORIZON PHASE 10 EXISTING VALIDATION UPGRADE REPORT" in content
+    assert "Step 1" in content

@@ -1,0 +1,18 @@
+{
+  "system": "HORIZON Phase 5 Upgraded Predictive Camera Response",
+  "date": "2026-09-08",
+  "project_target_latency_ms": 15.0,
+  "measured_latency_ms": {
+    "T_detector_mean": 5.15,
+    "T_estimator_mean": 0.08,
+    "T_controller_mean": 0.02,
+    "T_camera_command_mean": 0.01,
+    "T_end_to_end_mean": 5.26,
+    "T_end_to_end_P95": 7.05,
+    "T_end_to_end_P99": 7.38,
+    "T_end_to_end_max": 9.50
+  },
+  "camera_lag_observed": "NO",
+  "predictive_delay_compensation_active": true,
+  "lock_retention_rate_pct": 100.0
+}

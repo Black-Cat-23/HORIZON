@@ -1,0 +1,27 @@
+{
+  "hard_negatives_generated": 100,
+  "directory": "research\\data\\hard_negatives",
+  "seed": 123,
+  "sample_records": [
+    {
+      "file": "hard_neg_00000_sp_cluster.png",
+      "type": "sp_cluster"
+    },
+    {
+      "file": "hard_neg_00001_severe_fog.png",
+      "type": "severe_fog"
+    },
+    {
+      "file": "hard_neg_00002_severe_fog.png",
+      "type": "severe_fog"
+    },
+    {
+      "file": "hard_neg_00003_severe_fog.png",
+      "type": "severe_fog"
+    },
+    {
+      "file": "hard_neg_00004_severe_fog.png",
+      "type": "severe_fog"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+scenario,perception,estimation,control,actuation,end_to_end
+nominal_straight,5.15,0.08,0.02,0.01,5.26
+nominal_circular,5.15,0.08,0.02,0.01,5.26
+nominal_figure8,5.15,0.08,0.02,0.01,5.26
+fast_sinusoidal,5.15,0.08,0.02,0.01,5.26
+sudden_manoeuvre,5.15,0.09,0.02,0.01,5.27
+all_adversarial,5.85,0.10,0.02,0.01,5.98
