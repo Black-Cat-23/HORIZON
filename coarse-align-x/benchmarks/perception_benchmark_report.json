@@ -2,105 +2,105 @@
   "NOMINAL": {
     "classical": {
       "detection_rate_pct": 100.0,
-      "mean_error_px": 0.07400001778687686,
-      "mean_latency_ms": 3.835626667326627,
-      "fps": 260.7135904331859
+      "mean_error_px": 0.02756404516506209,
+      "mean_latency_ms": 6.230059999506921,
+      "fps": 160.5120978095147
     },
     "neural": {
-      "detection_rate_pct": 100.0,
-      "mean_error_px": 0.10073458001076409,
-      "mean_latency_ms": 33.45875666709617,
-      "fps": 29.88754214478671,
+      "detection_rate_pct": 50.0,
+      "mean_error_px": 0.10165122748804846,
+      "mean_latency_ms": 52.79529999994944,
+      "fps": 18.94107998251658,
       "is_model_loaded": true
     }
   },
   "GAUSSIAN": {
     "classical": {
       "detection_rate_pct": 100.0,
-      "mean_error_px": 0.10266225449206816,
-      "mean_latency_ms": 6.132943331613205,
-      "fps": 163.05384640444095
+      "mean_error_px": 0.031678431403691726,
+      "mean_latency_ms": 6.708516667276854,
+      "fps": 149.0642491622405
     },
     "neural": {
-      "detection_rate_pct": 90.0,
-      "mean_error_px": 0.09959486697652649,
-      "mean_latency_ms": 30.249916668011185,
-      "fps": 33.05794230691169,
+      "detection_rate_pct": 50.0,
+      "mean_error_px": 0.09367815352785877,
+      "mean_latency_ms": 52.07545666538257,
+      "fps": 19.202904094065396,
       "is_model_loaded": true
     }
   },
   "SALT_PEPPER": {
     "classical": {
       "detection_rate_pct": 100.0,
-      "mean_error_px": 0.10920139086799091,
-      "mean_latency_ms": 3.4509200001290687,
-      "fps": 289.77779837336095
+      "mean_error_px": 0.08083956171577926,
+      "mean_latency_ms": 5.870303332873543,
+      "fps": 170.34894847767518
     },
     "neural": {
-      "detection_rate_pct": 93.33333333333333,
-      "mean_error_px": 0.31258826525474215,
-      "mean_latency_ms": 30.22026000059365,
-      "fps": 33.090383735294,
+      "detection_rate_pct": 53.333333333333336,
+      "mean_error_px": 0.13269738539862197,
+      "mean_latency_ms": 56.27414666620704,
+      "fps": 17.77014951344444,
       "is_model_loaded": true
     }
   },
   "FOG": {
     "classical": {
       "detection_rate_pct": 100.0,
-      "mean_error_px": 0.11529249152152093,
-      "mean_latency_ms": 3.3457199984695762,
-      "fps": 298.8893273966224
+      "mean_error_px": 0.02423279979783969,
+      "mean_latency_ms": 2.068830001129148,
+      "fps": 483.36499347660725
     },
     "neural": {
-      "detection_rate_pct": 100.0,
-      "mean_error_px": 0.11494200342455353,
-      "mean_latency_ms": 30.047883336859133,
-      "fps": 33.28021440942298,
+      "detection_rate_pct": 50.0,
+      "mean_error_px": 0.0852338799266068,
+      "mean_latency_ms": 52.67969333314492,
+      "fps": 18.98264657077686,
       "is_model_loaded": true
     }
   },
   "RAIN": {
     "classical": {
       "detection_rate_pct": 100.0,
-      "mean_error_px": 0.07404518228400975,
-      "mean_latency_ms": 3.287439999015381,
-      "fps": 304.18806131808014
+      "mean_error_px": 0.03174201763443109,
+      "mean_latency_ms": 3.5421900002499265,
+      "fps": 282.3112255213421
     },
     "neural": {
-      "detection_rate_pct": 100.0,
-      "mean_error_px": 0.10575218852831564,
-      "mean_latency_ms": 30.2296133323883,
-      "fps": 33.08014525374661,
+      "detection_rate_pct": 56.666666666666664,
+      "mean_error_px": 0.10496900205108728,
+      "mean_latency_ms": 54.21699999957733,
+      "fps": 18.44439935827869,
       "is_model_loaded": true
     }
   },
   "LOW_LIGHT": {
     "classical": {
-      "detection_rate_pct": 100.0,
-      "mean_error_px": 0.15679800761580598,
-      "mean_latency_ms": 3.3333333354676142,
-      "fps": 299.9999998079147
+      "detection_rate_pct": 83.33333333333334,
+      "mean_error_px": 0.0762167154305842,
+      "mean_latency_ms": 3.2826966664288193,
+      "fps": 304.62759786084047
     },
     "neural": {
-      "detection_rate_pct": 100.0,
-      "mean_error_px": 0.06600773641955186,
-      "mean_latency_ms": 30.24943333293777,
-      "fps": 33.058470517235364,
+      "detection_rate_pct": 50.0,
+      "mean_error_px": 0.08590645855721182,
+      "mean_latency_ms": 55.137073333753506,
+      "fps": 18.13661733452627,
       "is_model_loaded": true
     }
   },
   "SEVERE": {
     "classical": {
       "detection_rate_pct": 100.0,
-      "mean_error_px": 0.16183601789673643,
-      "mean_latency_ms": 3.4330233320361003,
-      "fps": 291.2884368329963
+      "mean_error_px": 63.370820302931726,
+      "mean_latency_ms": 8.101189998948636,
+      "fps": 123.43865532468428
     },
     "neural": {
-      "detection_rate_pct": 86.66666666666667,
-      "mean_error_px": 0.4009123774647323,
-      "mean_latency_ms": 29.923219997241784,
-      "fps": 33.418863347332824,
+      "detection_rate_pct": 50.0,
+      "mean_error_px": 12.158101117119923,
+      "mean_latency_ms": 54.774876666488126,
+      "fps": 18.25654498665099,
       "is_model_loaded": true
     }
   }

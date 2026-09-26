@@ -12,23 +12,22 @@ import numpy as np
 from pat.state import PATMode, PATState
 from pat.thresholds import PATThresholds
 from .pid import PIDController
-from .feedforward import VelocityFeedForward
+from .feedforward import VelocityFeedForward, SCurveFeedForward
 from .saturation import ControllerSaturation
 from .actuator_interface import ActuatorInterface
 from .gain_scheduler import GainScheduler, ScheduledGains
 from .adrc_controller import DualAxisADRCController
+from .smith_predictor import SmithPredictor
+from .lqg_controller import LQGController
 
 
 class PATCameraController:
     """
     Master closed-loop camera controller combining:
     1. Mode-dependent Gain Scheduling with Uncertainty-Aware scaling.
-    2. Predictive Pointing & Kinematic Delay Compensation:
-       Compensates for sensor exposure, image processing, estimator innovation,
-       and gimbal actuator lag via forward extrapolation:
-       e(t + tau) = e(t) + omega * tau
-    3. Active Disturbance Rejection Control (ADRC) & Linear PID error regulation.
-    4. Angular velocity feedforward anticipation.
+    2. Predictive Pointing & Kinematic Delay Compensation (Smith Predictor & Forward Extrapolation).
+    3. Active Disturbance Rejection Control (ADRC), Linear PID, or Optimal LQG regulation.
+    4. Angular velocity S-Curve feedforward anticipation.
     5. Anti-Hunting Command Smoothing filter to eliminate noise-induced jitter.
     6. Actuator slew-rate and acceleration saturation limits.
     """
@@ -40,7 +39,7 @@ class PATCameraController:
         controller_type: str = "PID",
         lead_time_s: float = 0.05,
         smoothing_factor: float = 0.85,
-        max_rate_change_deg_s2: float = 180.0,
+        max_rate_change_deg_s2: float = 120.0,
     ):
         self.thresholds = thresholds or PATThresholds()
         self.scheduler = scheduler or GainScheduler()
@@ -59,7 +58,17 @@ class PATCameraController:
             max_tilt_rate_deg_s=self.thresholds.max_tilt_rate_deg_s,
         )
 
+        # Optimal LQG Controllers
+        self.lqg_pan = LQGController()
+        self.lqg_tilt = LQGController()
+
+        # Smith Predictor Latency Compensator
+        self.smith_predictor = SmithPredictor()
+
+        # Feedforward Controllers
         self.feedforward = VelocityFeedForward(kff_pan=0.6, kff_tilt=0.6, enabled=True)
+        self.scurve_ff = SCurveFeedForward(kff_pan=0.6, kff_tilt=0.6, max_accel_deg_s2=max_rate_change_deg_s2, max_jerk_deg_s3=4000.0, enabled=True)
+
         self.saturation = ControllerSaturation(
             max_pan_rate_deg_s=self.thresholds.max_pan_rate_deg_s,
             max_tilt_rate_deg_s=self.thresholds.max_tilt_rate_deg_s,
@@ -75,6 +84,8 @@ class PATCameraController:
         self.pan_pid.reset()
         self.tilt_pid.reset()
         self.adrc.reset()
+        self.smith_predictor.reset()
+        self.scurve_ff.reset()
         self.active_gains = self.scheduler.gains_inactive
         self._prev_cmd_pan = 0.0
         self._prev_cmd_tilt = 0.0
@@ -92,10 +103,11 @@ class PATCameraController:
         estimated_omega_x_deg_s: Optional[float] = None,
         estimated_omega_y_deg_s: Optional[float] = None,
         gimbal: Optional[Any] = None,
+        measured_latency_s: Optional[float] = None,
     ) -> Tuple[float, float, float, float, float, float, bool]:
         """
-        Calculates commanded pan and tilt rates with predictive delay compensation
-        and command smoothing.
+        Calculates commanded pan and tilt rates with dynamic predictive delay compensation,
+        relative kinematic forward extrapolation, and command smoothing.
 
         Returns:
             Tuple[cmd_pan_rate, cmd_tilt_rate, pid_pan, pid_tilt, ff_pan, ff_tilt, is_saturated]
@@ -131,33 +143,62 @@ class PATCameraController:
             )
             self.active_gains = gains
 
-            # 2. Determine target angular velocity: use direct 6-state IMM rate if provided, else convert pixel velocity
-            # Optical scale: 4.0 deg / 640 px = 0.00625 deg/px; 3.0 deg / 480 px = 0.00625 deg/px
-            deg_per_px_pan = 4.0 / 640.0
-            deg_per_px_tilt = 3.0 / 480.0
+            # 2. Determine target angular velocity using pinhole optics
+            fx_px = (640.0 / 2.0) / math.tan(math.radians(4.0 / 2.0))
+            fy_px = (480.0 / 2.0) / math.tan(math.radians(3.0 / 2.0))
+
             if estimated_omega_x_deg_s is not None:
                 pan_vel_deg_s = float(estimated_omega_x_deg_s)
             else:
-                pan_vel_deg_s = estimated_vx_px_s * deg_per_px_pan
+                pan_vel_deg_s = math.degrees(math.atan(estimated_vx_px_s / fx_px))
 
             if estimated_omega_y_deg_s is not None:
                 tilt_vel_deg_s = float(estimated_omega_y_deg_s)
             else:
-                tilt_vel_deg_s = estimated_vy_px_s * deg_per_px_tilt
+                tilt_vel_deg_s = math.degrees(math.atan(estimated_vy_px_s / fy_px))
 
-            # 3. Forward Kinematic Extrapolation (Predictive Pointing Delay Compensation)
-            # Extrapolates future pointing error over sensor/processing/actuator lag tau:
-            # e_pred = e(t) + omega * tau
-            # Modulate lead time with track quality (zero out lead extrapolation when track is degraded)
-            eff_lead_time = min(0.033, self.lead_time_s) * float(np.clip(pat_state.track_quality, 0.0, 1.0))
-            pan_error_pred = pat_state.pan_error_deg + pan_vel_deg_s * eff_lead_time
-            tilt_error_pred = pat_state.tilt_error_deg + tilt_vel_deg_s * eff_lead_time
+            # 3. Dynamic Transport Delay Measurement & Relative Kinematic Forward Extrapolation
+            act_pan_r = gimbal.actual_pan_rate if gimbal is not None else self._prev_cmd_pan
+            act_tilt_r = gimbal.actual_tilt_rate if gimbal is not None else self._prev_cmd_tilt
 
-            # 4. Closed-Loop Regulation
+            # Calculate dynamic effective transport lag:
+            # tau_eff = measured_perception_time + 0.5 * dt (ZOH midpoint) + tau_actuator (motor response)
+            if measured_latency_s is not None and measured_latency_s > 0.0:
+                tau_motor = 0.0167  # Physical actuator acceleration time constant (~16.7 ms)
+                base_latency = measured_latency_s + 0.5 * dt + tau_motor
+            else:
+                base_latency = self.lead_time_s
+
+            # Uncertainty-weighted attenuation to prevent over-projection under noisy/degraded conditions
+            q_factor = float(np.clip(pat_state.track_quality, 0.0, 1.0))
+            eff_lead_time = base_latency * q_factor
+
+            # Relative velocity between moving target and gimbal (true relative drift rate)
+            rel_pan_vel = pan_vel_deg_s - act_pan_r
+            rel_tilt_vel = tilt_vel_deg_s - act_tilt_r
+
+            # Relative kinematic extrapolation: true pointing error projected to actuation instant
+            pan_error_pred = pat_state.pan_error_deg + rel_pan_vel * eff_lead_time
+            tilt_error_pred = pat_state.tilt_error_deg + rel_tilt_vel * eff_lead_time
+
+            # Pass through modernized continuous-time Smith Predictor
+            pan_error_pred, tilt_error_pred = self.smith_predictor.predict_error(
+                pan_error_pred, tilt_error_pred, self._prev_cmd_pan, self._prev_cmd_tilt, dt, latency_s=eff_lead_time
+            )
+
+            # 4. Closed-Loop Regulation (ADRC, LQG, or PID)
             if self.controller_type == "ADRC":
                 pid_pan, pid_tilt = self.adrc.compute(
-                    pan_error_pred, tilt_error_pred, dt, gain_scale=gains.kp
+                    pan_error_pred,
+                    tilt_error_pred,
+                    dt,
+                    gain_scale=gains.kp,
+                    actual_pan_rate=act_pan_r,
+                    actual_tilt_rate=act_tilt_r,
                 )
+            elif self.controller_type == "LQG":
+                pid_pan = self.lqg_pan.compute(pan_error_pred, rel_pan_vel, dt)
+                pid_tilt = self.lqg_tilt.compute(tilt_error_pred, rel_tilt_vel, dt)
             else:
                 # Calculate PID pointing error commands using scheduled gains
                 pid_pan = self.pan_pid.compute(
@@ -175,12 +216,13 @@ class PATCameraController:
                     kd=gains.kd,
                 )
 
-            # 5. Apply velocity feedforward anticipation
-            self.feedforward.enabled = (gains.kff > 0.0)
-            self.feedforward.kff_pan = gains.kff
-            self.feedforward.kff_tilt = gains.kff
+            # 5. Apply velocity feedforward anticipation (3rd-order Jerk-Limited S-Curve Profiler)
+            ff_quality = float(np.clip(pat_state.track_quality, 0.2, 1.0)) if not pat_state.prediction_only else 0.4
+            self.scurve_ff.enabled = (gains.kff > 0.0)
+            self.scurve_ff.kff_pan = gains.kff * ff_quality
+            self.scurve_ff.kff_tilt = gains.kff * ff_quality
 
-            ff_pan, ff_tilt = self.feedforward.compute(pan_vel_deg_s, tilt_vel_deg_s)
+            ff_pan, ff_tilt = self.scurve_ff.compute(pan_vel_deg_s, tilt_vel_deg_s, dt=dt)
 
             raw_cmd_pan = pid_pan + ff_pan
             raw_cmd_tilt = pid_tilt + ff_tilt
@@ -214,3 +256,9 @@ class PATCameraController:
             self.actuator_interface.send_rate_command(actual_cmd_pan, actual_cmd_tilt)
 
         return (actual_cmd_pan, actual_cmd_tilt, pid_pan, pid_tilt, ff_pan, ff_tilt, is_saturated)
+
+    def get_estimated_disturbance(self) -> Tuple[float, float]:
+        """Returns the real-time estimated lumped disturbance rates (pan, tilt) in deg/s."""
+        if hasattr(self, "adrc") and hasattr(self.adrc, "get_estimated_disturbances"):
+            return self.adrc.get_estimated_disturbances()
+        return (0.0, 0.0)

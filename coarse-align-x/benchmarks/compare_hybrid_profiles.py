@@ -122,7 +122,99 @@ def run_hybrid_profile_benchmark(
     return benchmark_results
 
 
+def benchmark_adaptive_scheduling(
+    num_frames: int = 100, seed: int = 42
+) -> Dict[str, Any]:
+    """Benchmark throughput and accuracy of Adaptive Perception Scheduling vs Naive Full Hybrid."""
+    import cv2
+    detector_sync = HybridBeaconDetector(DetectorConfig(perception_mode="HYBRID"))
+    detector_adaptive = HybridBeaconDetector(DetectorConfig(perception_mode="HYBRID"))
+
+    u_center, v_center = 320.0, 240.0
+    vx, vy = 15.0, -8.0
+    dt = 0.033
+
+    sync_times: List[float] = []
+    sync_errors: List[float] = []
+    adaptive_times: List[float] = []
+    adaptive_errors: List[float] = []
+    adaptive_modes: List[str] = []
+    escalated_frames: List[int] = []
+
+    for i in range(num_frames):
+        t = i * dt
+        u_gt = u_center + vx * t
+        v_gt = v_center + vy * t
+
+        # Inject distractor at frames 45-50 to test instant escalation
+        inject_distractor = 45 <= i <= 50
+
+        frame, _ = render_synthetic_sample(
+            u_center=u_gt,
+            v_center=v_gt,
+            size_px=10.0,
+            disturbance_preset="NOMINAL",
+            seed=seed + i,
+        )
+
+        if inject_distractor:
+            # Add distractor glint to frame
+            cv2.line(frame, (int(u_gt + 25), int(v_gt)), (int(u_gt + 55), int(v_gt)), 255, 2)
+
+        pat_mode = "SEARCH" if i < 3 else ("ACQUIRE" if i < 6 else "TRACK")
+        track_quality = 0.40 if i < 6 else 0.92
+        consecutive_hits = i if i < 6 else (i - 5)
+
+        # 1. Sync full hybrid (no PAT mode passed)
+        res_sync = detector_sync.detect(frame, timestamp=t, estimator_prediction=(u_gt, v_gt))
+        sync_times.append(res_sync.processing_time_ms)
+        if res_sync.detected and res_sync.centroid:
+            sync_errors.append(math.hypot(res_sync.centroid[0] - u_gt, res_sync.centroid[1] - v_gt))
+
+        # 2. Adaptive hybrid (PAT mode passed)
+        res_ad = detector_adaptive.detect(
+            frame,
+            timestamp=t,
+            estimator_prediction=(u_gt, v_gt),
+            pat_mode=pat_mode,
+            track_quality=track_quality,
+            consecutive_hits=consecutive_hits,
+        )
+        adaptive_times.append(res_ad.processing_time_ms)
+        adaptive_modes.append(res_ad.detector_source)
+        if "ESCALATED" in getattr(res_ad, "decision_reason", ""):
+            escalated_frames.append(i)
+        if res_ad.detected and res_ad.centroid:
+            adaptive_errors.append(math.hypot(res_ad.centroid[0] - u_gt, res_ad.centroid[1] - v_gt))
+
+    summary = {
+        "sync_full_hybrid": {
+            "mean_latency_ms": float(np.mean(sync_times)),
+            "fps": float(1000.0 / max(float(np.mean(sync_times)), 0.01)),
+            "mean_error_px": float(np.mean(sync_errors)) if sync_errors else float("nan"),
+        },
+        "adaptive_hybrid_ours": {
+            "mean_latency_ms": float(np.mean(adaptive_times)),
+            "fps": float(1000.0 / max(float(np.mean(adaptive_times)), 0.01)),
+            "mean_error_px": float(np.mean(adaptive_errors)) if adaptive_errors else float("nan"),
+            "fast_path_fraction_pct": float(np.mean(["FAST" in m for m in adaptive_modes])) * 100.0,
+            "escalated_count": len(escalated_frames),
+            "escalated_frames": escalated_frames,
+        },
+        "speedup_factor": float(np.mean(sync_times) / max(float(np.mean(adaptive_times)), 0.01)),
+    }
+
+    report_path = Path("benchmarks/adaptive_scheduling_benchmark_report.json")
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(report_path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+
+    logger.info("Adaptive scheduling benchmark complete. Saved to %s", report_path)
+    return summary
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    res = run_hybrid_profile_benchmark(num_frames_per_condition=25, seed=42)
-    print(json.dumps(res, indent=2))
+    print("\n--- Running Adaptive Perception Benchmark ---")
+    ad_res = benchmark_adaptive_scheduling(num_frames=60, seed=42)
+    print(json.dumps(ad_res, indent=2))
