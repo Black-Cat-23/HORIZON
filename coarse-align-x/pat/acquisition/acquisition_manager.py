@@ -33,6 +33,8 @@ class AcquisitionManager:
         confidence: float,
         mahalanobis_distance: float,
         candidate_pos: Optional[Tuple[float, float]] = None,
+        velocity_hint_px_s: float = 0.0,
+        dt: float = 0.033,
     ) -> bool:
         """
         Processes a frame detection result and updates acquisition status.
@@ -44,16 +46,19 @@ class AcquisitionManager:
             self.reset()
             return False
 
-        if mahalanobis_distance > self.thresholds.max_mahalanobis_gate:
-            self.reset()
-            return False
-
         # Enforce spatial consistency across candidate confirmation frames
         if candidate_pos is not None and self.last_candidate_pos is not None:
             dx = candidate_pos[0] - self.last_candidate_pos[0]
             dy = candidate_pos[1] - self.last_candidate_pos[1]
             dist = math.hypot(dx, dy)
-            if dist > self.max_acquisition_drift_px:
+            # Dynamic velocity-adaptive allowed drift
+            # High-velocity trajectories (e.g. sinusoidal/spiral up to 2000 px/s) travel ~70 px in 0.033s
+            dynamic_max_drift = max(
+                self.max_acquisition_drift_px,
+                1.8 * velocity_hint_px_s * dt + 45.0,
+                75.0,
+            )
+            if dist > dynamic_max_drift:
                 # Candidate jumped across frame (random noise spike) - reset confirmation!
                 self.reset()
                 self.candidate_active = True
@@ -67,3 +72,4 @@ class AcquisitionManager:
             self.last_candidate_pos = candidate_pos
 
         return self.consecutive_valid_frames >= self.thresholds.acquire_required_frames
+

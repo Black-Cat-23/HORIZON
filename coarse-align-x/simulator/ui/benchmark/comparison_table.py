@@ -55,6 +55,10 @@ class BaselineComparisonTableWidget(PanelSurface):
         header = SectionHeaderLabel("Baseline performance comparison", self)
         layout.addWidget(header)
 
+        self.lbl_live_params = QLabel("Active Live Test Profile: Ready (Run simulation in Live tab to update)", self)
+        self.lbl_live_params.setStyleSheet(f"color: {COLOR_LOCK_CYAN}; font-family: {FONT_BODY}; font-size: 11px;")
+        layout.addWidget(self.lbl_live_params)
+
         # Main Table Grid
         self.grid = QGridLayout()
         self.grid.setHorizontalSpacing(SPACING_16)
@@ -195,3 +199,28 @@ class BaselineComparisonTableWidget(PanelSurface):
 
             lat = sub.get("processing_time_ms", sub.get("p95_latency", 10.0))
             self.cell_labels["p95_latency"][algo].set_value(f"{lat:.2f}", "ms")
+
+        latest_live = data.get("latest_live_test")
+        if latest_live and isinstance(latest_live, dict):
+            inp_src = latest_live.get("input_source", "VIRTUAL_CAMERA")
+            p_mode = latest_live.get("perception_mode", "HYBRID")
+            est = latest_live.get("estimator", "IMM_ADAPTIVE_EKF")
+            ctrl = latest_live.get("controller", "ADRC_NONLINEAR")
+            ts = latest_live.get("timestamp", "")
+            if inp_src == "EXTERNAL_VIDEO":
+                v_file = latest_live.get("video_file", "isro_sample_beacon_30s.mp4")
+                v_res = latest_live.get("video_resolution", "640x480")
+                v_fps = latest_live.get("video_source_fps", 30.0)
+                v_frames = latest_live.get("total_frames", 900)
+                self.lbl_live_params.setText(
+                    f"✓ Active External Video Benchmark ({ts}): File={v_file} ({v_res} @ {v_fps:.1f} FPS, {v_frames} frames) | perception={p_mode} | estimator={est} | controller={ctrl}"
+                )
+            else:
+                traj = latest_live.get("trajectory", "figure8")
+                seed = latest_live.get("seed", 42)
+                dur = latest_live.get("duration_seconds", 10.0)
+                self.lbl_live_params.setText(
+                    f"✓ Active Live Test Profile ({ts}): perception={p_mode} | estimator={est} | controller={ctrl} | trajectory={traj} | seed={seed} | duration={dur}s"
+                )
+        else:
+            self.lbl_live_params.setText("Active Live Test Profile: Default Benchmark Configuration (Phase 10 Output)")

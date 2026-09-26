@@ -54,14 +54,21 @@ class ReacquisitionManager:
         center_pan_deg: float,
         center_tilt_deg: float,
         uncertainty_deg: float = 1.0,
+        estimated_vx_deg_s: float = 0.0,
+        estimated_vy_deg_s: float = 0.0,
+        lead_time_s: float = 0.2,
     ) -> None:
         """
-        Starts reacquisition search centered at the predicted/last-known target position.
+        Starts reacquisition search centered at the predicted/last-known target position,
+        projected forward along the kinematic velocity vector.
         """
         self.active = True
         self.reacquire_duration_s = 0.0
         self.attempt_count += 1
-        self.search_strategy.reset(center_pan_deg, center_tilt_deg)
+
+        proj_pan = center_pan_deg + estimated_vx_deg_s * lead_time_s
+        proj_tilt = center_tilt_deg + estimated_vy_deg_s * lead_time_s
+        self.search_strategy.reset(proj_pan, proj_tilt)
         if isinstance(self.search_strategy, BeliefMapSearchStrategy):
             self.search_strategy.prior_sigma_deg = max(0.5, uncertainty_deg)
 

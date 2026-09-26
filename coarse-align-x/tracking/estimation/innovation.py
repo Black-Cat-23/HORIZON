@@ -26,6 +26,11 @@ class Innovation:
     is_valid: bool = True
 
     @property
+    def nis(self) -> float:
+        """Normalized Innovation Squared (d^2 = y^T S^-1 y)."""
+        return float(self.mahalanobis_sq)
+
+    @property
     def residual_x(self) -> float:
         """Horizontal residual component [px]."""
         return float(self.residual[0, 0])

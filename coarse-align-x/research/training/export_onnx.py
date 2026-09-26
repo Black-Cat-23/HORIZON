@@ -16,7 +16,7 @@ from pathlib import Path
 import shutil
 import time
 from typing import Dict, Any, List, Optional
-from ultralytics import YOLO
+# Lazy import ultralytics only during export
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +50,7 @@ def export_yolo_to_onnx(
         raise FileNotFoundError(f"PyTorch weights not found at: {weights_path}")
 
     logger.info("Loading PyTorch model from %s for ONNX export...", weights_path)
+    from ultralytics import YOLO
     model = YOLO(str(weights_path))
 
     # Export using Ultralytics export API

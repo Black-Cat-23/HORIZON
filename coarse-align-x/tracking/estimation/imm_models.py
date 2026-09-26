@@ -328,3 +328,106 @@ class HMModel(BaseModel):
         self._last_innovation = None
         self._last_likelihood = None
 
+
+class CTModel(BaseModel):
+    """Coordinated Turn (CT) non-linear model (5-state: [x, y, V, psi, omega]).
+
+    Model state:
+      x, y: 2D position [px]
+      V: linear speed [px/s]
+      psi: heading angle [rad]
+      omega: turn rate [rad/s]
+    """
+
+    def __init__(self, process_noise_std: float = 1.0):
+        self.q_std = process_noise_std
+        self._x = np.zeros(5, dtype=np.float64)
+        self._P = np.eye(5, dtype=np.float64) * 10.0
+        self._last_innovation: Optional[np.ndarray] = None
+        self._last_likelihood: Optional[float] = None
+        self._initialized = False
+
+    def predict(self, dt: float) -> None:
+        if not self._initialized:
+            return
+        x, y, V, psi, w = self._x
+        if abs(w) > 1e-5:
+            x_next = x + (V / w) * (np.sin(psi + w * dt) - np.sin(psi))
+            y_next = y - (V / w) * (np.cos(psi + w * dt) - np.cos(psi))
+            F = np.array([
+                [1, 0, (np.sin(psi + w * dt) - np.sin(psi)) / w, (V / w) * (np.cos(psi + w * dt) - np.cos(psi)), (V * dt * np.cos(psi + w * dt)) / w - (V * (np.sin(psi + w * dt) - np.sin(psi))) / (w ** 2)],
+                [0, 1, (-np.cos(psi + w * dt) + np.cos(psi)) / w, (V / w) * (np.sin(psi + w * dt) - np.sin(psi)), (V * dt * np.sin(psi + w * dt)) / w - (V * (-np.cos(psi + w * dt) + np.cos(psi))) / (w ** 2)],
+                [0, 0, 1, 0, 0],
+                [0, 0, 0, 1, dt],
+                [0, 0, 0, 0, 1],
+            ])
+        else:
+            x_next = x + V * np.cos(psi) * dt
+            y_next = y + V * np.sin(psi) * dt
+            F = np.array([
+                [1, 0, np.cos(psi) * dt, -V * np.sin(psi) * dt, 0],
+                [0, 1, np.sin(psi) * dt, V * np.cos(psi) * dt, 0],
+                [0, 0, 1, 0, 0],
+                [0, 0, 0, 1, dt],
+                [0, 0, 0, 0, 1],
+            ])
+        psi_next = (psi + w * dt + np.pi) % (2 * np.pi) - np.pi
+        self._x = np.array([x_next, y_next, V, psi_next, w], dtype=np.float64)
+
+        Q = np.diag([0.1 * dt**2, 0.1 * dt**2, (self.q_std * dt)**2, (0.1 * dt)**2, (0.05 * dt)**2])
+        self._P = F @ self._P @ F.T + Q
+
+    def update(self, z: np.ndarray, R: np.ndarray) -> None:
+        if not self._initialized:
+            # Auto initialize
+            self._x = np.array([z[0], z[1], 0.0, 0.0, 0.0], dtype=np.float64)
+            self._initialized = True
+            return
+
+        H = np.array([[1, 0, 0, 0, 0], [0, 1, 0, 0, 0]], dtype=np.float64)
+        y = z - H @ self._x
+        S = H @ self._P @ H.T + R
+        try:
+            inv_S = np.linalg.inv(S)
+            K = self._P @ H.T @ inv_S
+            det_S = max(1e-12, float(np.linalg.det(S)))
+            exponent = -0.5 * float(y.T @ inv_S @ y)
+            self._last_likelihood = float((2 * np.pi) ** (-1.0) * (det_S ** -0.5) * np.exp(exponent))
+        except np.linalg.LinAlgError:
+            K = np.zeros((5, 2))
+            self._last_likelihood = None
+
+        self._x = self._x + K @ y
+        I_KH = np.eye(5) - K @ H
+        self._P = I_KH @ self._P @ I_KH.T + K @ R @ K.T
+        self._last_innovation = y
+
+    def state(self) -> np.ndarray:
+        # Convert polar state [x, y, V, psi, omega] to Cartesian 4-state [x, y, vx, vy]
+        x, y, V, psi, _ = self._x
+        vx = V * np.cos(psi)
+        vy = V * np.sin(psi)
+        return np.array([x, y, vx, vy], dtype=np.float64)
+
+    def covariance(self) -> np.ndarray:
+        # Approximate 4x4 Cartesian covariance
+        P_cart = np.zeros((4, 4), dtype=np.float64)
+        P_cart[0:2, 0:2] = self._P[0:2, 0:2]
+        P_cart[2, 2] = max(10.0, float(self._P[2, 2]))
+        P_cart[3, 3] = max(10.0, float(self._P[2, 2]))
+        return P_cart
+
+    def innovation(self) -> Optional[np.ndarray]:
+        return self._last_innovation
+
+    def likelihood(self) -> Optional[float]:
+        return self._last_likelihood
+
+    def reset(self) -> None:
+        self._x = np.zeros(5, dtype=np.float64)
+        self._P = np.eye(5, dtype=np.float64) * 10.0
+        self._initialized = False
+        self._last_innovation = None
+        self._last_likelihood = None
+
+

@@ -22,7 +22,7 @@ class SpiralSearchStrategy(SearchStrategy):
         initial_radius_deg: float = 0.2,
         radius_step_deg: float = 0.4,
         angular_rate_rad_s: float = 1.5,
-        max_radius_deg: float = 12.0,
+        max_radius_deg: float = 3.0,
     ):
         self.initial_radius_deg = initial_radius_deg
         self.radius_step_deg = radius_step_deg
@@ -63,13 +63,17 @@ class SpiralSearchStrategy(SearchStrategy):
         target_pan = self.center_pan_deg + r * math.cos(self._theta)
         target_tilt = self.center_tilt_deg + r * math.sin(self._theta)
 
-        # Calculate proportional rate commands to move toward target_pan, target_tilt
+        # Proportional pursuit along spiral trajectory with smooth rate limiting
         error_pan = target_pan - current_pan_deg
         error_tilt = target_tilt - current_tilt_deg
-
-        # Rate command = position error / dt (clamped by controller saturation later)
-        pan_rate = error_pan / dt
-        tilt_rate = error_tilt / dt
+        dist = math.hypot(error_pan, error_tilt)
+        max_search_speed = 3.5  # deg/s smooth scanning speed
+        if dist > 1e-4:
+            speed = min(max_search_speed, max(0.5, dist * 3.0))
+            pan_rate = speed * (error_pan / dist)
+            tilt_rate = speed * (error_tilt / dist)
+        else:
+            pan_rate, tilt_rate = 0.0, 0.0
 
         return (pan_rate, tilt_rate)
 

@@ -72,12 +72,16 @@ class CameraJitterConfig:
                   Must satisfy 0.0 <= max_x_px <= 20.0 per official SIH limit.
         max_y_px: Maximum displacement along vertical image axis (pixels).
                   Must satisfy 0.0 <= max_y_px <= 20.0 per official SIH limit.
-        distribution: Displacement distribution ('uniform' or 'normal').
+        distribution: Displacement distribution ('uniform', 'normal', 'harmonic', 'colored', 'mil_std_810g').
+        harmonic_freqs: List of structural resonance frequencies (Hz) for harmonic jitter.
+        harmonic_amps: List of structural resonance amplitudes (px) for harmonic jitter.
     """
     enabled: bool = False
     max_x_px: float = 5.0   # OFFICIAL MAXIMUM: ±20.0 px/frame
     max_y_px: float = 5.0   # OFFICIAL MAXIMUM: ±20.0 px/frame
-    distribution: str = "uniform"  # PROJECT DEFAULT: "uniform" or "normal"
+    distribution: str = "uniform"  # "uniform", "normal", "harmonic", "colored", "mil_std_810g"
+    harmonic_freqs: Tuple[float, ...] = (18.0, 36.0, 72.0)
+    harmonic_amps: Tuple[float, ...] = (2.5, 1.2, 0.6)
 
 
 @dataclass(frozen=True)
@@ -86,7 +90,7 @@ class PlatformMotionConfig:
 
     Parameters:
         enabled: Toggle platform motion.
-        model: Motion model ('linear', 'circular', 'random', 'spiral', 'figure8').
+        model: Motion model ('linear', 'circular', 'random', 'spiral', 'figure8', 'cwh_orbital').
                Mandatory: 'linear'.
         max_dx_px_per_frame: Maximum velocity along X in pixels per frame.
                              Must satisfy <= 20.0 per official SIH limit.
@@ -95,14 +99,16 @@ class PlatformMotionConfig:
         velocity_x: Desired horizontal velocity in pixels/second (converted to px/frame via dt).
         velocity_y: Desired vertical velocity in pixels/second (converted to px/frame via dt).
         boundary_limit_px: Maximum cumulative platform offset before reversal/bounce (pixels).
+        cwh_mean_motion_n: Orbital mean motion n = sqrt(mu/a^3) (rad/s) for CWH orbital relative motion.
     """
     enabled: bool = False
-    model: str = "linear"  # Mandatory: linear; Optional: circular, random, spiral, figure8
+    model: str = "linear"  # Mandatory: linear; Optional: circular, random, spiral, figure8, cwh_orbital
     max_dx_px_per_frame: float = 20.0  # OFFICIAL MAXIMUM: ±20.0 px/frame
     max_dy_px_per_frame: float = 20.0  # OFFICIAL MAXIMUM: ±20.0 px/frame
     velocity_x: float = 60.0  # px/s (at 60Hz = 1 px/frame)
     velocity_y: float = 30.0  # px/s (at 60Hz = 0.5 px/frame)
     boundary_limit_px: float = 100.0  # PROJECT DEFAULT
+    cwh_mean_motion_n: float = 0.0011  # ~90 min LEO orbit mean motion rad/s
 
 
 VALID_ATMOSPHERE_CONDITIONS = {
@@ -194,18 +200,20 @@ class DistractorConfig:
 
     Parameters:
         enabled: Toggle false optical target distractors.
-        type: Distractor geometry/profile ('small_spot', 'large_blob', 'multiple_spots', 'reflection_like', 'noise_cluster').
+        type: Distractor geometry/profile ('small_spot', 'large_blob', 'multiple_spots', 'reflection_like', 'noise_cluster', 'sun_glint', 'cloud_edge_clutter').
         count: Number of distractor instances (>= 1).
         intensity: Distractor peak intensity (0–255).
         movement_model: Distractor motion model ('static', 'linear', 'random').
         speed_px_s: Speed of distractor motion in px/s.
+        sun_phase_angle_deg: Sun-Target-Observer aspect angle in degrees for specular glint calculation.
     """
     enabled: bool = False
-    type: str = "small_spot"   # 'small_spot', 'large_blob', 'multiple_spots', 'reflection_like', 'noise_cluster'
+    type: str = "small_spot"   # 'small_spot', 'large_blob', 'multiple_spots', 'reflection_like', 'noise_cluster', 'sun_glint', 'cloud_edge_clutter'
     count: int = 2
     intensity: int = 240
     movement_model: str = "linear"
     speed_px_s: float = 40.0
+    sun_phase_angle_deg: float = 15.0
 
 
 @dataclass(frozen=True)

@@ -154,6 +154,10 @@ class RobustnessHeatmapWidget(PanelSurface):
 
         self._on_envelope_changed(self.ENVELOPES[0])
 
+    def load_data(self) -> None:
+        """Reload and refresh matrix heatmap display."""
+        self._on_envelope_changed(self.combo_env.currentText())
+
     def _on_envelope_changed(self, env_name: str) -> None:
         """Rebuild matrix grid for selected parameter pair envelope."""
         # Clear existing grid

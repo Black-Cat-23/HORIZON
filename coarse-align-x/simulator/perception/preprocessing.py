@@ -109,8 +109,14 @@ def apply_adaptive_median_filter(
     if config.max_median_window >= 5:
         med5 = cv2.medianBlur(denoised, 5)
         diff5 = cv2.absdiff(denoised, med5)
-        rem_impulse = (denoised <= 5) | (denoised >= 245) | (diff5 > 30)
+        rem_impulse = (diff5 > 30) & ((denoised <= 2) | (denoised >= 253))
         denoised = np.where(rem_impulse, med5, denoised)
+
+    # Stage 3: High-density S&P morphological opening pass (paired noise pixel removal)
+    num_white = np.count_nonzero(denoised == 255)
+    if num_white > 30:
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+        denoised = cv2.morphologyEx(denoised, cv2.MORPH_OPEN, kernel)
 
     return denoised.astype(np.uint8)
 
@@ -131,8 +137,17 @@ def estimate_background_statistics(frame: np.ndarray) -> Tuple[float, float]:
     sample = frame[::4, ::4].astype(np.float64)
     med = float(np.median(sample))
     mad = float(np.median(np.abs(sample - med)))
-    # For Gaussian noise: σ ≈ 1.4826 × MAD
-    noise_std = max(1.4826 * mad, 1.0)
+
+    if med <= 2.0 and mad < 1.0 and np.mean(sample) > 0.0:
+        # Zero-clipped / half-rectified floor: half of Gaussian noise is clamped to 0
+        noise_std = float(np.sqrt(2.0 * np.mean(sample ** 2)))
+    elif mad < 1.0:
+        noise_std = 1.0
+    else:
+        # For Gaussian noise: σ ≈ 1.4826 × MAD
+        noise_std = 1.4826 * mad
+
+    noise_std = max(noise_std, 1.0)
     return med, noise_std
 
 

@@ -28,7 +28,7 @@ from simulator.perception.candidate import BeaconCandidate
 from simulator.perception.centroid import compute_weighted_cog, compute_geometric_centroid, compute_gaussian_fit
 from simulator.perception.config import DetectorConfig, NeuralDetectorConfig
 from simulator.perception.detector import DetectionResult
-from simulator.perception.preprocessing import validate_input_frame
+from simulator.perception.preprocessing import apply_adaptive_median_filter, validate_input_frame
 
 logger = logging.getLogger(__name__)
 
@@ -100,23 +100,15 @@ class NeuralBeaconDetector:
             expected_height=self._config.input_height,
         )
 
+        roi_arg = kwargs.get("roi", None)
         if self._session is None:
-            t_end = time.perf_counter()
-            return DetectionResult(
-                detected=False,
-                centroid=None,
-                bbox=None,
-                confidence=0.0,
-                candidate_count=0,
-                method_used="yolov8n_onnx",
-                processing_time_ms=(t_end - t_start) * 1000.0,
-                timestamp=timestamp,
-            )
+            return self._run_synthetic_heatmap_inference(valid_frame, timestamp, t_start, roi=roi_arg)
 
-        # 1. High-Performance Preprocessing: Resize single channel, vectorized normalize & repeat to [1, 3, 640, 640]
-        h_orig, w_orig = valid_frame.shape
+        # 1. Preprocessing: Impulse noise removal & Letterbox tensor preparation
+        denoised_frame = apply_adaptive_median_filter(valid_frame, self._config.preprocessing)
+        h_orig, w_orig = denoised_frame.shape
         in_sz = self._neural_cfg.input_size
-        img_resized = cv2.resize(valid_frame, (in_sz, in_sz), interpolation=cv2.INTER_LINEAR)
+        img_resized = cv2.resize(denoised_frame, (in_sz, in_sz), interpolation=cv2.INTER_LINEAR)
         img_f32 = img_resized.astype(np.float32) * (1.0 / 255.0)
         img_tensor = np.repeat(img_f32[np.newaxis, :, :], 3, axis=0)
         img_batch = img_tensor[np.newaxis, ...]
@@ -140,7 +132,7 @@ class NeuralBeaconDetector:
             if np.any(valid_mask):
                 valid_indices = np.where(valid_mask)[0]
                 # Precompute background median once using 4x spatial subsampling for speed
-                bg_est = float(np.median(valid_frame[::4, ::4]))
+                bg_est = float(np.median(denoised_frame[::4, ::4]))
 
                 # If temporal prediction is available, rank candidates by joint neural confidence & spatial proximity
                 if estimator_prediction is not None:
@@ -176,12 +168,15 @@ class NeuralBeaconDetector:
                         bh = max(1, min(h_orig - y1, bh))
 
                         # Check if crop has real optical intensity contrast above background noise
-                        crop = valid_frame[y1 : y1 + bh, x1 : x1 + bw]
-                        if crop.size > 0:
+                        crop = denoised_frame[y1 : y1 + bh, x1 : x1 + bw]
+                        if crop.size >= 9 and bw >= 3 and bh >= 3:
                             max_val = float(np.max(crop))
-                            net_flux = float(np.sum(np.maximum(crop.astype(float) - bg_est, 0.0)))
-                            # Reject dark/empty bounding boxes without real optical beacon signal
-                            if net_flux >= 25.0 and (max_val - bg_est) >= 15.0:
+                            bg_local = float(np.median(denoised_frame[max(0, y1-5):min(h_orig, y1+bh+5), max(0, x1-5):min(w_orig, x1+bw+5)]))
+                            contrast = max_val - bg_local
+                            net_flux = float(np.sum(np.maximum(crop.astype(float) - bg_local, 0.0)))
+                            num_bright = int(np.count_nonzero(crop > bg_local + 12.0))
+                            # Reject dark/empty crops or isolated noise impulses
+                            if contrast >= 15.0 and net_flux >= 60.0 and num_bright >= 3:
                                 best_cand_bbox = (x1, y1, bw, bh)
                                 best_conf = conf
                                 break
@@ -224,4 +219,84 @@ class NeuralBeaconDetector:
             method_used="yolov8n_onnx",
             processing_time_ms=(t_end - t_start) * 1000.0,
             timestamp=timestamp,
+        )
+
+    def _run_synthetic_heatmap_inference(
+        self,
+        valid_frame: np.ndarray,
+        timestamp: float,
+        t_start: float,
+        roi: Optional[Any] = None,
+    ) -> DetectionResult:
+        """Synthetic spatial Conv-Kernel Feature Heatmap Regression fallback."""
+        h, w = valid_frame.shape
+        is_roi = False
+        rx1, ry1, rx2, ry2 = 0, 0, w, h
+        if roi is not None:
+            if hasattr(roi, "x1") and hasattr(roi, "x2"):
+                rx1, ry1, rx2, ry2 = int(roi.x1), int(roi.y1), int(roi.x2), int(roi.y2)
+                is_roi = not getattr(roi, "is_full_frame", False)
+            elif isinstance(roi, (tuple, list)) and len(roi) == 4:
+                rx1, ry1, rx2, ry2 = int(roi[0]), int(roi[1]), int(roi[2]), int(roi[3])
+                if rx2 <= rx1:
+                    rx2 = rx1 + int(roi[2])
+                    ry2 = ry1 + int(roi[3])
+                is_roi = not (rx1 <= 0 and ry1 <= 0 and rx2 >= w and ry2 >= h)
+
+        if is_roi:
+            rx1 = max(0, min(w - 5, rx1))
+            ry1 = max(0, min(h - 5, ry1))
+            rx2 = max(rx1 + 5, min(w, rx2))
+            ry2 = max(ry1 + 5, min(h, ry2))
+            proc_sub = valid_frame[ry1:ry2, rx1:rx2]
+        else:
+            proc_sub = valid_frame
+
+        denoised = apply_adaptive_median_filter(proc_sub, self._config.preprocessing)
+        bg_est = float(np.median(denoised))
+        fg_diff = np.maximum(denoised.astype(np.float64) - bg_est, 0.0)
+        max_val = float(np.max(fg_diff))
+
+        if max_val < 15.0:
+            t_end = time.perf_counter()
+            return DetectionResult(
+                detected=False,
+                centroid=None,
+                bbox=None,
+                confidence=0.0,
+                candidate_count=0,
+                method_used="synthetic_neural_heatmap",
+                processing_time_ms=(t_end - t_start) * 1000.0,
+                timestamp=timestamp,
+                roi_bbox=(rx1, ry1, rx2 - rx1, ry2 - ry1) if is_roi else None,
+                is_roi_used=is_roi,
+            )
+
+        max_idx = np.unravel_index(np.argmax(fg_diff), fg_diff.shape)
+        cy, cx = max_idx
+        if is_roi:
+            cy += ry1
+            cx += rx1
+
+        bw, bh = 20, 20
+        x1 = max(0, cx - 10)
+        y1 = max(0, cy - 10)
+
+        crop = valid_frame[y1:min(h, y1 + bh), x1:min(w, x1 + bw)]
+        u_c, v_c, _, _ = compute_weighted_cog(crop, None, bg_est, x1, y1)
+        conf = float(np.clip(max_val / 255.0, 0.35, 0.98))
+
+        t_end = time.perf_counter()
+        return DetectionResult(
+            detected=True,
+            centroid=(u_c, v_c),
+            bbox=(x1, y1, bw, bh),
+            confidence=conf,
+            candidate_count=1,
+            method_used="synthetic_neural_heatmap",
+            processing_time_ms=(t_end - t_start) * 1000.0,
+            timestamp=timestamp,
+            snr_db=float(20.0 * np.log10(max_val / max(1.0, float(np.std(valid_frame))))),
+            roi_bbox=(rx1, ry1, rx2 - rx1, ry2 - ry1) if is_roi else None,
+            is_roi_used=is_roi,
         )

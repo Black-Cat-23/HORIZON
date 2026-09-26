@@ -161,6 +161,37 @@ class EstimatorEvaluator:
             mean_nees=float(np.mean(nees_arr)),
         )
 
+    def evaluate_chi2_consistency(self, dof: int = 4, alpha: float = 0.05) -> Tuple[str, float, float, float]:
+        """Evaluate Chi-Square consistency of the NEES sequence over N samples.
+
+        For 4 DOF state estimates over N samples, the average NEES follows a Chi-square
+        distribution with theoretical 95% bounds [r1, r2].
+
+        Returns:
+            Tuple[status_str, mean_nees, ci_lower, ci_upper]
+            status_str: "VALID_CONSISTENT", "OVERCONFIDENT_OPTIMISTIC", or "UNDERCONFIDENT_PESSIMISTIC"
+        """
+        N = len(self._nees_values)
+        if N == 0:
+            return "NO_DATA", 0.0, 0.0, 0.0
+
+        mean_nees = float(np.mean(self._nees_values))
+        # Analytical 95% Chi-square bounds approximation for N >= 10
+        # r1, r2 = dof * (1 - 2/(9*dof*N) +/- z * sqrt(2/(9*dof*N)))^3
+        z = 1.95996  # 95% 2-tailed normal quantile
+        factor = 2.0 / (9.0 * dof * N)
+        ci_lower = float(dof * (1.0 - factor - z * math.sqrt(factor)) ** 3)
+        ci_upper = float(dof * (1.0 - factor + z * math.sqrt(factor)) ** 3)
+
+        if mean_nees > ci_upper:
+            status = "OVERCONFIDENT_OPTIMISTIC"
+        elif mean_nees < ci_lower:
+            status = "UNDERCONFIDENT_PESSIMISTIC"
+        else:
+            status = "VALID_CONSISTENT"
+
+        return status, mean_nees, ci_lower, ci_upper
+
     def reset(self) -> None:
         """Clear all evaluation records."""
         self._samples.clear()

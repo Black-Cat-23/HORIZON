@@ -81,6 +81,8 @@ class Track:
         candidates: Optional[List[MeasurementCandidate]] = None,
         gimbal_pan_rate: float = 0.0,
         gimbal_tilt_rate: float = 0.0,
+        is_sensor_step: bool = True,
+        spot_uncertainty: Optional[Tuple[float, float]] = None,
     ) -> StateEstimate:
         """Process one tracking cycle.
 
@@ -91,6 +93,8 @@ class Track:
             candidates: Optional list of all candidate detections for multi-candidate association.
             gimbal_pan_rate: Camera pan rate in deg/s.
             gimbal_tilt_rate: Camera tilt rate in deg/s.
+            is_sensor_step: True if this tick represents a fresh sensor observation opportunity.
+            spot_uncertainty: Optional (sigma_u, sigma_v) detector observation uncertainty.
 
         Returns:
             StateEstimate output.
@@ -129,10 +133,16 @@ class Track:
                     timestamp=timestamp,
                     gimbal_pan_rate=gimbal_pan_rate,
                     gimbal_tilt_rate=gimbal_tilt_rate,
+                    spot_uncertainty=spot_uncertainty,
                 )
             else:
                 # All candidates gated out: missing/coasting update
-                estimate = self._filter.update_missing(timestamp=timestamp)
+                estimate = self._filter.update_missing(
+                    timestamp=timestamp,
+                    gimbal_pan_rate=gimbal_pan_rate,
+                    gimbal_tilt_rate=gimbal_tilt_rate,
+                    is_sensor_step=is_sensor_step,
+                )
 
             self._last_estimate = estimate
             return estimate
@@ -145,10 +155,16 @@ class Track:
                 timestamp=timestamp,
                 gimbal_pan_rate=gimbal_pan_rate,
                 gimbal_tilt_rate=gimbal_tilt_rate,
+                spot_uncertainty=spot_uncertainty,
             )
             self._last_association = None
         else:
-            estimate = self._filter.update_missing(timestamp=timestamp)
+            estimate = self._filter.update_missing(
+                timestamp=timestamp,
+                gimbal_pan_rate=gimbal_pan_rate,
+                gimbal_tilt_rate=gimbal_tilt_rate,
+                is_sensor_step=is_sensor_step,
+            )
             self._last_association = None
 
         self._last_estimate = estimate

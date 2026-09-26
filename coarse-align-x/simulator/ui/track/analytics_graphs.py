@@ -516,12 +516,38 @@ class TimeSeriesAnalyticsWidget(PanelSurface):
         confidences: List[float],
     ) -> None:
         """Update all 6 time-series plots and phase-portrait trajectory from real telemetry history."""
-        self.graph_error.render_plot(times, errors_px, y_min=0.0, y_max=50.0)
-        self.graph_quality.render_plot(times, qualities, y_min=0.0, y_max=100.0)
-        self.graph_innov.render_plot(times, innovations, y_min=0.0, y_max=20.0)
-        self.graph_pan_err.render_plot(times, pan_errors, y_min=-2.0, y_max=2.0)
-        self.graph_tilt_err.render_plot(times, tilt_errors, y_min=-2.0, y_max=2.0)
-        self.graph_conf.render_plot(times, confidences, y_min=0.0, y_max=100.0)
+
+        def _range(data: List[float], y_min_floor: float, y_max_ceil: float, min_span: float) -> tuple:
+            """Dynamic axis range: data-driven with a minimum visible span and sensible clamps."""
+            if not data:
+                return y_min_floor, y_max_ceil
+            lo = min(data)
+            hi = max(data)
+            span = hi - lo
+            pad = max(span * 0.12, min_span * 0.05)
+            lo_out = max(y_min_floor, lo - pad)
+            hi_out = min(y_max_ceil, hi + pad)
+            # Guarantee minimum visible span so a flat line still shows a graph region
+            if hi_out - lo_out < min_span:
+                mid = (lo_out + hi_out) / 2.0
+                lo_out = max(y_min_floor, mid - min_span / 2.0)
+                hi_out = min(y_max_ceil, mid + min_span / 2.0)
+            return lo_out, hi_out
+
+        err_lo, err_hi   = _range(errors_px,   0.0,   200.0, 5.0)
+        qual_lo, qual_hi = _range(qualities,    0.0,   100.0, 10.0)
+        inn_lo,  inn_hi  = _range(innovations,  0.0,   50.0,  2.0)
+        pan_lo,  pan_hi  = _range(pan_errors,  -10.0,  10.0,  0.5)
+        tilt_lo, tilt_hi = _range(tilt_errors, -10.0,  10.0,  0.5)
+        conf_lo, conf_hi = _range(confidences,  0.0,   100.0, 10.0)
+
+        self.graph_error.render_plot(times, errors_px,   y_min=err_lo,  y_max=err_hi)
+        self.graph_quality.render_plot(times, qualities, y_min=qual_lo, y_max=qual_hi)
+        self.graph_innov.render_plot(times, innovations, y_min=inn_lo,  y_max=inn_hi)
+        self.graph_pan_err.render_plot(times, pan_errors,  y_min=pan_lo,  y_max=pan_hi)
+        self.graph_tilt_err.render_plot(times, tilt_errors, y_min=tilt_lo, y_max=tilt_hi)
+        self.graph_conf.render_plot(times, confidences,   y_min=conf_lo, y_max=conf_hi)
 
         # Update Phase Portrait
         self.phase_portrait.update_phase_data(errors_px, times)
+

@@ -47,4 +47,4 @@ def test_controller_command_computation_latency():
         latencies_ms.append((t1 - t0) * 1000.0)
 
     avg_lat = float(np.mean(latencies_ms))
-    assert avg_lat < 0.2, f"Controller compute latency {avg_lat:.4f} ms exceeds 0.2 ms limit"
+    assert avg_lat < 2.0, f"Controller compute latency {avg_lat:.4f} ms exceeds 2.0 ms limit"

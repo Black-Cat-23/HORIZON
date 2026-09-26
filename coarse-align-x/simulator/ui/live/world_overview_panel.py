@@ -134,3 +134,107 @@ class WorldOverviewPanel(QWidget):
                 Qt.TransformationMode.SmoothTransformation,
             )
             self.canvas_label.setPixmap(scaled)
+
+    # ------------------------------------------------------------------
+    # External Video Path — completely separate from update_world_display
+    # The virtual camera path NEVER calls this method.
+    # This method NEVER calls anything from the virtual world / gimbal.
+    # Camera motion here is derived solely from the live IMM-EKF estimate.
+    # ------------------------------------------------------------------
+    def update_video_tracking_display(
+        self,
+        estimate,           # StateEstimate — provides estimated_x/y, predicted_x/y
+        detection_res,      # DetectionResult — centroid and detected flag
+        pat_state,          # PATState — mode for colour-coding
+        path_history: List[Tuple[float, float]],   # rolling estimate trail (sensor px)
+        frame_w: int = 640,
+        frame_h: int = 480,
+    ) -> None:
+        """
+        Render sensor-space (640×480) camera tracking overview for external video source.
+
+        The 'camera boresight' indicator moves to the IMM-EKF estimated beacon position.
+        This is algorithmically derived — the controller computes a pan/tilt command to
+        keep the boresight centred on the estimate; this view shows where that boresight
+        would be in sensor pixel space.
+
+        Completely separate code path from update_world_display (virtual camera).
+        No virtual world geometry, no SimulationEngine, no gimbal object accessed here.
+        """
+        # Build a dark sensor-space canvas (same size as the video frame)
+        canvas = np.full((frame_h, frame_w, 3), (10, 14, 20), dtype=np.uint8)
+
+        # ── 1. Sensor boundary ──────────────────────────────────────────
+        cv2.rectangle(canvas, (0, 0), (frame_w - 1, frame_h - 1), (45, 55, 65), 1)
+
+        # ── 2. Estimate trail (rolling history of IMM-EKF positions) ────
+        if path_history and len(path_history) > 1:
+            pts = np.array(path_history, dtype=np.int32).reshape((-1, 1, 2))
+            cv2.polylines(canvas, [pts], isClosed=False,
+                          color=(60, 140, 180), thickness=1, lineType=cv2.LINE_AA)
+
+        # ── 3. Algorithm-computed boresight (IMM-EKF estimate) ──────────
+        # The controller drives the gimbal to null (estimate_x - cx, estimate_y - cy).
+        # In sensor space the boresight crosshair sits at the estimated centroid.
+        if estimate is not None:
+            bx = int(round(float(estimate.estimated_x)))
+            by = int(round(float(estimate.estimated_y)))
+            bx = int(np.clip(bx, 0, frame_w - 1))
+            by = int(np.clip(by, 0, frame_h - 1))
+
+            # Boresight crosshair (cyan / amber based on PAT mode)
+            from pat.state import PATMode
+            if pat_state is not None and pat_state.mode == PATMode.TRACK:
+                cross_col = (127, 212, 232)   # cyan — locked
+            elif pat_state is not None and pat_state.mode in (PATMode.DEGRADED,):
+                cross_col = (92, 161, 232)    # amber — degraded
+            elif pat_state is not None and pat_state.mode in (PATMode.REACQUIRE, PATMode.SEARCH):
+                cross_col = (80, 80, 220)     # red-blue — searching
+            else:
+                cross_col = (180, 180, 180)   # neutral
+
+            cv2.line(canvas, (bx - 18, by), (bx + 18, by), cross_col, 1, cv2.LINE_AA)
+            cv2.line(canvas, (bx, by - 18), (bx, by + 18), cross_col, 1, cv2.LINE_AA)
+            cv2.circle(canvas, (bx, by), 6, cross_col, 1, cv2.LINE_AA)
+
+            # Predicted position (one step ahead — where the filter expects it next)
+            if hasattr(estimate, "predicted_x") and estimate.predicted_x is not None:
+                px = int(np.clip(round(float(estimate.predicted_x)), 0, frame_w - 1))
+                py = int(np.clip(round(float(estimate.predicted_y)), 0, frame_h - 1))
+                cv2.drawMarker(canvas, (px, py), (60, 60, 160),
+                               markerType=cv2.MARKER_CROSS, markerSize=10, thickness=1)
+
+            # Uncertainty ellipse (1-sigma, derived from position_uncertainty scalar)
+            if hasattr(estimate, "position_uncertainty") and estimate.position_uncertainty > 0:
+                r = int(np.clip(round(float(estimate.position_uncertainty)), 2, 80))
+                cv2.ellipse(canvas, (bx, by), (r, r), 0, 0, 360,
+                            (40, 80, 100), 1, cv2.LINE_AA)
+
+        # ── 4. Raw measurement dot (where HYBRID actually saw the beacon) ─
+        if detection_res is not None and detection_res.detected and detection_res.centroid:
+            mu = int(np.clip(round(detection_res.centroid[0]), 0, frame_w - 1))
+            mv = int(np.clip(round(detection_res.centroid[1]), 0, frame_h - 1))
+            cv2.circle(canvas, (mu, mv), 4, (111, 232, 168), -1, cv2.LINE_AA)
+            cv2.circle(canvas, (mu, mv), 7, (111, 232, 168), 1, cv2.LINE_AA)
+
+        # ── 5. Overlay: mode badge ───────────────────────────────────────
+        if pat_state is not None:
+            mode_text = pat_state.mode.value
+        else:
+            mode_text = "SEARCH"
+        cv2.putText(canvas, f"SENSOR VIEW  |  PAT: {mode_text}",
+                    (8, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (120, 130, 145), 1, cv2.LINE_AA)
+        cv2.putText(canvas, f"{frame_w}x{frame_h} px",
+                    (frame_w - 72, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (80, 90, 100), 1, cv2.LINE_AA)
+
+        # ── 6. Render to QLabel ──────────────────────────────────────────
+        rgb = cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB)
+        qimg = QImage(rgb.data, frame_w, frame_h, frame_w * 3, QImage.Format.Format_RGB888)
+        self._current_pixmap = QPixmap.fromImage(qimg)
+        scaled = self._current_pixmap.scaled(
+            self.canvas_label.size(),
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        self.canvas_label.setPixmap(scaled)
+

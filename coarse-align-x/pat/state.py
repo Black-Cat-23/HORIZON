@@ -38,6 +38,8 @@ class PATState:
     tilt_error_deg: float = 0.0
     commanded_pan_rate: float = 0.0
     commanded_tilt_rate: float = 0.0
+    reacquire_pan_rate: float = 0.0
+    reacquire_tilt_rate: float = 0.0
     actual_pan_rate: float = 0.0
     actual_tilt_rate: float = 0.0
     is_saturated: bool = False

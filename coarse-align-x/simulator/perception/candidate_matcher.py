@@ -83,24 +83,37 @@ class CandidateMatcher:
     """Matches Classical and Neural proposals based on spatial overlap and distance.
 
     Parameters:
-        max_centroid_distance_px: Maximum allowed centroid distance in pixels for matching.
+        max_centroid_distance_px: Base allowed centroid distance in pixels for matching.
         min_iou_threshold: Minimum IoU for bounding box matching if IoU available.
+        velocity_scale_factor: Pixels/s per unit of dynamic gate expansion (0.0 to disable).
+        max_matching_distance_cap: Hard upper cap in pixels for dynamic matching gate.
     """
 
     def __init__(
         self,
         max_centroid_distance_px: float = 25.0,
         min_iou_threshold: float = 0.10,
+        velocity_scale_factor: float = 60.0,
+        max_matching_distance_cap: float = 80.0,
     ) -> None:
         self.max_distance = max_centroid_distance_px
         self.min_iou = min_iou_threshold
+        self.velocity_scale_factor = velocity_scale_factor
+        self.max_distance_cap = max_matching_distance_cap
 
     def match_candidates(
         self,
         classical_candidates: List[UnifiedCandidate],
         neural_candidates: List[UnifiedCandidate],
+        velocity_hint_px_s: float = 0.0,
     ) -> Tuple[List[MatchedPair], List[UnifiedCandidate], List[UnifiedCandidate]]:
-        """Match lists of classical and neural candidates.
+        """Match lists of classical and neural candidates with dynamic velocity gating.
+
+        Args:
+            classical_candidates: Optical candidate proposals.
+            neural_candidates: Neural detector candidate proposals.
+            velocity_hint_px_s: Estimated beacon velocity magnitude in px/s.
+                               Dynamically widens distance threshold during rapid motion.
 
         Returns:
             Tuple of (matched_pairs, unmatched_classical, unmatched_neural)
@@ -112,6 +125,13 @@ class CandidateMatcher:
         if not classical_candidates or not neural_candidates:
             return matched_pairs, unmatched_classical, unmatched_neural
 
+        # Velocity-adaptive dynamic matching distance
+        if velocity_hint_px_s > 0.0 and self.velocity_scale_factor > 0.0:
+            expansion = 1.0 + (velocity_hint_px_s / self.velocity_scale_factor)
+            effective_max_dist = min(self.max_distance * expansion, self.max_distance_cap)
+        else:
+            effective_max_dist = self.max_distance
+
         used_neural_indices = set()
         used_classical_indices = set()
 
@@ -122,10 +142,10 @@ class CandidateMatcher:
                 dist = compute_centroid_distance(c_cand.centroid, n_cand.centroid)
                 iou = compute_iou(c_cand.bbox, n_cand.bbox)
 
-                # Match criteria: centroid distance <= max_distance OR IoU >= min_iou
-                if dist <= self.max_distance or iou >= self.min_iou:
+                # Match criteria: centroid distance <= effective_max_dist OR IoU >= min_iou
+                if dist <= effective_max_dist or iou >= self.min_iou:
                     # Preference score: higher IoU and lower distance
-                    match_score = (1.0 - min(dist / max(self.max_distance, 1.0), 1.0)) * 0.6 + iou * 0.4
+                    match_score = (1.0 - min(dist / max(effective_max_dist, 1.0), 1.0)) * 0.6 + iou * 0.4
                     candidate_pairs.append((match_score, i, j, dist, iou))
 
         # Greedy match sorting by match_score descending

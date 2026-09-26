@@ -67,6 +67,7 @@ class CameraConfig:
     initial_pan_deg: float = 0.0
     initial_tilt_deg: float = 0.0
     max_initial_offset_deg: float = 0.0  # 0 = always start at (0°,0°)
+    auto_align_boresight: bool = False    # Auto-align boresight to target t=0 position
     # Optical sensor parameters (Phase 2)
     pixel_pitch_um: Optional[float] = None  # Physical pixel size (µm); None = not modeled
     exposure_ms: float = 1.0               # Integration time (ms); enables motion blur

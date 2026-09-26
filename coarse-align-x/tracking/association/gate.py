@@ -87,3 +87,47 @@ class MahalanobisGate:
 
         is_valid = bool(d2 <= thresh and inno.is_valid)
         return is_valid, d2, d
+
+
+class AdaptiveMahalanobisGate(MahalanobisGate):
+    """Adaptive Chi-squared validation gate with velocity & covariance expansion."""
+
+    def __init__(
+        self,
+        base_threshold: float = 9.210,
+        kappa_v: float = 0.05,
+        kappa_p: float = 0.02,
+        v_ref: float = 20.0,
+        p_ref: float = 10.0,
+    ) -> None:
+        super().__init__(threshold=base_threshold)
+        self._kappa_v = float(kappa_v)
+        self._kappa_p = float(kappa_p)
+        self._v_ref = float(v_ref)
+        self._p_ref = float(p_ref)
+
+    def compute_adaptive_threshold(self, x_pred: np.ndarray, P_pred: np.ndarray) -> float:
+        """Compute velocity and covariance dependent validation gate threshold."""
+        vx = float(x_pred[2, 0]) if x_pred.shape[0] >= 4 else 0.0
+        vy = float(x_pred[3, 0]) if x_pred.shape[0] >= 4 else 0.0
+        speed = float(np.hypot(vx, vy))
+
+        cov_trace = float(np.trace(P_pred[:2, :2])) if P_pred.shape[0] >= 2 else 1.0
+
+        v_factor = 1.0 + self._kappa_v * (speed / max(1.0, self._v_ref))
+        p_factor = 1.0 + self._kappa_p * (cov_trace / max(1.0, self._p_ref))
+
+        adaptive_thresh = self._threshold * v_factor * p_factor
+        return float(np.clip(adaptive_thresh, 4.605, 25.0))
+
+    def test(
+        self,
+        z: np.ndarray,
+        x_pred: np.ndarray,
+        P_pred: np.ndarray,
+        H: np.ndarray,
+        R: np.ndarray,
+        custom_threshold: Optional[float] = None,
+    ) -> Tuple[bool, float, float]:
+        thresh = custom_threshold if custom_threshold is not None else self.compute_adaptive_threshold(x_pred, P_pred)
+        return super().test(z, x_pred, P_pred, H, R, custom_threshold=thresh)

@@ -181,3 +181,136 @@ class TrackAssociator:
             decision_reason=decision_reason,
             rejection_reasons=rejection_reasons,
         )
+
+
+# ---------------------------------------------------------------------------
+# Hungarian Multi-Target Assignment Engine
+# ---------------------------------------------------------------------------
+
+class HungarianMultiTargetAssociator:
+    """Hungarian Kuhn-Munkres global multi-target bipartite assignment engine."""
+
+    def __init__(self, gate_threshold: float = 9.210) -> None:
+        self._gate = MahalanobisGate(threshold=gate_threshold)
+        self._H = build_measurement_matrix()
+
+    def associate_matrix(
+        self,
+        candidates: List[MeasurementCandidate],
+        tracks_x_pred: List[np.ndarray],
+        tracks_P_pred: List[np.ndarray],
+    ) -> List[Optional[MeasurementCandidate]]:
+        """Perform optimal 2D Hungarian assignment between M tracks and N candidates."""
+        from scipy.optimize import linear_sum_assignment
+        num_tracks = len(tracks_x_pred)
+        num_cands = len(candidates)
+        if num_tracks == 0:
+            return []
+        if num_cands == 0:
+            return [None] * num_tracks
+
+        cost_matrix = np.full((num_tracks, num_cands), 1e6, dtype=np.float64)
+
+        for i in range(num_tracks):
+            x_pred = tracks_x_pred[i]
+            P_pred = tracks_P_pred[i]
+            for j in range(num_cands):
+                cand = candidates[j]
+                z = np.array([[cand.centroid_x], [cand.centroid_y]], dtype=np.float64)
+                R = build_measurement_noise_matrix(confidence=cand.confidence)
+                is_valid, d2, _ = self._gate.test(z, x_pred, P_pred, self._H, R)
+                if is_valid:
+                    cost = d2 - 2.0 * cand.confidence - 1.0 * cand.score
+                    cost_matrix[i, j] = cost
+
+        row_ind, col_ind = linear_sum_assignment(cost_matrix)
+
+        assignments: List[Optional[MeasurementCandidate]] = [None] * num_tracks
+        for r, c in zip(row_ind, col_ind):
+            if cost_matrix[r, c] < 1e5:
+                assignments[r] = candidates[c]
+
+        return assignments
+
+
+# ---------------------------------------------------------------------------
+# JPDA Soft-Association Engine
+# ---------------------------------------------------------------------------
+
+@dataclass
+class JPDAAssociationResult:
+    """Result of JPDA soft-association integration."""
+    associated: bool
+    combined_innovation: np.ndarray
+    combined_covariance_spread: np.ndarray
+    marginal_probabilities: List[float]
+    best_candidate: Optional[MeasurementCandidate]
+
+
+class JPDACandidateAssociator:
+    """Joint Probabilistic Data Association (JPDA) Bayesian soft-association integrator."""
+
+    def __init__(self, gate_threshold: float = 9.210, clutter_density: float = 1e-5) -> None:
+        self._gate = MahalanobisGate(threshold=gate_threshold)
+        self._clutter_density = float(clutter_density)
+        self._H = build_measurement_matrix()
+
+    def associate_jpda(
+        self,
+        candidates: List[MeasurementCandidate],
+        x_pred: np.ndarray,
+        P_pred: np.ndarray,
+    ) -> JPDAAssociationResult:
+        """Compute marginal joint association probabilities and soft-associated innovation."""
+        if not candidates:
+            return JPDAAssociationResult(
+                associated=False,
+                combined_innovation=np.zeros((2, 1), dtype=np.float64),
+                combined_covariance_spread=np.zeros((2, 2), dtype=np.float64),
+                marginal_probabilities=[],
+                best_candidate=None,
+            )
+
+        gated_candidates: List[Tuple[float, float, MeasurementCandidate, np.ndarray]] = []
+        for cand in candidates:
+            z = np.array([[cand.centroid_x], [cand.centroid_y]], dtype=np.float64)
+            R = build_measurement_noise_matrix(confidence=cand.confidence)
+            is_valid, d2, _ = self._gate.test(z, x_pred, P_pred, self._H, R)
+            if is_valid:
+                inno = compute_innovation(z, x_pred, P_pred, self._H, R)
+                gated_candidates.append((d2, inno.mahalanobis_distance, cand, inno.residual))
+
+        if not gated_candidates:
+            return JPDAAssociationResult(
+                associated=False,
+                combined_innovation=np.zeros((2, 1), dtype=np.float64),
+                combined_covariance_spread=np.zeros((2, 2), dtype=np.float64),
+                marginal_probabilities=[],
+                best_candidate=None,
+            )
+
+        likelihoods = [np.exp(-0.5 * d2) for d2, _, _, _ in gated_candidates]
+        v0 = max(1e-4, self._clutter_density * (2.0 * np.pi))
+        total_lik = v0 + sum(likelihoods)
+
+        beta_0 = v0 / total_lik
+        betas = [lik / total_lik for lik in likelihoods]
+
+        y_tilde_jpda = np.zeros((2, 1), dtype=np.float64)
+        for beta_j, (_, _, _, res) in zip(betas, gated_candidates):
+            y_tilde_jpda += beta_j * res
+
+        P_spread = np.zeros((2, 2), dtype=np.float64)
+        for beta_j, (_, _, _, res) in zip(betas, gated_candidates):
+            diff = res - y_tilde_jpda
+            P_spread += beta_j * (diff @ diff.T)
+
+        best_cand = max(gated_candidates, key=lambda item: item[2].confidence)[2]
+
+        return JPDAAssociationResult(
+            associated=True,
+            combined_innovation=y_tilde_jpda,
+            combined_covariance_spread=P_spread,
+            marginal_probabilities=[beta_0] + betas,
+            best_candidate=best_cand,
+        )

@@ -65,6 +65,12 @@ class AdaptivePerceptionScheduler:
         collect_diagnostics: bool = False,
     ) -> DetectionResult:
         """Executes the full hybrid pipeline."""
+        if hasattr(self._fusion, "fuse"):
+            class_res = self._classical.detect(frame, timestamp, collect_diagnostics)
+            neur_res = self._neural.detect(frame, timestamp, collect_diagnostics)
+            return self._fusion.fuse(neur_res, class_res)
+        elif hasattr(self._fusion, "detect"):
+            return self._fusion.detect(frame, timestamp, collect_diagnostics)
         class_res = self._classical.detect(frame, timestamp, collect_diagnostics)
         neur_res = self._neural.detect(frame, timestamp, collect_diagnostics)
         return self._fusion.fuse(neur_res, class_res)

@@ -3,6 +3,7 @@ PAT Mode Manager & Finite State Machine.
 HORIZON Phase 6
 """
 
+import math
 from typing import Optional, Dict, Any, Tuple
 from .state import PATMode, PATState
 from .thresholds import PATThresholds
@@ -103,9 +104,15 @@ class PATModeManager:
         current_pan_deg: float,
         current_tilt_deg: float,
         suppress_detection: bool = False,
+        is_new_frame: bool = True,
     ) -> PATState:
         """
         Executes one PAT Mode Manager cycle.
+        
+        Args:
+            is_new_frame: True if a fresh optical observation was captured by the sensor on this step.
+                          If False (e.g. intermediate simulation tick), state propagates without
+                          treating the frame as an optical detection miss.
         """
         # Apply controlled detection blackout test mode if active
         if suppress_detection:
@@ -117,7 +124,17 @@ class PATModeManager:
         self.state.mode_duration_frames += 1
         self.diagnostics.update_durations(dt, self.state.mode)
 
-        # Hit / Miss tracking
+        # Compute pointing error in degrees from estimated target position
+        pan_err, tilt_err = self.track_manager.compute_pointing_error(estimated_u_px, estimated_v_px)
+        self.state.pan_error_deg = pan_err
+        self.state.tilt_error_deg = tilt_err
+
+        # On intermediate simulation ticks where no new frame was captured, maintain tracking state
+        # and coast smoothly on estimator propagation without false miss accumulation.
+        if not is_new_frame:
+            return self.state
+
+        # Hit / Miss tracking on actual frame boundary
         if detection_valid:
             self.state.consecutive_hits += 1
             self.state.consecutive_misses = 0
@@ -137,13 +154,9 @@ class PATModeManager:
             consecutive_misses=self.state.consecutive_misses,
         )
 
-        # Compute pointing error in degrees from estimated target position
-        pan_err, tilt_err = self.track_manager.compute_pointing_error(estimated_u_px, estimated_v_px)
-        self.state.pan_error_deg = pan_err
-        self.state.tilt_error_deg = tilt_err
-
         # Execute State Machine Transitions
         mode = self.state.mode
+        vel_hint = math.hypot(estimated_vx_px_s, estimated_vy_px_s)
 
         if mode == PATMode.SEARCH:
             self.state.active_search_strategy = self.search_manager.active_strategy_name
@@ -153,11 +166,16 @@ class PATModeManager:
         elif mode == PATMode.ACQUIRE:
             candidate_pos = (estimated_u_px, estimated_v_px) if detection_valid else None
             confirmed = self.acquisition_manager.process_frame(
-                detection_valid, detection_confidence, mahalanobis_d2, candidate_pos
+                detection_valid=detection_valid,
+                confidence=detection_confidence,
+                mahalanobis_distance=math.sqrt(max(0.0, mahalanobis_d2)),
+                candidate_pos=candidate_pos,
+                velocity_hint_px_s=vel_hint,
+                dt=dt,
             )
             if confirmed:
                 self.transition_to(PATMode.TRACK, timestamp_s, "N consecutive valid detections confirmed")
-            elif not self.acquisition_manager.candidate_active and self.state.mode_duration_frames > 5:
+            elif self.state.consecutive_misses >= 5 or self.state.mode_duration_s >= 1.5:
                 self.transition_to(PATMode.SEARCH, timestamp_s, "Acquisition candidate invalid or lost")
 
         elif mode == PATMode.TRACK:
@@ -177,10 +195,20 @@ class PATModeManager:
         elif mode == PATMode.REACQUIRE:
             self.state.active_search_strategy = "SPIRAL_REACQUIRE"
             if detection_valid and detection_confidence >= self.thresholds.min_acquisition_confidence:
+                self.state.reacquire_pan_rate = 0.0
+                self.state.reacquire_tilt_rate = 0.0
                 self.transition_to(PATMode.ACQUIRE, timestamp_s, "Candidate re-detected during reacquisition search")
             else:
-                _, _, timed_out = self.reacquisition_manager.process_step(dt, current_pan_deg, current_tilt_deg)
+                reacq_p, reacq_t, timed_out = self.reacquisition_manager.process_step(dt, current_pan_deg, current_tilt_deg)
+                self.state.reacquire_pan_rate = reacq_p
+                self.state.reacquire_tilt_rate = reacq_t
                 if timed_out or self.state.mode_duration_s >= self.thresholds.reacquire_timeout_s:
+                    self.state.reacquire_pan_rate = 0.0
+                    self.state.reacquire_tilt_rate = 0.0
                     self.transition_to(PATMode.SEARCH, timestamp_s, "Reacquisition search timed out")
+        else:
+            self.state.reacquire_pan_rate = 0.0
+            self.state.reacquire_tilt_rate = 0.0
 
         return self.state
+

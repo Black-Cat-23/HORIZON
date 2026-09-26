@@ -87,6 +87,20 @@ def enforce_symmetry(P: np.ndarray) -> np.ndarray:
     return P_sym
 
 
+def clamp_covariance_spectrum(P: np.ndarray, min_eigenvalue: float = 1e-6) -> np.ndarray:
+    """Clamp the eigenvalue spectrum of covariance matrix P to be >= min_eigenvalue.
+
+    Ensures positive definiteness and prevents ill-conditioning during matrix inversion.
+    P_clamped = V * diag(max(lambda_i, min_eig)) * V^T
+    """
+    P_sym = enforce_symmetry(P)
+    eigvals, eigvecs = np.linalg.eigh(P_sym)
+    eigvals_clamped = np.maximum(eigvals, float(min_eigenvalue))
+    P_clamped = (eigvecs * eigvals_clamped) @ eigvecs.T
+    return enforce_symmetry(P_clamped)
+
+
+
 def compute_covariance_ellipse(
     P: np.ndarray,
     center_x: float = 0.0,

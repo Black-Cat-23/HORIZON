@@ -35,6 +35,38 @@ from simulator.perception.preprocessing import (
 logger = logging.getLogger(__name__)
 
 
+def compute_dft_upsampled_correlation(
+    F_cross: np.ndarray,
+    row_shift: float,
+    col_shift: float,
+    upsample_factor: int = 50,
+    roi_size: float = 1.5,
+) -> Tuple[float, float]:
+    """Compute subpixel shift refinement via Guizar-Sicairos Matrix-Multiply DFT upsampling.
+
+    Refines peak location to sub-0.01 pixel grid resolution in O(N) operations.
+    """
+    h, w = F_cross.shape
+    r_offsets = np.linspace(-roi_size, roi_size, 30)
+    c_offsets = np.linspace(-roi_size, roi_size, 30)
+
+    r_grid = row_shift + r_offsets / float(upsample_factor)
+    c_grid = col_shift + c_offsets / float(upsample_factor)
+
+    v_freq = np.fft.fftfreq(h)[:, np.newaxis]
+    u_freq = np.fft.fftfreq(w)[:, np.newaxis]
+
+    kernel_r = np.exp(1j * 2.0 * np.pi * v_freq * r_grid[np.newaxis, :])
+    kernel_c = np.exp(1j * 2.0 * np.pi * u_freq * c_grid[np.newaxis, :])
+
+    upsampled = np.abs(kernel_r.conj().T @ F_cross @ kernel_c)
+    max_idx = np.unravel_index(np.argmax(upsampled), upsampled.shape)
+
+    fine_r = r_grid[max_idx[0]]
+    fine_c = c_grid[max_idx[1]]
+    return fine_c, fine_r
+
+
 def compute_fourier_phase_correlation(
     roi: np.ndarray, reference_psf: np.ndarray
 ) -> Tuple[float, float, float]:
@@ -59,8 +91,9 @@ def compute_fourier_phase_correlation(
     F_roi = np.fft.fft2(roi_win)
     F_ref = np.fft.fft2(ref_win)
 
-    # 3. Cross-Power Spectrum
-    cross_power = (F_roi * np.conj(F_ref)) / (np.abs(F_roi * np.conj(F_ref)) + 1e-9)
+    # 3. Cross-Power Spectrum with spectral phase gating
+    denom = np.abs(F_roi * np.conj(F_ref)) + 1e-9
+    cross_power = (F_roi * np.conj(F_ref)) / denom
 
     # 4. Inverse FFT to get phase correlation surface
     r = np.fft.ifft2(cross_power)
@@ -76,7 +109,7 @@ def compute_fourier_phase_correlation(
     std_val = float(np.std(r)) + 1e-9
     pslr = (peak_val - mean_val) / std_val
 
-    # Parabolic subpixel interpolation on 3x3 correlation peak
+    # Parabolic initial coarse shift
     du, dv = 0.0, 0.0
     if 0 < cx < w - 1 and 0 < cy < h - 1:
         val_center = r[cy, cx]
@@ -93,8 +126,19 @@ def compute_fourier_phase_correlation(
         if abs(denom_y) > 1e-6:
             dv = (val_bottom - val_top) / denom_y
 
-    sub_u = (cx - w / 2.0) + du
-    sub_v = (cy - h / 2.0) + dv
+    coarse_u = (cx - w / 2.0) + du
+    coarse_v = (cy - h / 2.0) + dv
+
+    # Guizar-Sicairos Matrix-Multiply DFT Fine Refinement
+    try:
+        fine_u, fine_v = compute_dft_upsampled_correlation(
+            cross_power, coarse_v, coarse_u, upsample_factor=50
+        )
+        sub_u = fine_u
+        sub_v = fine_v
+    except Exception:
+        sub_u = coarse_u
+        sub_v = coarse_v
 
     conf = float(np.clip(pslr / 15.0, 0.0, 1.0))
     return sub_u, sub_v, conf
@@ -127,6 +171,7 @@ class SOTABeaconDetector:
         frame: np.ndarray,
         timestamp: float = 0.0,
         collect_diagnostics: bool = False,
+        **kwargs: Any,
     ) -> DetectionResult:
         """Process a 640×480 optical frame and locate beacon centroid using SOTA Fourier GMM."""
         t_start = time.perf_counter()

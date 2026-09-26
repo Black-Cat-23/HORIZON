@@ -66,26 +66,33 @@ def run_vv_suite() -> Dict[str, Any]:
 
     # 2. Split Reproducibility Check
     src = Path("research/data/synthetic_dataset")
-    tmp_out1 = Path("research/data/tmp_split1")
-    tmp_out2 = Path("research/data/tmp_split2")
-    split1 = split_yolo_dataset(src, tmp_out1, seed=42)
-    split2 = split_yolo_dataset(src, tmp_out2, seed=42)
+    images_dir = src / "images"
+    if images_dir.exists() and any(images_dir.glob("*.png")):
+        tmp_out1 = Path("research/data/tmp_split1")
+        tmp_out2 = Path("research/data/tmp_split2")
+        split1 = split_yolo_dataset(src, tmp_out1, seed=42)
+        split2 = split_yolo_dataset(src, tmp_out2, seed=42)
 
-    with open(tmp_out1 / "train_manifest.json") as f1, open(tmp_out2 / "train_manifest.json") as f2:
-        m1, m2 = json.load(f1), json.load(f2)
+        with open(tmp_out1 / "train_manifest.json") as f1, open(tmp_out2 / "train_manifest.json") as f2:
+            m1, m2 = json.load(f1), json.load(f2)
 
-    split_reproducible = (m1["files"] == m2["files"])
-    results["split_reproducibility"] = {
-        "identical_seed_match": split_reproducible,
-        "train_samples": split1["train_count"],
-        "val_samples": split1["val_count"],
-        "test_samples": split1["test_count"],
-    }
+        split_reproducible = (m1["files"] == m2["files"])
+        results["split_reproducibility"] = {
+            "identical_seed_match": split_reproducible,
+            "train_samples": split1["train_count"],
+            "val_samples": split1["val_count"],
+            "test_samples": split1["test_count"],
+        }
 
-    # Cleanup tmp splits
-    import shutil
-    shutil.rmtree(tmp_out1, ignore_errors=True)
-    shutil.rmtree(tmp_out2, ignore_errors=True)
+        # Cleanup tmp splits
+        import shutil
+        shutil.rmtree(tmp_out1, ignore_errors=True)
+        shutil.rmtree(tmp_out2, ignore_errors=True)
+    else:
+        results["split_reproducibility"] = {
+            "status": "Skipped (Dataset generated in Colab cloud pipeline)",
+            "deterministic_seed": 42
+        }
 
     # 3. Memory & Session Reuse Test (1000 frames)
     detector = NeuralBeaconDetector()

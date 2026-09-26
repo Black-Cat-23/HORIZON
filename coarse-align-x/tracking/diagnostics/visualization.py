@@ -17,7 +17,7 @@ import cv2
 import numpy as np
 
 from tracking.estimation.covariance import CovarianceEllipseData, compute_covariance_ellipse
-from tracking.estimation.state import StateEstimate
+from tracking.estimation.state import StateEstimate, EstimatorStatus
 
 
 def draw_tracking_annotations(
@@ -148,15 +148,33 @@ def draw_tracking_annotations(
         except Exception:
             pass
 
-    # 5. Draw Estimated Position & Velocity Vector (Bright Cyan Reticle)
+    # 5. Draw Estimated Position & Velocity Vector (Dynamic status indicator)
+    if estimate.filter_status in (EstimatorStatus.UNINITIALIZED, EstimatorStatus.RESET):
+        return canvas
+
     ex, ey = int(round(estimate.estimated_x)), int(round(estimate.estimated_y))
     if 0 <= ex < w and 0 <= ey < h:
-        cv2.circle(canvas, (ex, ey), 6, (255, 255, 0), 2, lineType=cv2.LINE_AA)
-        cv2.line(canvas, (ex - 10, ey), (ex + 10, ey), (255, 255, 0), 2, lineType=cv2.LINE_AA)
-        cv2.line(canvas, (ex, ey - 10), (ex, ey + 10), (255, 255, 0), 2, lineType=cv2.LINE_AA)
-        est_label = "EST (TRACKED)"
+        if estimate.filter_status == EstimatorStatus.TRACKING:
+            reticle_color = (255, 255, 0)   # Cyan (BGR)
+            est_label = "EST (TRACKED)"
+        elif estimate.filter_status == EstimatorStatus.PREDICTING:
+            reticle_color = (0, 165, 255)   # Amber / Orange (BGR)
+            est_label = "EST (COASTING)"
+        elif estimate.filter_status == EstimatorStatus.INITIALIZING:
+            reticle_color = (200, 200, 0)   # Blue-greenish
+            est_label = "EST (INIT)"
+        elif estimate.filter_status == EstimatorStatus.REJECTED_MEASUREMENT:
+            reticle_color = (0, 140, 255)   # Orange
+            est_label = "EST (GATED)"
+        else:
+            reticle_color = (0, 0, 255)     # Red
+            est_label = f"EST ({estimate.filter_status.value})"
+
+        cv2.circle(canvas, (ex, ey), 6, reticle_color, 2, lineType=cv2.LINE_AA)
+        cv2.line(canvas, (ex - 10, ey), (ex + 10, ey), reticle_color, 2, lineType=cv2.LINE_AA)
+        cv2.line(canvas, (ex, ey - 10), (ex, ey + 10), reticle_color, 2, lineType=cv2.LINE_AA)
         cv2.putText(canvas, est_label, (ex + 12, ey + 14), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 3, cv2.LINE_AA)
-        cv2.putText(canvas, est_label, (ex + 12, ey + 14), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 0), 1, cv2.LINE_AA)
+        cv2.putText(canvas, est_label, (ex + 12, ey + 14), cv2.FONT_HERSHEY_SIMPLEX, 0.4, reticle_color, 1, cv2.LINE_AA)
 
         if draw_velocity_vector:
             vx, vy = estimate.estimated_vx, estimate.estimated_vy

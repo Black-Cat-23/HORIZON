@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { SplitText } from '../components/SplitText';
+import { DocumentationVault } from '../components/DocumentationVault';
 
 interface SystemArchitectureProps {
   isActive: boolean;
@@ -171,6 +172,11 @@ export const SystemArchitecture: React.FC<SystemArchitectureProps> = ({ isActive
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Technical Documentation & Blueprint Vault */}
+        <div style={{ marginTop: '3rem' }}>
+          <DocumentationVault />
         </div>
       </div>
     </section>
