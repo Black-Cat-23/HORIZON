@@ -1,12 +1,21 @@
 # HORIZON PHASE 10 EXISTING VALIDATION UPGRADE REPORT
 
 ## Step 1 — Data Integrity Audit Summary
-- **Total Trial Files Inspected:** 41
+- **Total Trial Files Inspected:** 46
 - **Validated Trials:** 40
-- **Corrupted / Invalid Files:** 1
-- **Duplicate Trial Seeds:** 0
+- **Corrupted / Invalid Files:** 6
+- **Duplicate Trial Seeds:** 4
 - **Incomplete Trials:** 0
 - **Configuration Mismatches:** 0
+
+## Step 1.5 — Active Benchmark & Trial Profile
+- **Input Mode:** EXTERNAL_VIDEO
+- **Source File:** isro_sample_beacon_30s.mp4
+- **Video Resolution:** 640x480 @ 30.0 FPS (628 frames)
+- **Pipeline Engines:** Perception=HYBRID | Estimator=IMM_ADAPTIVE_EKF | Controller=ADRC_NONLINEAR
+- **Lock Retention Rate:** 99.8%
+- **RMSE Centroid Error:** 8.54 px
+- **P95 Processing Latency:** 38.89 ms
 
 ## Step 2 — Full Metric Distributions (P50, P95, P99, Max)
 | Algorithm | Success Rate | Lock Retention | Mean Error | Median (P50) | P95 Error | P99 Error | Max Error | Mean Latency |

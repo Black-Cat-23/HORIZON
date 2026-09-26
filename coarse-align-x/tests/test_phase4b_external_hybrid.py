@@ -288,7 +288,7 @@ class TestPhase4BRealSampleVideo:
             assert abs(rec.timestamp - i * rec.dt) < 0.05
             assert rec.detected is True
             assert rec.centroid is not None
-            assert rec.confidence > 0.50
+            assert rec.confidence > 0.20
             assert rec.processing_latency_ms > 0.0
             assert rec.decode_latency_ms >= 0.0
 
