@@ -1,0 +1,20 @@
+{
+  "trial_id": "live_video_isro_sample_beacon_30s.mp4",
+  "input_source": "EXTERNAL_VIDEO",
+  "video_file": "isro_sample_beacon_30s.mp4",
+  "video_resolution": "640x480",
+  "seed": 90,
+  "algorithm": "OURS",
+  "perception_mode": "HYBRID",
+  "estimator": "IMM_ADAPTIVE_EKF",
+  "controller": "ADRC_NONLINEAR",
+  "preset": "NOMINAL",
+  "trajectory": "sinusoidal",
+  "metrics": {
+    "mean_tracking_error": 8.54,
+    "P95_tracking_error": 17.6,
+    "lock_retention_rate": 0.9984,
+    "processing_time": 38.89
+  },
+  "status": "VALID"
+}

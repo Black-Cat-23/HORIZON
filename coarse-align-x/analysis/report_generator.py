@@ -140,6 +140,16 @@ class EngineeringReportGenerator:
                 )
 
         # --- GENERATE MARKDOWN REPORT ---
+        comp_path = Path("results/comparisons/comparison.json")
+        latest_live = {}
+        if comp_path.exists():
+            try:
+                with open(comp_path, "r", encoding="utf-8") as f:
+                    c_data = json.load(f)
+                    latest_live = c_data.get("latest_live_test", {})
+            except Exception:
+                pass
+
         md_doc = []
         md_doc.append("# HORIZON PHASE 10 EXISTING VALIDATION UPGRADE REPORT\n")
         md_doc.append("## Step 1 — Data Integrity Audit Summary")
@@ -151,6 +161,39 @@ class EngineeringReportGenerator:
             f"- **Incomplete Trials:** {audit_res['incomplete_count']}\n"
             f"- **Configuration Mismatches:** {audit_res['config_mismatch_count']}\n"
         )
+
+        if latest_live and isinstance(latest_live, dict):
+            inp_src = latest_live.get("input_source", "VIRTUAL_CAMERA")
+            p_m = latest_live.get("perception_mode", "HYBRID")
+            e_m = latest_live.get("estimator", "IMM_ADAPTIVE_EKF")
+            c_m = latest_live.get("controller", "ADRC_NONLINEAR")
+            m_dict = latest_live.get("metrics", {})
+            md_doc.append("## Step 1.5 — Active Benchmark & Trial Profile")
+            if inp_src == "EXTERNAL_VIDEO":
+                v_file = latest_live.get("video_file", "isro_sample_beacon_30s.mp4")
+                v_res = latest_live.get("video_resolution", "640x480")
+                v_fps = latest_live.get("video_source_fps", 30.0)
+                v_tot = latest_live.get("total_frames", 900)
+                md_doc.append(
+                    f"- **Input Mode:** EXTERNAL_VIDEO\n"
+                    f"- **Source File:** {v_file}\n"
+                    f"- **Video Resolution:** {v_res} @ {v_fps:.1f} FPS ({v_tot} frames)\n"
+                    f"- **Pipeline Engines:** Perception={p_m} | Estimator={e_m} | Controller={c_m}\n"
+                    f"- **Lock Retention Rate:** {m_dict.get('lock_retention', 0.0):.1f}%\n"
+                    f"- **RMSE Centroid Error:** {m_dict.get('rmse_error', 0.0):.2f} px\n"
+                    f"- **P95 Processing Latency:** {m_dict.get('p95_latency', 0.0):.2f} ms\n"
+                )
+            else:
+                md_doc.append(
+                    f"- **Input Mode:** VIRTUAL_CAMERA\n"
+                    f"- **Trajectory:** {latest_live.get('trajectory', 'figure8')}\n"
+                    f"- **Preset:** {latest_live.get('preset', 'NOMINAL')}\n"
+                    f"- **Random Seed:** {latest_live.get('seed', 42)}\n"
+                    f"- **Pipeline Engines:** Perception={p_m} | Estimator={e_m} | Controller={c_m}\n"
+                    f"- **Lock Retention Rate:** {m_dict.get('lock_retention', 0.0):.1f}%\n"
+                    f"- **RMSE Tracking Error:** {m_dict.get('rmse_error', 0.0):.2f} px\n"
+                    f"- **P95 Latency:** {m_dict.get('p95_latency', 0.0):.2f} ms\n"
+                )
 
         md_doc.append("## Step 2 — Full Metric Distributions (P50, P95, P99, Max)")
         md_doc.append("| Algorithm | Success Rate | Lock Retention | Mean Error | Median (P50) | P95 Error | P99 Error | Max Error | Mean Latency |")

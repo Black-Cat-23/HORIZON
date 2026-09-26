@@ -295,6 +295,14 @@ class BenchmarkScreenView(QWidget):
         scroll.setWidget(scroll_content)
         main_layout.addWidget(scroll, stretch=1)
 
+    def showEvent(self, event) -> None:
+        """Automatically refresh baseline table and widgets when Benchmark tab becomes visible."""
+        super().showEvent(event)
+        if hasattr(self, "comparison_table") and self.comparison_table is not None:
+            self.comparison_table.load_data()
+        if hasattr(self, "robustness_heatmap") and self.robustness_heatmap is not None:
+            self.robustness_heatmap.load_data()
+
     def _start_live_benchmark(self) -> None:
         """Launch background benchmark worker thread."""
         if self._bench_thread is not None and self._bench_thread.isRunning():

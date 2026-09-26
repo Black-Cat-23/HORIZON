@@ -1,10 +1,10 @@
 # HORIZON PHASE 10 EXISTING VALIDATION UPGRADE REPORT
 
 ## Step 1 — Data Integrity Audit Summary
-- **Total Trial Files Inspected:** 44
+- **Total Trial Files Inspected:** 41
 - **Validated Trials:** 40
-- **Corrupted / Invalid Files:** 4
-- **Duplicate Trial Seeds:** 3
+- **Corrupted / Invalid Files:** 1
+- **Duplicate Trial Seeds:** 0
 - **Incomplete Trials:** 0
 - **Configuration Mismatches:** 0
 

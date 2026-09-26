@@ -1,5 +1,6 @@
 import React from 'react';
 import { SplitText } from '../components/SplitText';
+import { AnimatedCounter } from '../components/AnimatedCounter';
 
 interface BenchmarkProofProps {
   isActive: boolean;
@@ -45,7 +46,7 @@ export const BenchmarkProof: React.FC<BenchmarkProofProps> = ({ isActive }) => {
           <div style={{ padding: '1.5rem', backgroundColor: 'rgba(11, 16, 24, 0.7)', border: '1px solid var(--border-subtle)' }}>
             <span className="label-caps" style={{ color: 'var(--text-muted)' }}>MEAN ACQUISITION</span>
             <div className="font-editorial" style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--state-lock)', margin: '0.5rem 0' }}>
-              0.048s
+              <AnimatedCounter value={0.048} decimals={3} suffix="s" isActive={isActive} />
             </div>
             <span className="font-mono" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               ≤ 0.5s TARGET SPEC
@@ -55,7 +56,7 @@ export const BenchmarkProof: React.FC<BenchmarkProofProps> = ({ isActive }) => {
           <div style={{ padding: '1.5rem', backgroundColor: 'rgba(11, 16, 24, 0.7)', border: '1px solid var(--border-subtle)' }}>
             <span className="label-caps" style={{ color: 'var(--text-muted)' }}>TRACKING RMSE</span>
             <div className="font-editorial" style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--state-lock)', margin: '0.5rem 0' }}>
-              1.24 px
+              <AnimatedCounter value={1.24} decimals={2} suffix=" px" isActive={isActive} />
             </div>
             <span className="font-mono" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               0.038° ANGULAR ERROR
@@ -65,7 +66,7 @@ export const BenchmarkProof: React.FC<BenchmarkProofProps> = ({ isActive }) => {
           <div style={{ padding: '1.5rem', backgroundColor: 'rgba(11, 16, 24, 0.7)', border: '1px solid var(--border-subtle)' }}>
             <span className="label-caps" style={{ color: 'var(--text-muted)' }}>LOCK RETENTION</span>
             <div className="font-editorial" style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--state-lock)', margin: '0.5rem 0' }}>
-              99.4%
+              <AnimatedCounter value={99.4} decimals={1} suffix="%" isActive={isActive} />
             </div>
             <span className="font-mono" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               OVER 10,000 FRAMES
@@ -75,7 +76,7 @@ export const BenchmarkProof: React.FC<BenchmarkProofProps> = ({ isActive }) => {
           <div style={{ padding: '1.5rem', backgroundColor: 'rgba(11, 16, 24, 0.7)', border: '1px solid var(--border-subtle)' }}>
             <span className="label-caps" style={{ color: 'var(--text-muted)' }}>PROCESSING LATENCY</span>
             <div className="font-editorial" style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--state-lock)', margin: '0.5rem 0' }}>
-              3.8 ms
+              <AnimatedCounter value={3.8} decimals={1} suffix=" ms" isActive={isActive} />
             </div>
             <span className="font-mono" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               260+ FPS PIPELINE CAP

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import architectureImg from '/@fs/C:/Users/Ankit/.gemini/antigravity-ide/brain/a2ef56d4-2aaf-4211-b079-a17e11825b40/.user_uploaded/media_1789201669295.jpg';
+const architectureImg = '/images/1.jpg';
 
 interface DocItem {
   id: string;
