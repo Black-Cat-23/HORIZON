@@ -1,9 +1,9 @@
 """HORIZON Phase 11.5 Disturbance Controls Component
 ======================================================
 Interactive disturbance parameter controls:
-  - Preset Selector Bank (NOMINAL, DIFFICULT, SEVERE, RECOVERY, ADVERSARIAL, CUSTOM)
-  - Real disturbance parameters: Gaussian sigma, Salt & Pepper, Poisson, Camera Jitter, Platform Motion, Atmosphere.
-  - "Run stress test" primary action button.
+  - Preset Selector Bank & Explicit CUSTOM mode
+  - Run Status Pill indicating idle/staged/running
+  - Controls locked during active run
 """
 
 from __future__ import annotations
@@ -18,30 +18,24 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QScrollArea,
-    QSlider,
     QVBoxLayout,
     QWidget,
 )
 
 from simulator.ui.foundation.tokens import (
-    COLOR_FIELD,
     COLOR_FIELD_RAISED,
     COLOR_HAIRLINE_BORDER_HEX,
-    COLOR_LOCK_CYAN,
     COLOR_TEXT_PRIMARY,
     COLOR_TEXT_SECONDARY,
     FONT_BODY,
-    SPACING_4,
     SPACING_8,
     SPACING_12,
-    SPACING_16,
 )
 from simulator.ui.foundation.primitives import (
-    ExpandableDiagnosticContainer,
-    PanelSurface,
-    PanelVariant,
     PrimaryButton,
     SectionHeaderLabel,
+    StateIndicatorPill,
+    StatePillState
 )
 from simulator.disturbances.config import (
     AtmosphereConfig,
@@ -53,7 +47,6 @@ from simulator.disturbances.config import (
     SaltPepperConfig,
 )
 from simulator.disturbances.presets import get_preset_config
-
 
 class DisturbanceControlsWidget(QWidget):
     """Interactive Disturbance Controls Panel Widget."""
@@ -72,15 +65,20 @@ class DisturbanceControlsWidget(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._updating_preset = False
+        self._custom_config_data = {} # Preserves custom values
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(SPACING_8)
 
-        # Header Title: "Disturbance controls" (sentence case)
+        # Header Title
         header = SectionHeaderLabel("Disturbance controls", self)
         header.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY}; font-family: {FONT_BODY}; font-size: 14px; font-weight: 600;")
         layout.addWidget(header)
+
+        # Status Pill for Run State
+        self.pill_status = StateIndicatorPill(StatePillState.IDLE, label_text="IDLE", parent=self)
+        layout.addWidget(self.pill_status)
 
         # 1. Preset Selector Combo Box
         preset_layout = QHBoxLayout()
@@ -111,20 +109,20 @@ class DisturbanceControlsWidget(QWidget):
         layout.addLayout(preset_layout)
 
         # 2. Scrollable Sliders & Form
-        scroll_area = QScrollArea(self)
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        scroll_area.setStyleSheet("background: transparent;")
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll_area = QScrollArea(self)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        self.scroll_area.setStyleSheet("background: transparent;")
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
-        scroll_content = QWidget(scroll_area)
-        scroll_content.setStyleSheet("background: transparent;")
-        form_layout = QFormLayout(scroll_content)
+        self.scroll_content = QWidget(self.scroll_area)
+        self.scroll_content.setStyleSheet("background: transparent;")
+        form_layout = QFormLayout(self.scroll_content)
         form_layout.setHorizontalSpacing(SPACING_12)
         form_layout.setVerticalSpacing(SPACING_12)
 
         # A. Gaussian Noise Sigma
-        self.spin_gaussian = QDoubleSpinBox(scroll_content)
+        self.spin_gaussian = QDoubleSpinBox(self.scroll_content)
         self.spin_gaussian.setRange(0.0, 20.0)
         self.spin_gaussian.setSingleStep(0.5)
         self.spin_gaussian.setSuffix(" σ")
@@ -132,90 +130,116 @@ class DisturbanceControlsWidget(QWidget):
         form_layout.addRow("Gaussian Noise:", self.spin_gaussian)
 
         # B. Salt & Pepper Probability
-        self.spin_sp = QDoubleSpinBox(scroll_content)
-        self.spin_sp.setRange(0.00, 0.10)
+        self.spin_sp = QDoubleSpinBox(self.scroll_content)
+        self.spin_sp.setRange(0.00, 1.0)
         self.spin_sp.setSingleStep(0.01)
         self.spin_sp.setDecimals(2)
         self.spin_sp.setSuffix(" p")
         self.spin_sp.valueChanged.connect(self._on_user_field_change)
         form_layout.addRow("Salt & Pepper Noise:", self.spin_sp)
 
-        # C. Poisson Shot Noise (Peak Photons)
-        self.spin_poisson = QDoubleSpinBox(scroll_content)
+        # C. Poisson Shot Noise
+        self.spin_poisson = QDoubleSpinBox(self.scroll_content)
         self.spin_poisson.setRange(10.0, 100.0)
         self.spin_poisson.setSingleStep(5.0)
         self.spin_poisson.setSuffix(" photons")
-        self.spin_poisson.setValue(100.0)
         self.spin_poisson.valueChanged.connect(self._on_user_field_change)
         form_layout.addRow("Poisson Peak Flux:", self.spin_poisson)
 
         # D. Camera Jitter Max
-        self.spin_jitter = QDoubleSpinBox(scroll_content)
-        self.spin_jitter.setRange(0.0, 20.0)
+        self.spin_jitter = QDoubleSpinBox(self.scroll_content)
+        self.spin_jitter.setRange(0.0, 100.0)
         self.spin_jitter.setSingleStep(1.0)
         self.spin_jitter.setSuffix(" px")
         self.spin_jitter.valueChanged.connect(self._on_user_field_change)
         form_layout.addRow("Camera Jitter Max:", self.spin_jitter)
 
         # E. Platform Motion Velocity & Model
-        self.spin_platform = QDoubleSpinBox(scroll_content)
-        self.spin_platform.setRange(0.0, 120.0)
+        self.spin_platform = QDoubleSpinBox(self.scroll_content)
+        self.spin_platform.setRange(0.0, 200.0)
         self.spin_platform.setSingleStep(5.0)
         self.spin_platform.setSuffix(" px/s")
         self.spin_platform.valueChanged.connect(self._on_user_field_change)
         form_layout.addRow("Platform Velocity:", self.spin_platform)
 
-        self.combo_platform_model = QComboBox(scroll_content)
+        self.combo_platform_model = QComboBox(self.scroll_content)
         self.combo_platform_model.addItems(self.PLATFORM_MODELS)
         self.combo_platform_model.currentTextChanged.connect(self._on_user_field_change)
         form_layout.addRow("Platform Model:", self.combo_platform_model)
 
         # F. Atmosphere Condition
-        self.combo_atmo = QComboBox(scroll_content)
+        self.combo_atmo = QComboBox(self.scroll_content)
         self.combo_atmo.addItems(self.ATMOSPHERES)
         self.combo_atmo.currentTextChanged.connect(self._on_user_field_change)
         form_layout.addRow("Atmosphere Condition:", self.combo_atmo)
 
-        self.spin_atmo_severity = QDoubleSpinBox(scroll_content)
+        self.spin_atmo_severity = QDoubleSpinBox(self.scroll_content)
         self.spin_atmo_severity.setRange(0.0, 1.0)
         self.spin_atmo_severity.setSingleStep(0.1)
-        self.spin_atmo_severity.setValue(0.5)
         self.spin_atmo_severity.valueChanged.connect(self._on_user_field_change)
         form_layout.addRow("Atmosphere Severity:", self.spin_atmo_severity)
 
-        scroll_area.setWidget(scroll_content)
-        layout.addWidget(scroll_area, stretch=1)
+        self.scroll_area.setWidget(self.scroll_content)
+        layout.addWidget(self.scroll_area, stretch=1)
 
-        # 3. Action Button: "Run stress test" (sentence case per patched button rules)
+        # 3. Action Button
         self.btn_run_test = PrimaryButton("Run stress test", parent=self)
         self.btn_run_test.clicked.connect(lambda: self.run_test_requested.emit())
         layout.addWidget(self.btn_run_test)
 
-        # Load NOMINAL preset by default
         self._on_preset_selected("NOMINAL")
+
+    def set_run_state(self, state: str, current_frame: int, total_frames: int):
+        """Called by StressScreenView to lock UI and update progress pill."""
+        if state == "running":
+            self.pill_status.set_state(StatePillState.ACTIVE, f"RUNNING ({current_frame}/{total_frames})")
+            self.scroll_content.setEnabled(False)
+            self.combo_preset.setEnabled(False)
+            self.btn_run_test.setText("Stop stress test")
+        elif state == "completed":
+            self.pill_status.set_state(StatePillState.CONFIRMED, "COMPLETED")
+            self.scroll_content.setEnabled(True)
+            self.combo_preset.setEnabled(True)
+            self.btn_run_test.setText("Run stress test")
+        else: # idle, configuring
+            self.pill_status.set_state(StatePillState.IDLE, "IDLE - CONFIGURING")
+            self.scroll_content.setEnabled(True)
+            self.combo_preset.setEnabled(True)
+            self.btn_run_test.setText("Run stress test")
 
     def _on_preset_selected(self, preset_name: str) -> None:
         self._updating_preset = True
         try:
-            cfg = get_preset_config(preset_name)
-            if not cfg.enabled:
-                self.spin_gaussian.setValue(0.0)
-                self.spin_sp.setValue(0.0)
-                self.spin_poisson.setValue(100.0)
-                self.spin_jitter.setValue(0.0)
-                self.spin_platform.setValue(0.0)
-                self.combo_platform_model.setCurrentText("linear")
-                self.combo_atmo.setCurrentText("clear")
-                self.spin_atmo_severity.setValue(0.5)
+            if preset_name == "CUSTOM":
+                if "gaussian" in self._custom_config_data:
+                    self.spin_gaussian.setValue(self._custom_config_data["gaussian"])
+                    self.spin_sp.setValue(self._custom_config_data["sp"])
+                    self.spin_poisson.setValue(self._custom_config_data["poisson"])
+                    self.spin_jitter.setValue(self._custom_config_data["jitter"])
+                    self.spin_platform.setValue(self._custom_config_data["platform"])
+                    self.combo_platform_model.setCurrentText(self._custom_config_data["model"])
+                    self.combo_atmo.setCurrentText(self._custom_config_data["atmo"])
+                    self.spin_atmo_severity.setValue(self._custom_config_data["atmo_sev"])
             else:
-                self.spin_gaussian.setValue(cfg.gaussian.sigma if cfg.gaussian.enabled else 0.0)
-                self.spin_sp.setValue(cfg.salt_pepper.probability if cfg.salt_pepper.enabled else 0.0)
-                self.spin_poisson.setValue(cfg.poisson.peak_photons if cfg.poisson.enabled else 100.0)
-                self.spin_jitter.setValue(cfg.camera_jitter.max_x_px if cfg.camera_jitter.enabled else 0.0)
-                self.spin_platform.setValue(cfg.platform_motion.velocity_x if cfg.platform_motion.enabled else 0.0)
-                self.combo_platform_model.setCurrentText(cfg.platform_motion.model if cfg.platform_motion.enabled else "linear")
-                self.combo_atmo.setCurrentText(cfg.atmosphere.condition if cfg.atmosphere.enabled else "clear")
-                self.spin_atmo_severity.setValue(cfg.atmosphere.severity if cfg.atmosphere.enabled else 0.5)
+                cfg = get_preset_config(preset_name)
+                if not cfg.enabled:
+                    self.spin_gaussian.setValue(0.0)
+                    self.spin_sp.setValue(0.0)
+                    self.spin_poisson.setValue(100.0)
+                    self.spin_jitter.setValue(0.0)
+                    self.spin_platform.setValue(0.0)
+                    self.combo_platform_model.setCurrentText("linear")
+                    self.combo_atmo.setCurrentText("clear")
+                    self.spin_atmo_severity.setValue(0.5)
+                else:
+                    self.spin_gaussian.setValue(cfg.gaussian.sigma if cfg.gaussian.enabled else 0.0)
+                    self.spin_sp.setValue(cfg.salt_pepper.probability if cfg.salt_pepper.enabled else 0.0)
+                    self.spin_poisson.setValue(cfg.poisson.peak_photons if cfg.poisson.enabled else 100.0)
+                    self.spin_jitter.setValue(cfg.camera_jitter.max_x_px if cfg.camera_jitter.enabled else 0.0)
+                    self.spin_platform.setValue(cfg.platform_motion.velocity_x if cfg.platform_motion.enabled else 0.0)
+                    self.combo_platform_model.setCurrentText(cfg.platform_motion.model if cfg.platform_motion.enabled else "linear")
+                    self.combo_atmo.setCurrentText(cfg.atmosphere.condition if cfg.atmosphere.enabled else "clear")
+                    self.spin_atmo_severity.setValue(cfg.atmosphere.severity if cfg.atmosphere.enabled else 0.5)
 
             self._emit_config()
         finally:
@@ -223,7 +247,17 @@ class DisturbanceControlsWidget(QWidget):
 
     def _on_user_field_change(self) -> None:
         if not self._updating_preset:
-            # Switch preset display to "CUSTOM" when user manually changes a control
+            # Save custom config
+            self._custom_config_data = {
+                "gaussian": self.spin_gaussian.value(),
+                "sp": self.spin_sp.value(),
+                "poisson": self.spin_poisson.value(),
+                "jitter": self.spin_jitter.value(),
+                "platform": self.spin_platform.value(),
+                "model": self.combo_platform_model.currentText(),
+                "atmo": self.combo_atmo.currentText(),
+                "atmo_sev": self.spin_atmo_severity.value()
+            }
             self.combo_preset.blockSignals(True)
             self.combo_preset.setCurrentText("CUSTOM")
             self.combo_preset.blockSignals(False)
@@ -251,3 +285,4 @@ class DisturbanceControlsWidget(QWidget):
             atmosphere=AtmosphereConfig(enabled=(atmo != "clear"), condition=atmo, severity=atmo_sev),
         )
         self.disturbance_changed.emit(config)
+
