@@ -78,7 +78,7 @@ def test_system_response_panel_widget(qapp):
     )
     pat_state = PATState(mode=PATMode.TRACK, track_quality=0.92)
 
-    panel.update_telemetry(dist_telem=telem, pat_state=pat_state, detection_res=None, fps=30.0)
+    panel.update_telemetry(screen_state='running', staged_config=DisturbanceConfig(enabled=False), dist_telem=telem, pat_state=pat_state, detection_res=None, fps=30.0)
 
     assert panel.telem_g_sig._val_label.text().strip() != ""
     assert panel.telem_sp_prob._val_label.text().strip() != ""

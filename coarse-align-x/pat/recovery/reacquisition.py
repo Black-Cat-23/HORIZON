@@ -22,7 +22,7 @@ class ReacquisitionManager:
     def __init__(
         self,
         thresholds: Optional[PATThresholds] = None,
-        strategy_type: str = "SPIRAL",
+        strategy_type: str = "BELIEF_MAP",
     ):
         self.thresholds = thresholds or PATThresholds()
         self.strategy_type = strategy_type
