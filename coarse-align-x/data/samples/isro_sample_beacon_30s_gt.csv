@@ -1,901 +1,901 @@
-frame_idx,timestamp_s,ground_truth_u,ground_truth_v,true_u,true_v,target_size_px,target_shape,phase,occluded,in_fov
-0,0.0,120.0,110.0,120.0,110.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-1,0.0333,122.5,111.6,122.5,111.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-2,0.0667,125.0,113.2,125.0,113.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-3,0.1,127.5,114.8,127.5,114.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-4,0.1333,130.0,116.4,130.0,116.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-5,0.1667,132.5,118.0,132.5,118.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-6,0.2,135.0,119.6,135.0,119.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-7,0.2333,137.5,121.2,137.5,121.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-8,0.2667,140.0,122.8,140.0,122.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-9,0.3,142.5,124.4,142.5,124.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-10,0.3333,145.0,126.0,145.0,126.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-11,0.3667,147.5,127.6,147.5,127.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-12,0.4,150.0,129.2,150.0,129.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-13,0.4333,152.5,130.8,152.5,130.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-14,0.4667,155.0,132.4,155.0,132.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-15,0.5,157.5,134.0,157.5,134.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-16,0.5333,160.0,135.6,160.0,135.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-17,0.5667,162.5,137.2,162.5,137.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-18,0.6,165.0,138.8,165.0,138.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-19,0.6333,167.5,140.4,167.5,140.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-20,0.6667,170.0,142.0,170.0,142.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-21,0.7,172.5,143.6,172.5,143.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-22,0.7333,175.0,145.2,175.0,145.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-23,0.7667,177.5,146.8,177.5,146.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-24,0.8,180.0,148.4,180.0,148.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-25,0.8333,182.5,150.0,182.5,150.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-26,0.8667,185.0,151.6,185.0,151.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-27,0.9,187.5,153.2,187.5,153.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-28,0.9333,190.0,154.8,190.0,154.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-29,0.9667,192.5,156.4,192.5,156.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-30,1.0,195.0,158.0,195.0,158.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-31,1.0333,197.5,159.6,197.5,159.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-32,1.0667,200.0,161.2,200.0,161.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-33,1.1,202.5,162.8,202.5,162.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-34,1.1333,205.0,164.4,205.0,164.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-35,1.1667,207.5,166.0,207.5,166.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-36,1.2,210.0,167.6,210.0,167.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-37,1.2333,212.5,169.2,212.5,169.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-38,1.2667,215.0,170.8,215.0,170.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-39,1.3,217.5,172.4,217.5,172.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-40,1.3333,220.0,174.0,220.0,174.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-41,1.3667,222.5,175.6,222.5,175.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-42,1.4,225.0,177.2,225.0,177.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-43,1.4333,227.5,178.8,227.5,178.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-44,1.4667,230.0,180.4,230.0,180.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-45,1.5,232.5,182.0,232.5,182.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-46,1.5333,235.0,183.6,235.0,183.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-47,1.5667,237.5,185.2,237.5,185.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-48,1.6,240.0,186.8,240.0,186.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-49,1.6333,242.5,188.4,242.5,188.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-50,1.6667,245.0,190.0,245.0,190.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-51,1.7,247.5,191.6,247.5,191.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-52,1.7333,250.0,193.2,250.0,193.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-53,1.7667,252.5,194.8,252.5,194.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-54,1.8,255.0,196.4,255.0,196.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-55,1.8333,257.5,198.0,257.5,198.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-56,1.8667,260.0,199.6,260.0,199.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-57,1.9,262.5,201.2,262.5,201.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-58,1.9333,265.0,202.8,265.0,202.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-59,1.9667,267.5,204.4,267.5,204.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-60,2.0,270.0,206.0,270.0,206.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-61,2.0333,272.5,207.6,272.5,207.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-62,2.0667,275.0,209.2,275.0,209.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-63,2.1,277.5,210.8,277.5,210.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-64,2.1333,280.0,212.4,280.0,212.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-65,2.1667,282.5,214.0,282.5,214.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-66,2.2,285.0,215.6,285.0,215.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-67,2.2333,287.5,217.2,287.5,217.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-68,2.2667,290.0,218.8,290.0,218.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-69,2.3,292.5,220.4,292.5,220.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-70,2.3333,295.0,222.0,295.0,222.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-71,2.3667,297.5,223.6,297.5,223.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-72,2.4,300.0,225.2,300.0,225.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-73,2.4333,302.5,226.8,302.5,226.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-74,2.4667,305.0,228.4,305.0,228.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-75,2.5,307.5,230.0,307.5,230.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-76,2.5333,310.0,231.6,310.0,231.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-77,2.5667,312.5,233.2,312.5,233.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-78,2.6,315.0,234.8,315.0,234.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-79,2.6333,317.5,236.4,317.5,236.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-80,2.6667,320.0,238.0,320.0,238.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-81,2.7,322.5,239.6,322.5,239.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-82,2.7333,325.0,241.2,325.0,241.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-83,2.7667,327.5,242.8,327.5,242.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-84,2.8,330.0,244.4,330.0,244.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-85,2.8333,332.5,246.0,332.5,246.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-86,2.8667,335.0,247.6,335.0,247.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-87,2.9,337.5,249.2,337.5,249.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-88,2.9333,340.0,250.8,340.0,250.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-89,2.9667,342.5,252.4,342.5,252.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-90,3.0,345.0,254.0,345.0,254.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-91,3.0333,347.5,255.6,347.5,255.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-92,3.0667,350.0,257.2,350.0,257.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-93,3.1,352.5,258.8,352.5,258.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-94,3.1333,355.0,260.4,355.0,260.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-95,3.1667,357.5,262.0,357.5,262.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-96,3.2,360.0,263.6,360.0,263.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-97,3.2333,362.5,265.2,362.5,265.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-98,3.2667,365.0,266.8,365.0,266.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-99,3.3,367.5,268.4,367.5,268.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-100,3.3333,370.0,270.0,370.0,270.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-101,3.3667,372.5,271.6,372.5,271.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-102,3.4,375.0,273.2,375.0,273.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-103,3.4333,377.5,274.8,377.5,274.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-104,3.4667,380.0,276.4,380.0,276.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-105,3.5,382.5,278.0,382.5,278.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-106,3.5333,385.0,279.6,385.0,279.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-107,3.5667,387.5,281.2,387.5,281.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-108,3.6,390.0,282.8,390.0,282.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-109,3.6333,392.5,284.4,392.5,284.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-110,3.6667,395.0,286.0,395.0,286.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-111,3.7,397.5,287.6,397.5,287.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-112,3.7333,400.0,289.2,400.0,289.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-113,3.7667,402.5,290.8,402.5,290.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-114,3.8,405.0,292.4,405.0,292.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-115,3.8333,407.5,294.0,407.5,294.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-116,3.8667,410.0,295.6,410.0,295.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-117,3.9,412.5,297.2,412.5,297.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-118,3.9333,415.0,298.8,415.0,298.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-119,3.9667,417.5,300.4,417.5,300.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-120,4.0,420.0,302.0,420.0,302.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-121,4.0333,422.5,303.6,422.5,303.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-122,4.0667,425.0,305.2,425.0,305.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-123,4.1,427.5,306.8,427.5,306.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-124,4.1333,430.0,308.4,430.0,308.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-125,4.1667,432.5,310.0,432.5,310.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-126,4.2,435.0,311.6,435.0,311.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-127,4.2333,437.5,313.2,437.5,313.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-128,4.2667,440.0,314.8,440.0,314.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-129,4.3,442.5,316.4,442.5,316.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-130,4.3333,445.0,318.0,445.0,318.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-131,4.3667,447.5,319.6,447.5,319.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-132,4.4,450.0,321.2,450.0,321.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-133,4.4333,452.5,322.8,452.5,322.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-134,4.4667,455.0,324.4,455.0,324.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-135,4.5,457.5,326.0,457.5,326.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-136,4.5333,460.0,327.6,460.0,327.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-137,4.5667,462.5,329.2,462.5,329.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-138,4.6,465.0,330.8,465.0,330.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-139,4.6333,467.5,332.4,467.5,332.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-140,4.6667,470.0,334.0,470.0,334.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-141,4.7,472.5,335.6,472.5,335.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-142,4.7333,475.0,337.2,475.0,337.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-143,4.7667,477.5,338.8,477.5,338.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-144,4.8,480.0,340.4,480.0,340.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-145,4.8333,482.5,342.0,482.5,342.0,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-146,4.8667,485.0,343.6,485.0,343.6,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-147,4.9,487.5,345.2,487.5,345.2,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-148,4.9333,490.0,346.8,490.0,346.8,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-149,4.9667,492.5,348.4,492.5,348.4,10.0,SQUARE,Phase 1: Straight Line & Nominal Acquisition,0,1
-150,5.0,450.929,275.86,450.929,275.86,11.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-151,5.0333,451.106,277.023,451.106,277.023,11.2,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-152,5.0667,448.982,279.123,448.982,279.123,11.4,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-153,5.1,447.892,279.628,447.892,279.628,11.6,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-154,5.1333,445.436,281.466,445.436,281.466,11.8,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-155,5.1667,442.157,284.706,442.157,284.706,12.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-156,5.2,433.719,285.368,433.719,285.368,12.2,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-157,5.2333,432.121,291.117,432.121,291.117,12.3,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-158,5.2667,427.524,295.521,427.524,295.521,12.5,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-159,5.3,424.679,300.76,424.679,300.76,12.7,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-160,5.3333,423.946,303.602,423.946,303.602,12.9,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-161,5.3667,423.216,310.614,423.216,310.614,13.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-162,5.4,421.383,314.317,421.383,314.317,13.2,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-163,5.4333,418.606,316.173,418.606,316.173,13.3,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-164,5.4667,414.099,317.858,414.099,317.858,13.4,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-165,5.5,405.88,318.947,405.88,318.947,13.5,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-166,5.5333,400.38,317.819,400.38,317.819,13.6,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-167,5.5667,395.341,321.847,395.341,321.847,13.7,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-168,5.6,388.702,322.795,388.702,322.795,13.8,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-169,5.6333,385.692,321.47,385.692,321.47,13.9,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-170,5.6667,381.975,325.009,381.975,325.009,13.9,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-171,5.7,381.754,327.14,381.754,327.14,14.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-172,5.7333,378.641,333.334,378.641,333.334,14.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-173,5.7667,374.385,334.165,374.385,334.165,14.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-174,5.8,370.933,338.65,370.933,338.65,14.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-175,5.8333,362.043,340.53,362.043,340.53,14.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-176,5.8667,357.102,343.761,357.102,343.761,14.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-177,5.9,349.051,340.155,349.051,340.155,13.9,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-178,5.9333,343.017,341.325,343.017,341.325,13.9,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-179,5.9667,335.827,337.551,335.827,337.551,13.8,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-180,6.0,332.043,337.486,332.043,337.486,13.7,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-181,6.0333,330.665,338.745,330.665,338.745,13.6,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-182,6.0667,327.733,337.416,327.733,337.416,13.5,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-183,6.1,325.645,338.47,325.645,338.47,13.4,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-184,6.1333,321.591,341.343,321.591,341.343,13.3,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-185,6.1667,315.413,338.802,315.413,338.802,13.2,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-186,6.2,304.989,342.695,304.989,342.695,13.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-187,6.2333,300.851,342.759,300.851,342.759,12.9,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-188,6.2667,292.77,343.867,292.77,343.867,12.7,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-189,6.3,285.021,341.949,285.021,341.949,12.5,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-190,6.3333,281.735,337.767,281.735,337.767,12.4,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-191,6.3667,278.367,336.096,278.367,336.096,12.2,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-192,6.4,274.178,332.652,274.178,332.652,12.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-193,6.4333,272.72,331.07,272.72,331.07,11.8,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-194,6.4667,269.104,328.513,269.104,328.513,11.6,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-195,6.5,264.723,326.502,264.723,326.502,11.4,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-196,6.5333,260.412,327.057,260.412,327.057,11.2,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-197,6.5667,253.973,327.085,253.973,327.085,11.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-198,6.6,244.339,327.593,244.339,327.593,10.8,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-199,6.6333,239.314,324.659,239.314,324.659,10.6,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-200,6.6667,231.837,325.478,231.837,325.478,10.4,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-201,6.7,231.606,321.717,231.606,321.717,10.2,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-202,6.7333,230.235,318.03,230.235,318.03,10.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-203,6.7667,230.63,313.262,230.63,313.262,9.9,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-204,6.8,225.554,309.027,225.554,309.027,9.7,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-205,6.8333,225.103,303.673,225.103,303.673,9.5,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-206,6.8667,220.137,300.579,220.137,300.579,9.3,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-207,6.9,216.403,297.75,216.403,297.75,9.2,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-208,6.9333,208.198,295.397,208.198,295.397,9.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-209,6.9667,205.077,294.34,205.077,294.34,8.9,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-210,7.0,199.176,292.883,199.176,292.883,8.7,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-211,7.0333,198.537,293.485,198.537,293.485,8.6,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-212,7.0667,197.868,288.289,197.868,288.289,8.5,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-213,7.1,198.784,285.436,198.784,285.436,8.4,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-214,7.1333,195.719,280.676,195.719,280.676,8.3,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-215,7.1667,196.75,277.475,196.75,277.475,8.2,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-216,7.2,194.622,271.696,194.622,271.696,8.1,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-217,7.2333,194.547,266.517,194.547,266.517,8.1,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-218,7.2667,188.896,259.666,188.896,259.666,8.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-219,7.3,185.108,256.171,185.108,256.171,8.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-220,7.3333,180.647,249.378,180.647,249.378,8.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-221,7.3667,181.313,250.315,181.313,250.315,8.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-222,7.4,183.071,248.406,183.071,248.406,8.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-223,7.4333,183.519,246.302,183.519,246.302,8.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-224,7.4667,187.239,242.957,187.239,242.957,8.1,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-225,7.5,190.519,242.595,190.519,242.595,8.1,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-226,7.5333,189.136,235.259,189.136,235.259,8.2,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-227,7.5667,188.885,231.605,188.885,231.605,8.3,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-228,7.6,186.302,226.301,186.302,226.301,8.3,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-229,7.6333,186.165,220.513,186.165,220.513,8.4,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-230,7.6667,185.195,213.94,185.195,213.94,8.6,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-231,7.7,185.646,210.243,185.646,210.243,8.7,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-232,7.7333,184.99,207.377,184.99,207.377,8.8,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-233,7.7667,189.768,200.777,189.768,200.777,9.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-234,7.8,196.357,202.409,196.357,202.409,9.1,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-235,7.8333,200.513,199.452,200.513,199.452,9.3,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-236,7.8667,204.117,197.934,204.117,197.934,9.4,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-237,7.9,205.298,196.513,205.298,196.513,9.6,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-238,7.9333,206.056,194.442,206.056,194.442,9.8,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-239,7.9667,205.035,189.566,205.035,189.566,10.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-240,8.0,207.595,184.623,207.595,184.623,10.2,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-241,8.0333,209.9,181.267,209.9,181.267,10.4,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-242,8.0667,207.902,174.085,207.902,174.085,10.6,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-243,8.1,215.298,170.223,215.298,170.223,10.8,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-244,8.1333,220.813,168.332,220.813,168.332,11.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-245,8.1667,228.182,163.911,228.182,163.911,11.2,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-246,8.2,233.699,164.465,233.699,164.465,11.3,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-247,8.2333,237.654,163.643,237.654,163.643,11.5,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-248,8.2667,241.082,161.14,241.082,161.14,11.7,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-249,8.3,242.992,158.915,242.992,158.915,11.9,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-250,8.3333,245.259,159.941,245.259,159.941,12.1,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-251,8.3667,248.171,157.437,248.171,157.437,12.3,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-252,8.4,253.546,155.183,253.546,155.183,12.5,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-253,8.4333,253.922,151.173,253.922,151.173,12.7,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-254,8.4667,265.336,145.811,265.336,145.811,12.8,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-255,8.5,271.247,143.035,271.247,143.035,13.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-256,8.5333,276.106,142.312,276.106,142.312,13.1,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-257,8.5667,283.04,139.452,283.04,139.452,13.3,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-258,8.6,288.586,139.849,288.586,139.849,13.4,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-259,8.6333,289.972,140.817,289.972,140.817,13.5,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-260,8.6667,293.842,139.568,293.842,139.568,13.6,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-261,8.7,294.658,142.64,294.658,142.64,13.7,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-262,8.7333,298.685,144.681,298.685,144.681,13.8,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-263,8.7667,306.314,143.76,306.314,143.76,13.8,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-264,8.8,309.774,141.63,309.774,141.63,13.9,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-265,8.8333,318.891,140.83,318.891,140.83,13.9,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-266,8.8667,325.805,140.989,325.805,140.989,14.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-267,8.9,333.591,137.812,333.591,137.812,14.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-268,8.9333,339.618,137.033,339.618,137.033,14.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-269,8.9667,339.935,136.361,339.935,136.361,14.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-270,9.0,346.609,135.425,346.609,135.425,14.0,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-271,9.0333,347.394,139.079,347.394,139.079,13.9,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-272,9.0667,353.413,141.594,353.413,141.594,13.9,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-273,9.1,358.801,143.802,358.801,143.802,13.8,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-274,9.1333,362.701,144.87,362.701,144.87,13.7,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-275,9.1667,366.455,149.997,366.455,149.997,13.7,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-276,9.2,375.909,153.132,375.909,153.132,13.6,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-277,9.2333,381.323,149.565,381.323,149.565,13.5,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-278,9.2667,388.074,152.619,388.074,152.619,13.3,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-279,9.3,395.343,153.629,395.343,153.629,13.2,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-280,9.3333,394.596,153.012,394.596,153.012,13.1,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-281,9.3667,396.766,154.115,396.766,154.115,12.9,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-282,9.4,399.594,154.496,399.594,154.496,12.8,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-283,9.4333,401.771,156.74,401.771,156.74,12.6,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-284,9.4667,403.819,162.125,403.819,162.125,12.4,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-285,9.5,410.961,166.657,410.961,166.657,12.2,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-286,9.5333,417.675,171.785,417.675,171.785,12.1,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-287,9.5667,423.681,175.156,423.681,175.156,11.9,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-288,9.6,430.813,180.602,430.813,180.602,11.7,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-289,9.6333,431.941,183.691,431.941,183.691,11.5,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-290,9.6667,431.372,184.035,431.372,184.035,11.3,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-291,9.7,435.337,184.045,435.337,184.045,11.1,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-292,9.7333,433.32,186.978,433.32,186.978,10.9,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-293,9.7667,435.088,189.264,435.088,189.264,10.7,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-294,9.8,436.336,189.166,436.336,189.166,10.5,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-295,9.8333,440.033,195.146,440.033,195.146,10.3,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-296,9.8667,443.82,198.988,443.82,198.988,10.1,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-297,9.9,447.213,202.97,447.213,202.97,9.9,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-298,9.9333,451.472,209.341,451.472,209.341,9.7,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-299,9.9667,456.799,214.931,456.799,214.931,9.5,SQUARE,Phase 2: Circular Orbit & Platform Vibration,0,1
-300,10.0,320.0,332.0,320.0,332.0,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-301,10.0333,324.387,331.849,324.387,331.849,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-302,10.0667,328.701,331.41,328.701,331.41,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-303,10.1,332.874,330.716,332.874,330.716,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-304,10.1333,336.856,329.823,336.856,329.823,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-305,10.1667,340.615,328.798,340.615,328.798,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-306,10.2,344.145,327.714,344.145,327.714,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-307,10.2333,347.463,326.641,347.463,326.641,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-308,10.2667,350.608,325.642,350.608,325.642,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-309,10.3,353.636,324.759,353.636,324.759,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-310,10.3333,356.614,324.017,356.614,324.017,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-311,10.3667,359.615,323.413,359.615,323.413,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-312,10.4,362.703,322.923,362.703,322.923,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-313,10.4333,365.934,322.502,365.934,322.502,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-314,10.4667,369.344,322.087,369.344,322.087,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-315,10.5,372.946,321.608,372.946,321.608,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-316,10.5333,376.729,320.993,376.729,320.993,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-317,10.5667,380.659,320.179,380.659,320.179,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-318,10.6,384.683,319.114,384.683,319.114,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-319,10.6333,388.733,317.769,388.733,317.769,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-320,10.6667,392.734,316.135,392.734,316.135,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-321,10.7,396.614,314.23,396.614,314.23,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-322,10.7333,400.308,312.094,400.308,312.094,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-323,10.7667,403.769,309.785,403.769,309.785,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-324,10.8,406.969,307.372,406.969,307.372,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-325,10.8333,409.904,304.93,409.904,304.93,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-326,10.8667,412.596,302.53,412.596,302.53,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-327,10.9,415.087,300.233,415.087,300.233,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-328,10.9333,417.436,298.08,417.436,298.08,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-329,10.9667,419.713,296.093,419.713,296.093,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-330,11.0,421.987,294.267,421.987,294.267,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-331,11.0333,424.325,292.575,424.325,292.575,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-332,11.0667,426.779,290.971,426.779,290.971,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-333,11.1,429.382,289.391,429.382,289.391,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-334,11.1333,432.144,287.766,432.144,287.766,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-335,11.1667,435.053,286.025,435.053,286.025,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-336,11.2,438.07,284.107,438.07,284.107,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-337,11.2333,441.14,281.965,441.14,281.965,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-338,11.2667,444.195,279.573,444.195,279.573,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-339,11.3,447.161,276.929,447.161,276.929,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-340,11.3333,449.965,274.052,449.965,274.052,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-341,11.3667,452.547,270.988,452.547,270.988,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-342,11.4,454.861,267.797,454.861,267.797,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-343,11.4333,456.884,264.551,456.884,264.551,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-344,11.4667,458.619,261.326,458.619,261.326,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-345,11.5,460.088,258.191,460.088,258.191,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-346,11.5333,461.339,255.206,461.339,255.206,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-347,11.5667,462.433,252.411,462.433,252.411,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-348,11.6,463.44,249.823,463.44,249.823,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-349,11.6333,464.432,247.435,464.432,247.435,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-350,11.6667,465.474,245.217,465.474,245.217,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-351,11.7,466.616,243.12,466.616,243.12,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-352,11.7333,467.889,241.081,467.889,241.081,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-353,11.7667,469.3,239.028,469.3,239.028,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-354,11.8,470.832,236.894,470.832,236.894,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-355,11.8333,472.447,234.618,472.447,234.618,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-356,11.8667,474.087,232.158,474.087,232.158,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-357,11.9,475.683,229.49,475.683,229.49,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-358,11.9333,477.162,226.615,477.162,226.615,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-359,11.9667,478.453,223.559,478.453,223.559,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-360,12.0,479.498,220.368,479.498,220.368,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-361,12.0333,480.256,217.106,480.256,217.106,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-362,12.0667,480.709,213.845,480.709,213.845,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-363,12.1,480.861,210.662,480.861,210.662,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-364,12.1333,480.743,207.624,480.743,207.624,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-365,12.1667,480.403,204.788,480.403,204.788,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-366,12.2,479.906,202.191,479.906,202.191,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-367,12.2333,479.324,199.846,479.324,199.846,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-368,12.2667,478.729,197.743,478.729,197.743,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-369,12.3,478.185,195.849,478.185,195.849,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-370,12.3333,477.739,194.111,477.739,194.111,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-371,12.3667,477.421,192.463,477.421,192.463,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-372,12.4,477.236,190.835,477.236,190.835,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-373,12.4333,477.163,189.159,477.163,189.159,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-374,12.4667,477.162,187.377,477.162,187.377,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-375,12.5,477.173,185.447,477.173,185.447,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-376,12.5333,477.128,183.349,477.128,183.349,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-377,12.5667,476.954,181.089,476.954,181.089,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-378,12.6,476.583,178.693,476.583,178.693,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-379,12.6333,475.959,176.212,475.959,176.212,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-380,12.6667,475.046,173.708,475.046,173.708,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-381,12.7,473.83,171.257,473.83,171.257,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-382,12.7333,472.321,168.931,472.321,168.931,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-383,12.7667,470.552,166.797,470.552,166.797,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-384,12.8,468.576,164.909,468.576,164.909,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-385,12.8333,466.459,163.299,466.459,163.299,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-386,12.8667,464.276,161.975,464.276,161.975,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-387,12.9,462.098,160.924,462.098,160.924,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-388,12.9333,459.988,160.107,459.988,160.107,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-389,12.9667,457.992,159.469,457.992,159.469,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-390,13.0,456.137,158.942,456.137,158.942,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-391,13.0333,454.425,158.454,454.425,158.454,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-392,13.0667,452.833,157.938,452.833,157.938,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-393,13.1,451.318,157.335,451.318,157.335,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-394,13.1333,449.819,156.607,449.819,156.607,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-395,13.1667,448.268,155.737,448.268,155.737,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-396,13.2,446.593,154.73,446.593,154.73,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-397,13.2333,444.729,153.619,444.729,153.619,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-398,13.2667,442.622,152.452,442.622,152.452,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-399,13.3,440.241,151.295,440.241,151.295,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-400,13.3333,437.575,150.221,437.575,150.221,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-401,13.3667,434.639,149.302,434.639,149.302,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-402,13.4,431.47,148.602,431.47,148.602,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-403,13.4333,428.125,148.17,428.125,148.17,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-404,13.4667,424.672,148.033,424.672,148.033,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-405,13.5,421.186,148.196,421.186,148.196,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-406,13.5333,417.739,148.639,417.739,148.639,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-407,13.5667,414.392,149.32,414.392,149.32,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-408,13.6,411.189,150.18,411.189,150.18,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-409,13.6333,408.155,151.148,408.155,151.148,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-410,13.6667,405.287,152.152,405.287,152.152,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-411,13.7,402.56,153.123,402.56,153.123,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-412,13.7333,399.93,154.006,399.93,154.006,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-413,13.7667,397.334,154.761,397.334,154.761,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-414,13.8,394.703,155.376,394.703,155.376,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-415,13.8333,391.967,155.857,391.967,155.857,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-416,13.8667,389.062,156.239,389.062,156.239,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-417,13.9,385.939,156.572,385.939,156.572,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-418,13.9333,382.568,156.922,382.568,156.922,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-419,13.9667,378.945,157.361,378.945,157.361,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-420,14.0,375.088,157.958,375.088,157.958,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-421,14.0333,371.038,158.775,371.038,158.775,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-422,14.0667,366.853,159.855,366.853,159.855,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-423,14.1,362.605,161.223,362.605,161.223,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-424,14.1333,358.369,162.878,358.369,162.878,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-425,14.1667,354.215,164.794,354.215,164.794,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-426,14.2,350.204,166.926,350.204,166.926,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-427,14.2333,346.377,169.211,346.377,169.211,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-428,14.2667,342.754,171.577,342.754,171.577,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-429,14.3,339.331,173.949,339.331,173.949,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-430,14.3333,336.079,176.26,336.079,176.26,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-431,14.3667,332.951,178.453,332.951,178.453,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-432,14.4,329.884,180.495,329.884,180.495,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-433,14.4333,326.808,182.372,326.808,182.372,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-434,14.4667,323.652,184.096,323.652,184.096,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-435,14.5,320.357,185.7,320.357,185.7,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-436,14.5333,316.874,187.239,316.874,187.239,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-437,14.5667,313.18,188.778,313.18,188.778,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-438,14.6,309.271,190.388,309.271,190.388,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-439,14.6333,305.171,192.137,305.171,192.137,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-440,14.6667,300.923,194.082,300.923,194.082,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-441,14.7,296.589,196.265,296.589,196.265,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-442,14.7333,292.241,198.703,292.241,198.703,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-443,14.7667,287.953,201.393,287.953,201.393,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-444,14.8,283.795,204.304,283.795,204.304,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-445,14.8333,279.826,207.387,279.826,207.387,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-446,14.8667,276.084,210.577,276.084,210.577,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-447,14.9,272.584,213.799,272.584,213.799,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-448,14.9333,269.32,216.979,269.32,216.979,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-449,14.9667,266.258,220.05,266.258,220.05,13.0,SQUARE,Phase 3: Atmospheric Scintillation & Haze,0,1
-450,15.0,200.0,180.0,200.0,180.0,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-451,15.0333,202.667,181.167,202.667,181.167,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-452,15.0667,205.333,182.333,205.333,182.333,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-453,15.1,208.0,183.5,208.0,183.5,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-454,15.1333,210.667,184.667,210.667,184.667,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-455,15.1667,213.333,185.833,213.333,185.833,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-456,15.2,216.0,187.0,216.0,187.0,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-457,15.2333,218.667,188.167,218.667,188.167,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-458,15.2667,221.333,189.333,221.333,189.333,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-459,15.3,224.0,190.5,224.0,190.5,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-460,15.3333,226.667,191.667,226.667,191.667,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-461,15.3667,229.333,192.833,229.333,192.833,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-462,15.4,232.0,194.0,232.0,194.0,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-463,15.4333,234.667,195.167,234.667,195.167,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-464,15.4667,237.333,196.333,237.333,196.333,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-465,15.5,240.0,197.5,240.0,197.5,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-466,15.5333,242.667,198.667,242.667,198.667,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-467,15.5667,245.333,199.833,245.333,199.833,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-468,15.6,248.0,201.0,248.0,201.0,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-469,15.6333,250.667,202.167,250.667,202.167,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-470,15.6667,253.333,203.333,253.333,203.333,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-471,15.7,256.0,204.5,256.0,204.5,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-472,15.7333,258.667,205.667,258.667,205.667,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-473,15.7667,261.333,206.833,261.333,206.833,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-474,15.8,264.0,208.0,264.0,208.0,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-475,15.8333,266.667,209.167,266.667,209.167,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-476,15.8667,269.333,210.333,269.333,210.333,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-477,15.9,272.0,211.5,272.0,211.5,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-478,15.9333,274.667,212.667,274.667,212.667,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-479,15.9667,277.333,213.833,277.333,213.833,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-480,16.0,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-481,16.0333,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-482,16.0667,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-483,16.1,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-484,16.1333,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-485,16.1667,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-486,16.2,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-487,16.2333,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-488,16.2667,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-489,16.3,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-490,16.3333,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-491,16.3667,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-492,16.4,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-493,16.4333,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-494,16.4667,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-495,16.5,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-496,16.5333,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-497,16.5667,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-498,16.6,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-499,16.6333,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-500,16.6667,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-501,16.7,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-502,16.7333,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-503,16.7667,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-504,16.8,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-505,16.8333,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-506,16.8667,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-507,16.9,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-508,16.9333,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-509,16.9667,,,,,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,1,0
-510,17.0,360.0,250.0,360.0,250.0,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-511,17.0333,362.667,251.167,362.667,251.167,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-512,17.0667,365.333,252.333,365.333,252.333,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-513,17.1,368.0,253.5,368.0,253.5,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-514,17.1333,370.667,254.667,370.667,254.667,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-515,17.1667,373.333,255.833,373.333,255.833,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-516,17.2,376.0,257.0,376.0,257.0,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-517,17.2333,378.667,258.167,378.667,258.167,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-518,17.2667,381.333,259.333,381.333,259.333,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-519,17.3,384.0,260.5,384.0,260.5,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-520,17.3333,386.667,261.667,386.667,261.667,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-521,17.3667,389.333,262.833,389.333,262.833,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-522,17.4,392.0,264.0,392.0,264.0,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-523,17.4333,394.667,265.167,394.667,265.167,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-524,17.4667,397.333,266.333,397.333,266.333,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-525,17.5,400.0,267.5,400.0,267.5,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-526,17.5333,402.667,268.667,402.667,268.667,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-527,17.5667,405.333,269.833,405.333,269.833,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-528,17.6,408.0,271.0,408.0,271.0,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-529,17.6333,410.667,272.167,410.667,272.167,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-530,17.6667,413.333,273.333,413.333,273.333,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-531,17.7,416.0,274.5,416.0,274.5,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-532,17.7333,418.667,275.667,418.667,275.667,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-533,17.7667,421.333,276.833,421.333,276.833,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-534,17.8,424.0,278.0,424.0,278.0,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-535,17.8333,426.667,279.167,426.667,279.167,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-536,17.8667,429.333,280.333,429.333,280.333,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-537,17.9,432.0,281.5,432.0,281.5,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-538,17.9333,434.667,282.667,434.667,282.667,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-539,17.9667,437.333,283.833,437.333,283.833,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-540,18.0,440.0,285.0,440.0,285.0,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-541,18.0333,442.667,286.167,442.667,286.167,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-542,18.0667,445.333,287.333,445.333,287.333,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-543,18.1,448.0,288.5,448.0,288.5,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-544,18.1333,450.667,289.667,450.667,289.667,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-545,18.1667,453.333,290.833,453.333,290.833,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-546,18.2,456.0,292.0,456.0,292.0,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-547,18.2333,458.667,293.167,458.667,293.167,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-548,18.2667,461.333,294.333,461.333,294.333,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-549,18.3,464.0,295.5,464.0,295.5,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-550,18.3333,466.667,296.667,466.667,296.667,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-551,18.3667,469.333,297.833,469.333,297.833,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-552,18.4,472.0,299.0,472.0,299.0,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-553,18.4333,474.667,300.167,474.667,300.167,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-554,18.4667,477.333,301.333,477.333,301.333,10.0,SQUARE,Phase 4: Cloud Eclipse & Re-acquisition,0,1
-555,18.5,323.77,250.243,323.77,250.243,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-556,18.5333,331.493,255.644,331.493,255.644,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-557,18.5667,347.973,257.235,347.973,257.235,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-558,18.6,347.446,263.069,347.446,263.069,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-559,18.6333,349.411,262.935,349.411,262.935,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-560,18.6667,343.474,275.986,343.474,275.986,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-561,18.7,352.588,290.293,352.588,290.293,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-562,18.7333,357.27,304.712,357.27,304.712,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-563,18.7667,375.371,315.222,375.371,315.222,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-564,18.8,396.577,325.142,396.577,325.142,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-565,18.8333,401.643,328.321,401.643,328.321,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-566,18.8667,403.738,327.692,403.738,327.692,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-567,18.9,402.875,325.485,402.875,325.485,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-568,18.9333,403.655,330.643,403.655,330.643,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-569,18.9667,402.27,336.11,402.27,336.11,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-570,19.0,416.113,350.815,416.113,350.815,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-571,19.0333,433.241,357.456,433.241,357.456,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-572,19.0667,445.411,364.97,445.411,364.97,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-573,19.1,453.49,364.414,453.49,364.414,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-574,19.1333,452.673,357.712,452.673,357.712,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-575,19.1667,451.65,353.402,451.65,353.402,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-576,19.2,439.178,348.35,439.178,348.35,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-577,19.2333,452.293,352.888,452.293,352.888,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-578,19.2667,463.928,352.608,463.928,352.608,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-579,19.3,472.415,358.363,472.415,358.363,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-580,19.3333,488.435,360.284,488.435,360.284,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-581,19.3667,488.727,358.716,488.727,358.716,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-582,19.4,488.425,350.088,488.425,350.088,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-583,19.4333,480.072,337.532,480.072,337.532,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-584,19.4667,478.051,332.418,478.051,332.418,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-585,19.5,482.962,321.916,482.962,321.916,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-586,19.5333,492.43,319.48,492.43,319.48,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-587,19.5667,504.975,317.322,504.975,317.322,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-588,19.6,509.811,316.395,509.811,316.395,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-589,19.6333,510.234,317.234,510.234,317.234,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-590,19.6667,507.366,303.035,507.366,303.035,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-591,19.7,500.607,290.889,500.607,290.889,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-592,19.7333,494.078,272.816,494.078,272.816,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-593,19.7667,501.147,259.403,501.147,259.403,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-594,19.8,504.842,250.281,504.842,250.281,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-595,19.8333,515.543,248.14,515.543,248.14,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-596,19.8667,519.465,244.625,519.465,244.625,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-597,19.9,514.155,243.075,514.155,243.075,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-598,19.9333,509.178,234.18,509.178,234.18,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-599,19.9667,501.909,221.517,501.909,221.517,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-600,20.0,494.128,205.691,494.128,205.691,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-601,20.0333,497.244,191.263,497.244,191.263,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-602,20.0667,504.461,186.582,504.461,186.582,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-603,20.1,511.769,175.435,511.769,175.435,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-604,20.1333,511.518,168.647,511.518,168.647,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-605,20.1667,509.431,169.021,509.431,169.021,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-606,20.2,498.833,163.982,498.833,163.982,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-607,20.2333,486.591,157.511,486.591,157.511,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-608,20.2667,473.369,150.483,473.369,150.483,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-609,20.3,482.552,139.219,482.552,139.219,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-610,20.3333,484.898,128.344,484.898,128.344,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-611,20.3667,484.796,122.674,484.796,122.674,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-612,20.4,489.843,123.275,489.843,123.275,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-613,20.4333,477.527,123.994,477.527,123.994,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-614,20.4667,467.57,127.945,467.57,127.945,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-615,20.5,459.761,130.329,459.761,130.329,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-616,20.5333,445.07,124.405,445.07,124.405,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-617,20.5667,446.332,120.956,446.332,120.956,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-618,20.6,448.389,113.084,448.389,113.084,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-619,20.6333,452.715,113.001,452.715,113.001,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-620,20.6667,447.847,113.9,447.847,113.9,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-621,20.7,433.842,119.094,433.842,119.094,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-622,20.7333,420.481,132.218,420.481,132.218,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-623,20.7667,413.958,144.392,413.958,144.392,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-624,20.8,402.626,145.323,402.626,145.323,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-625,20.8333,399.57,144.287,399.57,144.287,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-626,20.8667,409.371,146.191,409.371,146.191,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-627,20.9,409.951,145.338,409.951,145.338,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-628,20.9333,397.272,152.512,397.272,152.512,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-629,20.9667,384.449,161.915,384.449,161.915,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-630,21.0,364.793,173.379,364.793,173.379,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-631,21.0333,352.631,190.175,352.631,190.175,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-632,21.0667,346.474,199.475,346.474,199.475,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-633,21.1,343.714,206.759,343.714,206.759,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-634,21.1333,350.966,211.34,350.966,211.34,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-635,21.1667,349.726,212.862,349.726,212.862,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-636,21.2,340.522,213.51,340.522,213.51,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-637,21.2333,327.71,226.98,327.71,226.98,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-638,21.2667,309.172,240.648,309.172,240.648,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-639,21.3,301.993,259.485,301.993,259.485,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-640,21.3333,290.762,271.284,290.762,271.284,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-641,21.3667,292.569,278.856,292.569,278.856,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-642,21.4,293.656,288.09,293.656,288.09,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-643,21.4333,290.518,284.911,290.518,284.911,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-644,21.4667,281.558,290.942,281.558,290.942,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-645,21.5,268.039,297.177,268.039,297.177,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-646,21.5333,253.715,305.469,253.715,305.469,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-647,21.5667,235.657,320.82,235.657,320.82,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-648,21.6,238.392,333.385,238.392,333.385,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-649,21.6333,237.48,335.534,237.48,335.534,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-650,21.6667,241.064,345.862,241.064,345.862,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-651,21.7,238.829,346.844,238.829,346.844,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-652,21.7333,227.833,342.572,227.833,342.572,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-653,21.7667,217.462,346.828,217.462,346.828,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-654,21.8,202.297,344.541,202.297,344.541,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-655,21.8333,189.881,355.336,189.881,355.336,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-656,21.8667,186.312,357.953,186.312,357.953,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-657,21.9,194.857,362.477,194.857,362.477,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-658,21.9333,192.677,370.938,192.677,370.938,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-659,21.9667,191.092,366.447,191.092,366.447,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-660,22.0,180.935,356.809,180.935,356.809,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-661,22.0333,172.986,350.571,172.986,350.571,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-662,22.0667,163.6,345.372,163.6,345.372,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-663,22.1,147.648,345.354,147.648,345.354,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-664,22.1333,152.165,345.664,152.165,345.664,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-665,22.1667,158.546,349.72,158.546,349.72,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-666,22.2,159.047,345.911,159.047,345.911,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-667,22.2333,156.175,346.075,156.175,346.075,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-668,22.2667,152.009,331.539,152.009,331.539,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-669,22.3,143.265,316.932,143.265,316.932,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-670,22.3333,128.317,304.288,128.317,304.288,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-671,22.3667,126.993,299.635,126.993,299.635,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-672,22.4,129.392,295.913,129.392,295.913,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-673,22.4333,135.672,291.281,135.672,291.281,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-674,22.4667,140.118,290.581,140.118,290.581,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-675,22.5,144.791,280.529,144.791,280.529,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-676,22.5333,139.413,272.967,139.413,272.967,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-677,22.5667,129.889,259.252,129.889,259.252,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-678,22.6,122.147,242.954,122.147,242.954,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-679,22.6333,120.316,229.066,120.316,229.066,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-680,22.6667,128.048,217.708,128.048,217.708,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-681,22.7,135.561,221.763,135.561,221.763,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-682,22.7333,143.209,217.452,143.209,217.452,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-683,22.7667,138.866,209.944,138.866,209.944,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-684,22.8,137.607,201.762,137.607,201.762,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-685,22.8333,136.519,190.158,136.519,190.158,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-686,22.8667,123.589,174.426,123.589,174.426,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-687,22.9,128.025,159.919,128.025,159.919,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-688,22.9333,134.1,150.362,134.1,150.362,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-689,22.9667,143.671,148.488,143.671,148.488,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-690,23.0,159.105,151.432,159.105,151.432,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-691,23.0333,163.297,150.837,163.297,150.837,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-692,23.0667,157.467,148.361,157.467,148.361,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-693,23.1,150.604,140.379,150.604,140.379,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-694,23.1333,151.226,133.121,151.226,133.121,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-695,23.1667,156.808,123.411,156.808,123.411,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-696,23.2,161.592,114.825,161.592,114.825,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-697,23.2333,180.672,109.805,180.672,109.805,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-698,23.2667,187.395,117.572,187.395,117.572,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-699,23.3,192.155,125.77,192.155,125.77,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-700,23.3333,187.407,124.949,187.407,124.949,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-701,23.3667,186.32,130.816,186.32,130.816,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-702,23.4,191.144,131.679,191.144,131.679,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-703,23.4333,195.307,122.652,195.307,122.652,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-704,23.4667,203.367,120.508,203.367,120.508,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-705,23.5,226.639,123.076,226.639,123.076,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-706,23.5333,234.35,128.756,234.35,128.756,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-707,23.5667,242.238,136.715,242.238,136.715,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-708,23.6,239.31,151.071,239.31,151.071,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-709,23.6333,235.367,158.605,235.367,158.605,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-710,23.6667,240.434,162.376,240.434,162.376,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-711,23.7,244.654,165.699,244.654,165.699,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-712,23.7333,263.407,166.488,263.407,166.488,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-713,23.7667,277.26,169.319,277.26,169.319,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-714,23.8,290.895,176.497,290.895,176.497,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-715,23.8333,292.034,190.558,292.034,190.558,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-716,23.8667,288.858,204.11,288.858,204.11,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-717,23.9,291.754,220.975,291.754,220.975,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-718,23.9333,295.104,232.761,295.104,232.761,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-719,23.9667,307.751,236.647,307.751,236.647,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-720,24.0,323.54,240.649,323.54,240.649,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-721,24.0333,338.607,242.866,338.607,242.866,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-722,24.0667,347.371,246.242,347.371,246.242,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-723,24.1,349.072,260.666,349.072,260.666,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-724,24.1333,346.117,277.356,346.117,277.356,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-725,24.1667,348.3,290.747,348.3,290.747,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-726,24.2,349.179,302.904,349.179,302.904,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-727,24.2333,369.628,306.905,369.628,306.905,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-728,24.2667,377.147,313.116,377.147,313.116,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-729,24.3,392.814,312.133,392.814,312.133,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-730,24.3333,398.066,315.963,398.066,315.963,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-731,24.3667,404.338,322.915,404.338,322.915,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-732,24.4,400.457,327.877,400.457,327.877,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-733,24.4333,400.516,344.098,400.516,344.098,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-734,24.4667,404.939,353.177,404.939,353.177,12.0,SQUARE,Phase 5: Figure-8 with Camera Jitter,0,1
-735,24.5,350.0,343.0,350.0,343.0,14.0,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-736,24.5333,357.529,340.353,357.529,340.353,14.0,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-737,24.5667,364.52,337.131,364.52,337.131,13.9,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-738,24.6,370.809,333.459,370.809,333.459,13.9,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-739,24.6333,376.291,329.517,376.291,329.517,13.9,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-740,24.6667,380.932,325.51,380.932,325.51,13.8,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-741,24.7,384.779,321.642,384.779,321.642,13.8,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-742,24.7333,387.948,318.083,387.948,318.083,13.8,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-743,24.7667,390.61,314.949,390.61,314.949,13.8,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-744,24.8,392.965,312.283,392.965,312.283,13.7,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-745,24.8333,395.209,310.055,395.209,310.055,13.7,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-746,24.8667,397.509,308.164,397.509,308.164,13.7,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-747,24.9,399.979,306.459,399.979,306.459,13.6,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-748,24.9333,402.661,304.768,402.661,304.768,13.6,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-749,24.9667,405.525,302.919,405.525,302.919,13.6,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-750,25.0,408.476,300.778,408.476,300.778,13.5,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-751,25.0333,411.374,298.264,411.374,298.264,13.5,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-752,25.0667,414.055,295.369,414.055,295.369,13.5,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-753,25.1,416.367,292.155,416.367,292.155,13.5,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-754,25.1333,418.192,288.748,418.192,288.748,13.4,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-755,25.1667,419.473,285.32,419.473,285.32,13.4,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-756,25.2,420.223,282.058,420.223,282.058,13.4,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-757,25.2333,420.526,279.136,420.526,279.136,13.3,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-758,25.2667,420.53,276.69,420.53,276.69,13.3,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-759,25.3,420.423,274.79,420.423,274.79,13.3,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-760,25.3333,420.41,273.436,420.41,273.436,13.2,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-761,25.3667,420.678,272.55,420.678,272.55,13.2,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-762,25.4,421.37,271.992,421.37,271.992,13.2,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-763,25.4333,422.567,271.576,422.567,271.576,13.2,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-764,25.4667,424.269,271.105,424.269,271.105,13.1,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-765,25.5,426.404,270.393,426.404,270.393,13.1,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-766,25.5333,428.834,269.295,428.834,269.295,13.1,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-767,25.5667,431.376,267.732,431.376,267.732,13.0,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-768,25.6,433.832,265.696,433.832,265.696,13.0,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-769,25.6333,436.021,263.252,436.021,263.252,13.0,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-770,25.6667,437.799,260.526,437.799,260.526,12.9,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-771,25.7,439.087,257.68,439.087,257.68,12.9,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-772,25.7333,439.876,254.889,439.876,254.889,12.9,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-773,25.7667,440.226,252.308,440.226,252.308,12.8,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-774,25.8,440.257,250.048,440.257,250.048,12.8,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-775,25.8333,440.12,248.152,440.12,248.152,12.8,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-776,25.8667,439.975,246.594,439.975,246.594,12.8,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-777,25.9,439.958,245.273,439.958,245.273,12.7,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-778,25.9333,440.158,244.035,440.158,244.035,12.7,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-779,25.9667,440.597,242.692,440.597,242.692,12.7,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-780,26.0,441.221,241.05,441.221,241.05,12.6,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-781,26.0333,441.909,238.942,441.909,238.942,12.6,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-782,26.0667,442.48,236.252,442.48,236.252,12.6,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-783,26.1,442.727,232.931,442.727,232.931,12.5,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-784,26.1333,442.436,229.008,442.436,229.008,12.5,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-785,26.1667,441.425,224.583,441.425,224.583,12.5,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-786,26.2,439.563,219.815,439.563,219.815,12.5,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-787,26.2333,436.789,214.892,436.789,214.892,12.4,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-788,26.2667,433.124,210.007,433.124,210.007,12.4,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-789,26.3,428.657,205.327,428.657,205.327,12.4,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-790,26.3333,423.537,200.968,423.537,200.968,12.3,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-791,26.3667,417.943,196.977,417.943,196.977,12.3,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-792,26.4,412.059,193.331,412.059,193.331,12.3,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-793,26.4333,406.043,189.938,406.043,189.938,12.2,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-794,26.4667,400.002,186.655,400.002,186.655,12.2,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-795,26.5,393.977,183.315,393.977,183.315,12.2,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-796,26.5333,387.941,179.754,387.941,179.754,12.2,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-797,26.5667,381.8,175.843,381.8,175.843,12.1,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-798,26.6,375.417,171.507,375.417,171.507,12.1,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-799,26.6333,368.632,166.742,368.632,166.742,12.1,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-800,26.6667,361.294,161.623,361.294,161.623,12.0,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-801,26.7,353.291,156.287,353.291,156.287,12.0,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-802,26.7333,344.569,150.923,344.569,150.923,12.0,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-803,26.7667,335.15,145.741,335.15,145.741,11.9,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-804,26.8,325.131,140.945,325.131,140.945,11.9,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-805,26.8333,314.679,136.701,314.679,136.701,11.9,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-806,26.8667,304.008,133.118,304.008,133.118,11.8,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-807,26.9,293.353,130.231,293.353,130.231,11.8,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-808,26.9333,282.944,128.0,282.944,128.0,11.8,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-809,26.9667,272.969,126.32,272.969,126.32,11.8,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-810,27.0,263.561,125.039,263.561,125.039,11.7,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-811,27.0333,254.778,123.986,254.778,123.986,11.7,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-812,27.0667,246.602,123.001,246.602,123.001,11.7,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-813,27.1,238.953,121.96,238.953,121.96,11.6,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-814,27.1333,231.705,120.799,231.705,120.799,11.6,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-815,27.1667,224.713,119.525,224.713,119.525,11.6,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-816,27.2,217.844,118.217,217.844,118.217,11.5,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-817,27.2333,211.003,117.015,211.003,117.015,11.5,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-818,27.2667,204.155,116.096,204.155,116.096,11.5,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-819,27.3,197.335,115.651,197.335,115.651,11.5,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-820,27.3333,190.647,115.853,190.647,115.853,11.4,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-821,27.3667,184.251,116.828,184.251,116.828,11.4,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-822,27.4,178.345,118.639,178.345,118.639,11.4,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-823,27.4333,173.131,121.27,173.131,121.27,11.3,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-824,27.4667,168.794,124.632,168.794,124.632,11.3,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-825,27.5,165.463,128.575,165.463,128.575,11.3,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-826,27.5333,163.204,132.908,163.204,132.908,11.2,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-827,27.5667,162.002,137.43,162.002,137.43,11.2,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-828,27.6,161.764,141.955,161.764,141.955,11.2,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-829,27.6333,162.336,146.347,162.336,146.347,11.2,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-830,27.6667,163.526,150.529,163.526,150.529,11.1,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-831,27.7,165.127,154.5,165.127,154.5,11.1,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-832,27.7333,166.953,158.33,166.953,158.33,11.1,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-833,27.7667,168.862,162.143,168.862,162.143,11.0,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-834,27.8,170.777,166.096,170.777,166.096,11.0,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-835,27.8333,172.691,170.352,172.691,170.352,11.0,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-836,27.8667,174.667,175.048,174.667,175.048,10.9,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-837,27.9,176.821,180.272,176.821,180.272,10.9,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-838,27.9333,179.3,186.043,179.3,186.043,10.9,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-839,27.9667,182.251,192.306,182.251,192.306,10.8,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-840,28.0,185.797,198.936,185.797,198.936,10.8,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-841,28.0333,190.008,205.754,190.008,205.754,10.8,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-842,28.0667,194.884,212.552,194.884,212.552,10.8,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-843,28.1,200.353,219.122,200.353,219.122,10.7,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-844,28.1333,206.274,225.284,206.274,225.284,10.7,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-845,28.1667,212.454,230.914,212.454,230.914,10.7,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-846,28.2,218.674,235.957,218.674,235.957,10.6,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-847,28.2333,224.719,240.435,224.719,240.435,10.6,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-848,28.2667,230.407,244.44,230.407,244.44,10.6,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-849,28.3,235.612,248.116,235.612,248.116,10.5,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-850,28.3333,240.28,251.633,240.28,251.633,10.5,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-851,28.3667,244.437,255.164,244.437,255.164,10.5,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-852,28.4,248.179,258.846,248.179,258.846,10.5,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-853,28.4333,251.654,262.766,251.654,262.766,10.4,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-854,28.4667,255.037,266.939,255.037,266.939,10.4,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-855,28.5,258.503,271.309,258.503,271.309,10.4,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-856,28.5333,262.193,275.755,262.193,275.755,10.3,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-857,28.5667,266.196,280.11,266.196,280.11,10.3,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-858,28.6,270.532,284.188,270.532,284.188,10.3,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-859,28.6333,275.151,287.811,275.151,287.811,10.2,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-860,28.6667,279.937,290.84,279.937,290.84,10.2,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-861,28.7,284.735,293.196,284.735,293.196,10.2,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-862,28.7333,289.37,294.874,289.37,294.874,10.2,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-863,28.7667,293.68,295.944,293.68,295.944,10.1,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-864,28.8,297.543,296.544,297.543,296.544,10.1,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-865,28.8333,300.9,296.853,300.9,296.853,10.1,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-866,28.8667,303.764,297.074,303.764,297.074,10.0,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-867,28.9,306.223,297.395,306.223,297.395,10.0,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-868,28.9333,308.43,297.966,308.43,297.966,10.0,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-869,28.9667,310.58,298.876,310.58,298.876,9.9,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-870,29.0,312.883,300.141,312.883,300.141,9.9,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-871,29.0333,315.534,301.704,315.534,301.704,9.9,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-872,29.0667,318.686,303.448,318.686,303.448,9.8,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-873,29.1,322.426,305.212,322.426,305.212,9.8,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-874,29.1333,326.769,306.823,326.769,306.823,9.8,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-875,29.1667,331.652,308.124,331.652,308.124,9.8,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-876,29.2,336.95,309.002,336.95,309.002,9.7,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-877,29.2333,342.497,309.404,342.497,309.404,9.7,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-878,29.2667,348.112,309.354,348.112,309.354,9.7,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-879,29.3,353.63,308.946,353.63,308.946,9.6,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-880,29.3333,358.929,308.33,358.929,308.33,9.6,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-881,29.3667,363.947,307.696,363.947,307.696,9.6,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-882,29.4,368.693,307.238,368.693,307.238,9.5,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-883,29.4333,373.247,307.13,373.247,307.13,9.5,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-884,29.4667,377.739,307.496,377.739,307.496,9.5,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-885,29.5,382.334,308.395,382.334,308.395,9.5,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-886,29.5333,387.2,309.806,387.2,309.806,9.4,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-887,29.5667,392.478,311.639,392.478,311.639,9.4,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-888,29.6,398.258,313.743,398.258,313.743,9.4,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-889,29.6333,404.559,315.934,404.559,315.934,9.3,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-890,29.6667,411.324,318.02,411.324,318.02,9.3,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-891,29.7,418.423,319.833,418.423,319.833,9.3,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-892,29.7333,425.667,321.255,425.667,321.255,9.2,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-893,29.7667,432.836,322.233,432.836,322.233,9.2,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-894,29.8,439.705,322.787,439.705,322.787,9.2,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-895,29.8333,446.075,323.008,446.075,323.008,9.2,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-896,29.8667,451.798,323.036,451.798,323.036,9.1,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-897,29.9,456.797,323.042,456.797,323.042,9.1,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-898,29.9333,461.067,323.195,461.067,323.195,9.1,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
-899,29.9667,464.674,323.635,464.674,323.635,9.0,SQUARE,Phase 6: 10% Salt & Pepper + Rain Stress,0,1
+frame_idx,timestamp_s,ground_truth_u,ground_truth_v,occulted
+0,0.0,319.303,243.147,0
+1,0.0333,327.077,249.305,0
+2,0.0667,332.599,256.911,0
+3,0.1,338.382,262.695,0
+4,0.1333,345.452,267.104,0
+5,0.1667,348.969,274.908,0
+6,0.2,353.391,280.086,0
+7,0.2333,358.558,285.529,0
+8,0.2667,360.814,294.085,0
+9,0.3,368.237,299.544,0
+10,0.3333,371.233,309.145,0
+11,0.3667,378.445,316.617,0
+12,0.4,385.998,323.054,0
+13,0.4333,392.573,328.611,0
+14,0.4667,399.439,334.669,0
+15,0.5,404.963,338.208,0
+16,0.5333,409.591,343.264,0
+17,0.5667,413.216,345.201,0
+18,0.6,414.78,348.852,0
+19,0.6333,420.296,350.102,0
+20,0.6667,422.938,354.509,0
+21,0.7,427.287,357.513,0
+22,0.7333,431.977,361.508,0
+23,0.7667,437.532,364.116,0
+24,0.8,444.966,366.11,0
+25,0.8333,450.815,370.02,0
+26,0.8667,455.118,370.92,0
+27,0.9,459.734,373.399,0
+28,0.9333,461.831,373.097,0
+29,0.9667,465.279,371.886,0
+30,1.0,466.704,367.83,0
+31,1.0333,469.46,365.805,0
+32,1.0667,473.326,364.198,0
+33,1.1,477.242,361.961,0
+34,1.1333,481.58,360.844,0
+35,1.1667,484.32,359.102,0
+36,1.2,489.304,355.952,0
+37,1.2333,493.311,355.197,0
+38,1.2667,496.755,351.141,0
+39,1.3,499.509,349.041,0
+40,1.3333,501.677,344.503,0
+41,1.3667,503.823,340.036,0
+42,1.4,503.016,332.686,0
+43,1.4333,504.178,329.111,0
+44,1.4667,506.213,321.963,0
+45,1.5,508.803,313.704,0
+46,1.5333,510.192,308.208,0
+47,1.5667,513.075,301.315,0
+48,1.6,516.525,295.641,0
+49,1.6333,519.804,288.753,0
+50,1.6667,520.127,282.746,0
+51,1.7,521.051,278.049,0
+52,1.7333,520.082,271.163,0
+53,1.7667,520.451,265.552,0
+54,1.8,517.901,258.882,0
+55,1.8333,517.085,250.53,0
+56,1.8667,516.653,243.103,0
+57,1.9,517.636,235.13,0
+58,1.9333,518.276,225.922,0
+59,1.9667,519.228,218.73,0
+60,2.0,520.247,209.965,0
+61,2.0333,520.87,203.002,0
+62,2.0667,520.335,197.413,0
+63,2.1,518.827,190.382,0
+64,2.1333,516.511,185.595,0
+65,2.1667,514.706,179.46,0
+66,2.2,511.376,173.886,0
+67,2.2333,507.572,168.69,0
+68,2.2667,507.96,163.345,0
+69,2.3,504.907,157.084,0
+70,2.3333,505.806,149.899,0
+71,2.3667,503.984,144.734,0
+72,2.4,504.069,138.933,0
+73,2.4333,501.569,133.279,0
+74,2.4667,499.073,128.288,0
+75,2.5,495.037,123.687,0
+76,2.5333,491.47,122.26,0
+77,2.5667,485.603,119.44,0
+78,2.6,483.585,118.391,0
+79,2.6333,477.96,119.002,0
+80,2.6667,476.884,116.029,0
+81,2.7,472.062,113.766,0
+82,2.7333,470.07,112.425,0
+83,2.7667,467.044,111.9,0
+84,2.8,465.046,109.721,0
+85,2.8333,461.927,109.347,0
+86,2.8667,457.5,109.782,0
+87,2.9,452.52,110.371,0
+88,2.9333,446.333,110.193,0
+89,2.9667,442.145,112.231,0
+90,3.0,434.31,114.834,0
+91,3.0333,429.299,118.485,0
+92,3.0667,424.544,123.035,0
+93,3.1,420.345,126.254,0
+94,3.1333,418.492,130.987,0
+95,3.1667,416.257,134.363,0
+96,3.2,411.568,137.453,0
+97,3.2333,407.754,142.373,0
+98,3.2667,401.644,144.696,0
+99,3.3,396.115,148.726,0
+100,3.3333,387.678,153.474,0
+101,3.3667,380.843,158.475,0
+102,3.4,376.146,165.607,0
+103,3.4333,369.077,172.987,0
+104,3.4667,364.14,180.06,0
+105,3.5,361.192,188.555,0
+106,3.5333,356.859,195.857,0
+107,3.5667,352.004,203.859,0
+108,3.6,348.146,209.861,0
+109,3.6333,343.408,215.534,0
+110,3.6667,337.583,222.826,0
+111,3.7,328.469,230.26,0
+112,3.7333,322.385,235.29,0
+113,3.7667,315.243,241.829,0
+114,3.8,308.702,247.531,0
+115,3.8333,302.91,255.541,0
+116,3.8667,297.412,264.168,0
+117,3.9,293.505,271.428,0
+118,3.9333,288.57,281.318,0
+119,3.9667,285.387,289.25,0
+120,4.0,280.771,293.821,0
+121,4.0333,277.806,302.384,0
+122,4.0667,270.255,308.147,0
+123,4.1,262.656,313.686,0
+124,4.1333,254.392,319.724,0
+125,4.1667,249.152,323.948,0
+126,4.2,243.043,327.442,0
+127,4.2333,236.685,331.5,0
+128,4.2667,234.044,336.16,0
+129,4.3,230.375,341.959,0
+130,4.3333,226.632,346.803,0
+131,4.3667,223.505,350.64,0
+132,4.4,219.36,356.579,0
+133,4.4333,214.423,360.285,0
+134,4.4667,209.467,363.85,0
+135,4.5,203.418,367.609,0
+136,4.5333,196.102,367.063,0
+137,4.5667,191.377,368.188,0
+138,4.6,187.39,368.126,0
+139,4.6333,183.09,369.744,0
+140,4.6667,178.381,366.334,0
+141,4.7,176.805,367.506,0
+142,4.7333,172.94,367.371,0
+143,4.7667,172.359,366.86,0
+144,4.8,168.732,366.582,0
+145,4.8333,165.445,366.841,0
+146,4.8667,161.277,365.188,0
+147,4.9,156.034,364.114,0
+148,4.9333,151.466,361.888,0
+149,4.9667,147.264,358.454,0
+150,5.0,143.967,353.385,0
+151,5.0333,140.958,349.486,0
+152,5.0667,140.401,344.756,0
+153,5.1,139.343,338.624,0
+154,5.1333,137.386,332.458,0
+155,5.1667,134.896,328.877,0
+156,5.2,134.74,322.7,0
+157,5.2333,132.749,317.719,0
+158,5.2667,130.086,314.306,0
+159,5.3,127.802,307.776,0
+160,5.3333,124.914,303.2,0
+161,5.3667,122.156,296.157,0
+162,5.4,120.475,289.117,0
+163,5.4333,119.763,282.144,0
+164,5.4667,121.629,275.193,0
+165,5.5,121.168,267.271,0
+166,5.5333,122.006,257.798,0
+167,5.5667,123.326,249.21,0
+168,5.6,122.816,244.051,0
+169,5.6333,121.25,236.464,0
+170,5.6667,121.476,229.116,0
+171,5.7,120.833,223.257,0
+172,5.7333,119.448,215.902,0
+173,5.7667,118.9,210.696,0
+174,5.8,119.056,205.57,0
+175,5.8333,120.505,196.01,0
+176,5.8667,122.135,189.904,0
+177,5.9,124.77,184.073,0
+178,5.9333,128.543,176.159,0
+179,5.9667,130.549,169.634,0
+180,6.0,132.281,162.996,0
+181,6.0333,134.468,155.24,0
+182,6.0667,134.092,149.834,0
+183,6.1,135.144,145.374,0
+184,6.1333,137.14,140.439,0
+185,6.1667,137.976,137.569,0
+186,6.2,139.197,134.411,0
+187,6.2333,143.119,131.479,0
+188,6.2667,147.311,127.498,0
+189,6.3,152.487,123.438,0
+190,6.3333,155.982,121.867,0
+191,6.3667,160.594,117.283,0
+192,6.4,163.323,115.223,0
+193,6.4333,166.665,110.549,0
+194,6.4667,167.815,108.411,0
+195,6.5,171.175,108.86,0
+196,6.5333,171.548,108.358,0
+197,6.5667,176.584,108.434,0
+198,6.6,179.399,108.992,0
+199,6.6333,184.922,112.347,0
+200,6.6667,191.274,111.71,0
+201,6.7,198.207,113.714,0
+202,6.7333,204.101,118.182,0
+203,6.7667,208.197,120.178,0
+204,6.8,212.884,120.961,0
+205,6.8333,216.693,122.968,0
+206,6.8667,219.055,125.004,0
+207,6.9,222.325,128.558,0
+208,6.9333,226.079,131.163,0
+209,6.9667,229.351,137.466,0
+210,7.0,235.727,141.533,0
+211,7.0333,242.224,148.355,0
+212,7.0667,248.788,154.13,0
+213,7.1,254.518,160.323,0
+214,7.1333,262.819,166.357,0
+215,7.1667,268.54,172.76,0
+216,7.2,273.112,179.022,0
+217,7.2333,279.022,183.921,0
+218,7.2667,281.189,192.357,0
+219,7.3,286.165,197.17,0
+220,7.3333,290.059,203.283,0
+221,7.3667,294.085,209.213,0
+222,7.4,300.645,216.029,0
+223,7.4333,307.599,223.205,0
+224,7.4667,314.855,230.265,0
+225,7.5,322.039,239.524,0
+226,7.5333,329.558,247.226,0
+227,7.5667,333.619,257.01,0
+228,7.6,339.299,264.322,0
+229,7.6333,343.903,272.074,0
+230,7.6667,348.068,276.34,0
+231,7.7,350.887,283.598,0
+232,7.7333,356.116,289.34,0
+233,7.7667,361.232,295.823,0
+234,7.8,367.165,300.084,0
+235,7.8333,373.629,305.554,0
+236,7.8667,380.991,311.53,0
+237,7.9,388.193,319.32,0
+238,7.9333,392.752,325.999,0
+239,7.9667,398.269,330.811,0
+240,8.0,404.432,337.884,0
+241,8.0333,407.105,342.316,0
+242,8.0667,411.079,347.426,0
+243,8.1,413.242,353.491,0
+244,8.1333,417.466,355.913,0
+245,8.1667,423.016,357.192,0
+246,8.2,429.203,359.532,0
+247,8.2333,435.086,361.745,0
+248,8.2667,439.96,361.923,0
+249,8.3,445.998,364.575,0
+250,8.3333,450.86,364.455,0
+251,8.3667,455.66,368.094,0
+252,8.4,459.529,370.075,0
+253,8.4333,461.957,369.414,0
+254,8.4667,462.424,371.25,0
+255,8.5,464.905,372.193,0
+256,8.5333,468.848,370.865,0
+257,8.5667,472.879,368.686,0
+258,8.6,477.222,366.557,0
+259,8.6333,482.772,363.343,0
+260,8.6667,487.35,361.405,0
+261,8.7,491.032,355.537,0
+262,8.7333,494.312,352.739,0
+263,8.7667,497.508,348.937,0
+264,8.8,499.835,343.686,0
+265,8.8333,500.859,340.864,0
+266,8.8667,500.975,338.177,0
+267,8.9,503.055,334.834,0
+268,8.9333,502.887,330.108,0
+269,8.9667,504.445,324.731,0
+270,9.0,508.176,319.244,0
+271,9.0333,511.645,310.924,0
+272,9.0667,516.381,304.57,0
+273,9.1,516.459,295.565,0
+274,9.1333,518.025,290.432,0
+275,9.1667,519.198,284.077,0
+276,9.2,519.383,276.007,0
+277,9.2333,519.278,267.109,0
+278,9.2667,517.858,261.458,0
+279,9.3,515.886,255.292,0
+280,9.3333,517.728,249.079,0
+281,9.3667,517.561,242.447,0
+282,9.4,518.987,238.215,0
+283,9.4333,518.503,229.617,0
+284,9.4667,521.873,222.146,0
+285,9.5,521.25,214.288,0
+286,9.5333,520.427,206.289,0
+287,9.5667,519.988,197.001,0
+288,9.6,516.845,189.933,0
+289,9.6333,514.757,184.157,0
+290,9.6667,511.633,176.986,0
+291,9.7,509.236,171.046,0
+292,9.7333,508.88,165.901,0
+293,9.7667,506.721,159.662,0
+294,9.8,506.375,157.302,0
+295,9.8333,505.43,151.718,0
+296,9.8667,505.092,147.511,0
+297,9.9,504.333,142.049,0
+298,9.9333,503.362,136.989,0
+299,9.9667,498.261,132.022,0
+300,10.0,493.069,128.405,0
+301,10.0333,489.653,121.393,0
+302,10.0667,485.343,117.997,0
+303,10.1,482.308,117.492,0
+304,10.1333,478.118,113.759,0
+305,10.1667,475.074,112.565,0
+306,10.2,473.498,111.741,0
+307,10.2333,472.287,111.179,0
+308,10.2667,469.061,112.755,0
+309,10.3,465.47,111.271,0
+310,10.3333,462.777,112.315,0
+311,10.3667,458.318,112.469,0
+312,10.4,451.675,112.62,0
+313,10.4333,444.674,113.12,0
+314,10.4667,440.565,114.48,0
+315,10.5,433.967,113.459,0
+316,10.5333,430.433,116.675,0
+317,10.5667,426.184,119.56,0
+318,10.6,423.238,122.423,0
+319,10.6333,420.838,128.943,0
+320,10.6667,415.53,132.887,0
+321,10.7,410.363,137.096,0
+322,10.7333,407.108,143.515,0
+323,10.7667,399.642,148.418,0
+324,10.8,392.493,152.71,0
+325,10.8333,387.197,158.303,0
+326,10.8667,378.887,162.965,0
+327,10.9,375.536,168.259,0
+328,10.9333,369.589,172.261,0
+329,10.9667,365.622,178.283,0
+330,11.0,362.412,184.803,0
+331,11.0333,356.949,191.503,0
+332,11.0667,351.799,198.583,0
+333,11.1,348.755,208.144,0
+334,11.1333,341.344,214.998,0
+335,11.1667,335.251,223.966,0
+336,11.2,327.874,232.35,0
+337,11.2333,322.141,238.481,0
+338,11.2667,314.024,246.675,0
+339,11.3,308.648,250.547,0
+340,11.3333,303.602,257.569,0
+341,11.3667,299.002,264.7,0
+342,11.4,295.286,270.73,0
+343,11.4333,291.218,277.543,0
+344,11.4667,287.019,283.826,0
+345,11.5,281.737,291.665,0
+346,11.5333,275.243,298.239,0
+347,11.5667,267.765,306.336,0
+348,11.6,260.495,313.518,0
+349,11.6333,255.236,320.411,0
+350,11.6667,248.861,326.704,0
+351,11.7,242.799,330.718,0
+352,11.7333,238.811,335.568,0
+353,11.7667,235.694,338.621,0
+354,11.8,231.939,343.299,0
+355,11.8333,227.915,346.112,0
+356,11.8667,224.475,349.675,0
+357,11.9,218.922,351.59,0
+358,11.9333,214.389,356.926,0
+359,11.9667,207.158,358.086,0
+360,12.0,201.829,365.401,1
+361,12.0333,195.337,366.721,1
+362,12.0667,189.345,368.522,1
+363,12.1,186.87,370.826,1
+364,12.1333,182.587,372.144,1
+365,12.1667,181.19,372.587,1
+366,12.2,179.164,371.597,1
+367,12.2333,176.813,370.21,1
+368,12.2667,172.711,367.844,1
+369,12.3,169.048,366.691,1
+370,12.3333,163.333,364.613,1
+371,12.3667,159.429,361.95,1
+372,12.4,153.554,359.54,1
+373,12.4333,148.545,358.574,1
+374,12.4667,147.212,358.93,1
+375,12.5,142.667,352.824,1
+376,12.5333,142.4,350.421,1
+377,12.5667,141.631,346.806,1
+378,12.6,141.302,342.366,1
+379,12.6333,139.546,337.801,1
+380,12.6667,137.741,331.345,1
+381,12.7,136.762,324.384,1
+382,12.7333,132.056,317.66,1
+383,12.7667,128.981,310.302,1
+384,12.8,127.369,305.292,1
+385,12.8333,121.503,298.408,1
+386,12.8667,121.265,292.895,1
+387,12.9,120.236,286.536,1
+388,12.9333,119.366,281.361,1
+389,12.9667,122.521,275.545,1
+390,13.0,122.043,269.479,1
+391,13.0333,122.98,262.631,1
+392,13.0667,122.763,255.945,1
+393,13.1,122.303,245.408,1
+394,13.1333,121.277,238.255,1
+395,13.1667,118.849,229.477,1
+396,13.2,118.95,220.931,1
+397,13.2333,117.133,214.331,1
+398,13.2667,118.668,207.637,1
+399,13.3,118.794,201.619,1
+400,13.3333,122.256,194.828,1
+401,13.3667,125.839,188.868,1
+402,13.4,126.614,182.259,1
+403,13.4333,128.897,178.22,1
+404,13.4667,132.379,172.294,1
+405,13.5,130.949,167.104,1
+406,13.5333,131.389,160.089,1
+407,13.5667,132.907,154.366,1
+408,13.6,132.848,146.82,1
+409,13.6333,134.356,140.435,1
+410,13.6667,138.336,134.71,1
+411,13.7,140.28,131.267,1
+412,13.7333,146.005,127.999,1
+413,13.7667,149.137,125.444,1
+414,13.8,154.057,122.535,1
+415,13.8333,156.915,120.35,1
+416,13.8667,159.991,119.602,1
+417,13.9,164.057,118.04,1
+418,13.9333,165.491,115.097,1
+419,13.9667,167.779,113.918,1
+420,14.0,168.492,112.374,1
+421,14.0333,172.783,108.906,1
+422,14.0667,175.53,107.177,1
+423,14.1,181.02,108.22,1
+424,14.1333,186.5,108.932,1
+425,14.1667,192.296,108.954,1
+426,14.2,198.266,111.676,1
+427,14.2333,202.941,113.849,1
+428,14.2667,208.436,118.39,1
+429,14.3,212.684,120.414,1
+430,14.3333,214.344,125.92,1
+431,14.3667,216.852,128.941,1
+432,14.4,220.31,131.806,1
+433,14.4333,226.189,136.466,1
+434,14.4667,230.896,139.471,1
+435,14.5,239.313,142.091,1
+436,14.5333,243.882,144.828,1
+437,14.5667,248.97,151.227,1
+438,14.6,256.737,157.745,1
+439,14.6333,262.917,162.831,1
+440,14.6667,267.38,170.507,1
+441,14.7,271.918,177.171,1
+442,14.7333,275.903,185.079,1
+443,14.7667,279.124,193.008,1
+444,14.8,283.076,199.256,1
+445,14.8333,289.879,206.73,1
+446,14.8667,295.928,212.31,1
+447,14.9,301.306,220.553,1
+448,14.9333,307.796,225.609,1
+449,14.9667,316.047,231.049,1
+450,15.0,323.065,236.994,1
+451,15.0333,328.992,244.203,0
+452,15.0667,332.951,252.931,0
+453,15.1,338.746,259.517,0
+454,15.1333,341.404,267.452,0
+455,15.1667,345.414,277.981,0
+456,15.2,350.35,284.052,0
+457,15.2333,355.634,292.399,0
+458,15.2667,361.698,297.922,0
+459,15.3,369.482,303.38,0
+460,15.3333,375.982,309.741,0
+461,15.3667,384.813,314.952,0
+462,15.4,388.112,318.362,0
+463,15.4333,393.457,324.77,0
+464,15.4667,397.715,329.059,0
+465,15.5,401.598,334.222,0
+466,15.5333,404.907,339.135,0
+467,15.5667,408.925,347.573,0
+468,15.6,413.435,351.558,0
+469,15.6333,419.375,354.358,0
+470,15.6667,424.734,357.469,0
+471,15.7,429.809,362.665,0
+472,15.7333,436.496,364.396,0
+473,15.7667,443.415,366.813,0
+474,15.8,446.043,365.74,0
+475,15.8333,452.401,368.28,0
+476,15.8667,452.942,368.329,0
+477,15.9,458.19,367.541,0
+478,15.9333,458.251,367.095,0
+479,15.9667,462.704,367.21,0
+480,16.0,466.406,367.712,0
+481,16.0333,469.961,366.661,0
+482,16.0667,474.073,368.065,0
+483,16.1,478.448,367.368,0
+484,16.1333,483.528,365.801,0
+485,16.1667,488.507,363.751,0
+486,16.2,493.314,360.949,0
+487,16.2333,495.773,354.805,0
+488,16.2667,494.415,351.311,0
+489,16.3,497.423,344.866,0
+490,16.3333,497.574,340.276,0
+491,16.3667,498.563,335.973,0
+492,16.4,502.094,331.914,0
+493,16.4333,505.565,325.101,0
+494,16.4667,508.15,321.674,0
+495,16.5,510.54,316.756,0
+496,16.5333,515.148,311.852,0
+497,16.5667,515.567,307.147,0
+498,16.6,516.776,300.501,0
+499,16.6333,519.187,294.335,0
+500,16.6667,517.265,286.184,0
+501,16.7,515.939,277.264,0
+502,16.7333,515.157,270.496,0
+503,16.7667,517.069,261.815,0
+504,16.8,516.378,253.344,0
+505,16.8333,518.069,246.639,0
+506,16.8667,517.595,240.126,0
+507,16.9,521.723,233.034,0
+508,16.9333,522.798,226.963,0
+509,16.9667,523.085,221.035,0
+510,17.0,522.907,215.862,0
+511,17.0333,518.682,208.845,0
+512,17.0667,517.773,201.746,0
+513,17.1,515.866,193.585,0
+514,17.1333,513.113,185.356,0
+515,17.1667,510.602,177.442,0
+516,17.2,510.286,170.428,0
+517,17.2333,508.796,164.369,0
+518,17.2667,508.773,157.902,0
+519,17.3,508.257,152.601,0
+520,17.3333,507.153,149.028,0
+521,17.3667,505.326,143.207,0
+522,17.4,504.506,140.297,0
+523,17.4333,500.601,137.037,0
+524,17.4667,494.655,132.914,0
+525,17.5,491.576,131.2,0
+526,17.5333,487.521,125.508,0
+527,17.5667,484.471,122.862,0
+528,17.6,481.893,118.826,0
+529,17.6333,478.877,114.872,0
+530,17.6667,477.495,109.715,0
+531,17.7,476.355,110.836,0
+532,17.7333,473.479,109.499,0
+533,17.7667,470.159,107.952,0
+534,17.8,465.686,109.905,0
+535,17.8333,461.442,109.715,0
+536,17.8667,455.003,112.538,0
+537,17.9,449.592,114.061,0
+538,17.9333,444.25,115.05,0
+539,17.9667,439.377,116.311,0
+540,18.0,433.9,117.942,0
+541,18.0333,431.457,118.579,0
+542,18.0667,427.789,121.509,0
+543,18.1,425.034,123.779,0
+544,18.1333,420.74,125.398,0
+545,18.1667,416.848,129.564,0
+546,18.2,411.901,133.093,0
+547,18.2333,405.629,139.574,0
+548,18.2667,397.172,144.783,0
+549,18.3,392.973,150.281,0
+550,18.3333,385.593,158.034,0
+551,18.3667,380.145,164.723,0
+552,18.4,375.681,170.152,0
+553,18.4333,371.355,177.152,0
+554,18.4667,367.855,182.1,0
+555,18.5,363.903,187.418,0
+556,18.5333,358.914,193.865,0
+557,18.5667,353.931,198.939,0
+558,18.6,346.861,206.013,0
+559,18.6333,340.582,211.302,0
+560,18.6667,333.655,219.161,0
+561,18.7,326.975,228.975,0
+562,18.7333,320.227,235.059,0
+563,18.7667,315.228,244.306,0
+564,18.8,309.054,252.061,0
+565,18.8333,305.328,260.979,0
+566,18.8667,301.126,266.608,0
+567,18.9,297.158,274.53,0
+568,18.9333,292.738,279.884,0
+569,18.9667,288.089,285.955,0
+570,19.0,280.225,291.737,0
+571,19.0333,273.606,297.977,0
+572,19.0667,266.281,302.951,0
+573,19.1,260.324,308.098,0
+574,19.1333,254.728,316.424,0
+575,19.1667,249.421,323.523,0
+576,19.2,244.446,328.252,0
+577,19.2333,240.732,336.323,0
+578,19.2667,235.273,340.952,0
+579,19.3,232.846,346.465,0
+580,19.3333,229.436,349.565,0
+581,19.3667,224.444,353.239,0
+582,19.4,217.525,355.321,0
+583,19.4333,212.051,357.138,0
+584,19.4667,206.743,359.35,0
+585,19.5,201.221,362.445,0
+586,19.5333,194.852,363.932,0
+587,19.5667,190.904,364.889,0
+588,19.6,188.649,367.242,0
+589,19.6333,185.432,370.33,0
+590,19.6667,181.304,371.305,0
+591,19.7,180.122,371.377,0
+592,19.7333,175.569,372.609,0
+593,19.7667,172.752,371.129,0
+594,19.8,168.191,369.792,0
+595,19.8333,163.09,366.898,0
+596,19.8667,158.421,365.368,0
+597,19.9,152.823,359.909,0
+598,19.9333,149.495,356.831,0
+599,19.9667,145.676,353.77,0
+600,20.0,146.94,349.682,0
+601,20.0333,144.327,347.017,0
+602,20.0667,143.914,343.898,0
+603,20.1,141.84,339.507,0
+604,20.1333,140.503,334.948,0
+605,20.1667,137.07,332.657,0
+606,20.2,133.185,327.613,0
+607,20.2333,129.495,321.336,0
+608,20.2667,127.313,315.133,0
+609,20.3,123.387,308.705,0
+610,20.3333,123.881,301.055,0
+611,20.3667,123.903,290.824,0
+612,20.4,122.386,284.952,0
+613,20.4333,124.793,279.13,0
+614,20.4667,123.565,272.867,0
+615,20.5,124.36,267.69,0
+616,20.5333,124.149,259.997,0
+617,20.5667,122.513,254.259,0
+618,20.6,121.504,248.578,0
+619,20.6333,119.355,240.866,0
+620,20.6667,118.602,233.845,0
+621,20.7,117.987,226.084,0
+622,20.7333,118.683,218.03,0
+623,20.7667,120.053,209.028,0
+624,20.8,122.151,200.945,0
+625,20.8333,123.235,192.574,0
+626,20.8667,125.258,187.119,0
+627,20.9,128.575,179.463,0
+628,20.9333,129.723,174.648,0
+629,20.9667,130.949,169.206,0
+630,21.0,127.66,163.7,0
+631,21.0333,129.875,160.15,0
+632,21.0667,130.506,155.021,0
+633,21.1,130.799,148.179,0
+634,21.1333,135.284,143.714,0
+635,21.1667,138.112,139.16,0
+636,21.2,141.641,133.906,0
+637,21.2333,146.101,127.876,0
+638,21.2667,151.088,123.123,0
+639,21.3,153.325,120.381,0
+640,21.3333,156.177,117.296,0
+641,21.3667,157.868,115.001,0
+642,21.4,161.288,114.783,0
+643,21.4333,162.046,112.117,0
+644,21.4667,166.301,112.346,0
+645,21.5,167.932,113.07,0
+646,21.5333,173.768,113.745,0
+647,21.5667,178.079,112.837,0
+648,21.6,182.021,111.046,0
+649,21.6333,187.515,112.105,0
+650,21.6667,193.161,113.0,0
+651,21.7,200.254,111.825,0
+652,21.7333,201.818,113.885,0
+653,21.7667,206.268,116.019,0
+654,21.8,209.811,117.622,0
+655,21.8333,211.727,121.673,0
+656,21.8667,214.906,125.632,0
+657,21.9,222.019,131.341,0
+658,21.9333,225.174,135.978,0
+659,21.9667,232.287,141.705,0
+660,22.0,240.151,145.115,0
+661,22.0333,246.399,151.517,0
+662,22.0667,250.322,154.904,0
+663,22.1,258.572,159.513,0
+664,22.1333,261.275,165.016,0
+665,22.1667,266.305,169.832,0
+666,22.2,269.2,174.22,0
+667,22.2333,273.572,182.382,0
+668,22.2667,279.129,189.06,0
+669,22.3,283.717,195.855,0
+670,22.3333,290.451,204.072,0
+671,22.3667,297.148,211.969,0
+672,22.4,304.029,219.713,0
+673,22.4333,310.313,227.727,0
+674,22.4667,317.036,233.779,0
+675,22.5,322.325,241.74,0
+676,22.5333,327.117,247.925,0
+677,22.5667,331.799,255.229,0
+678,22.6,335.591,259.731,0
+679,22.6333,339.431,266.808,0
+680,22.6667,346.121,273.167,0
+681,22.7,350.878,280.595,0
+682,22.7333,358.22,288.594,0
+683,22.7667,363.915,297.282,0
+684,22.8,371.074,302.985,0
+685,22.8333,376.618,311.784,0
+686,22.8667,383.349,318.56,0
+687,22.9,388.618,322.833,0
+688,22.9333,392.78,328.614,0
+689,22.9667,396.846,332.864,0
+690,23.0,399.295,336.413,0
+691,23.0333,404.048,340.427,0
+692,23.0667,409.45,343.952,0
+693,23.1,413.61,347.69,0
+694,23.1333,419.857,351.849,0
+695,23.1667,425.581,354.592,0
+696,23.2,433.359,359.355,0
+697,23.2333,438.702,363.327,0
+698,23.2667,441.426,365.615,0
+699,23.3,447.742,368.275,0
+700,23.3333,450.492,371.046,0
+701,23.3667,454.306,370.7,0
+702,23.4,455.266,372.621,0
+703,23.4333,458.116,370.592,0
+704,23.4667,461.49,369.944,0
+705,23.5,465.403,367.181,0
+706,23.5333,470.858,364.719,0
+707,23.5667,476.188,365.141,0
+708,23.6,481.855,362.886,0
+709,23.6333,485.289,360.032,0
+710,23.6667,488.313,360.71,0
+711,23.7,491.271,358.335,0
+712,23.7333,494.117,356.547,0
+713,23.7667,494.263,352.966,0
+714,23.8,495.853,349.252,0
+715,23.8333,496.016,345.074,0
+716,23.8667,499.183,338.887,0
+717,23.9,501.564,334.553,0
+718,23.9333,505.723,326.866,0
+719,23.9667,509.217,320.334,0
+720,24.0,512.325,314.623,0
+721,24.0333,515.213,306.801,0
+722,24.0667,516.434,302.509,0
+723,24.1,516.593,296.158,0
+724,24.1333,517.67,291.894,0
+725,24.1667,516.777,286.23,0
+726,24.2,517.754,279.919,0
+727,24.2333,515.779,272.05,0
+728,24.2667,516.458,264.96,0
+729,24.3,517.053,258.034,0
+730,24.3333,519.76,249.677,0
+731,24.3667,521.563,240.607,0
+732,24.4,522.419,232.569,0
+733,24.4333,522.585,226.267,0
+734,24.4667,521.74,218.495,0
+735,24.5,521.371,210.093,0
+736,24.5333,519.704,203.895,0
+737,24.5667,517.068,200.168,0
+738,24.6,513.566,192.115,0
+739,24.6333,512.771,185.477,0
+740,24.6667,510.68,182.005,0
+741,24.7,510.454,175.524,0
+742,24.7333,511.29,167.277,0
+743,24.7667,510.637,161.46,0
+744,24.8,509.578,154.576,0
+745,24.8333,508.197,148.583,0
+746,24.8667,505.914,143.162,0
+747,24.9,502.737,136.761,0
+748,24.9333,497.558,132.856,0
+749,24.9667,495.402,130.146,0
+750,25.0,490.973,127.791,0
+751,25.0333,486.997,124.956,0
+752,25.0667,485.571,121.883,0
+753,25.1,482.956,120.118,0
+754,25.1333,481.034,118.613,0
+755,25.1667,479.825,117.213,0
+756,25.2,476.387,113.925,0
+757,25.2333,473.866,111.556,0
+758,25.2667,469.46,109.689,0
+759,25.3,464.499,109.149,0
+760,25.3333,456.612,108.764,0
+761,25.3667,453.268,110.119,0
+762,25.4,447.614,109.723,0
+763,25.4333,442.893,112.12,0
+764,25.4667,440.234,112.923,0
+765,25.5,436.828,117.228,0
+766,25.5333,434.734,120.788,0
+767,25.5667,429.767,123.033,0
+768,25.6,426.785,126.374,0
+769,25.6333,421.629,130.402,0
+770,25.6667,415.674,133.067,0
+771,25.7,411.386,134.252,0
+772,25.7333,402.912,140.59,0
+773,25.7667,397.394,143.309,0
+774,25.8,391.72,147.552,0
+775,25.8333,386.046,154.806,0
+776,25.8667,381.867,159.575,0
+777,25.9,376.034,166.586,0
+778,25.9333,372.578,174.876,0
+779,25.9667,368.89,183.308,0
+780,26.0,366.155,190.667,0
+781,26.0333,360.302,197.1,0
+782,26.0667,352.994,202.79,0
+783,26.1,346.366,208.644,0
+784,26.1333,339.642,213.75,0
+785,26.1667,332.333,221.518,0
+786,26.2,325.508,226.86,0
+787,26.2333,319.769,233.453,0
+788,26.2667,315.34,241.251,0
+789,26.3,310.196,248.331,0
+790,26.3333,305.912,257.453,0
+791,26.3667,303.176,265.585,0
+792,26.4,296.79,273.847,0
+793,26.4333,290.28,280.972,0
+794,26.4667,286.73,288.192,0
+795,26.5,279.435,295.01,0
+796,26.5333,272.153,301.145,0
+797,26.5667,265.931,306.529,0
+798,26.6,258.019,311.449,0
+799,26.6333,255.431,316.322,0
+800,26.6667,250.137,321.493,0
+801,26.7,245.852,326.568,0
+802,26.7333,243.168,331.897,0
+803,26.7667,238.887,337.224,0
+804,26.8,234.322,343.402,0
+805,26.8333,227.829,348.662,0
+806,26.8667,221.858,353.594,0
+807,26.9,216.26,356.37,0
+808,26.9333,211.06,359.995,0
+809,26.9667,203.736,364.042,0
+810,27.0,198.299,365.391,0
+811,27.0333,194.992,368.438,0
+812,27.0667,194.353,365.546,0
+813,27.1,188.006,366.251,0
+814,27.1333,186.764,366.433,0
+815,27.1667,182.164,366.817,0
+816,27.2,180.447,367.972,0
+817,27.2333,176.112,369.409,0
+818,27.2667,169.802,367.831,0
+819,27.3,167.134,369.774,0
+820,27.3333,161.51,369.421,0
+821,27.3667,156.723,367.986,0
+822,27.4,151.8,363.172,0
+823,27.4333,151.521,361.33,0
+824,27.4667,148.351,356.656,0
+825,27.5,146.65,352.473,0
+826,27.5333,145.846,347.765,0
+827,27.5667,144.73,340.991,0
+828,27.6,142.201,336.241,0
+829,27.6333,139.155,331.582,0
+830,27.6667,135.226,327.646,0
+831,27.7,131.957,324.798,0
+832,27.7333,128.731,320.288,0
+833,27.7667,126.252,314.293,0
+834,27.8,124.728,308.768,0
+835,27.8333,123.403,302.709,0
+836,27.8667,123.242,296.371,0
+837,27.9,124.861,289.395,0
+838,27.9333,124.68,281.184,0
+839,27.9667,124.536,272.545,0
+840,28.0,122.994,264.542,0
+841,28.0333,120.159,255.768,0
+842,28.0667,121.419,250.2,0
+843,28.1,118.579,244.927,0
+844,28.1333,117.406,236.439,0
+845,28.1667,116.693,230.86,0
+846,28.2,116.256,224.335,0
+847,28.2333,119.028,218.398,0
+848,28.2667,121.262,212.218,0
+849,28.3,124.13,204.431,0
+850,28.3333,124.668,196.793,0
+851,28.3667,128.155,188.948,0
+852,28.4,128.787,181.26,0
+853,28.4333,127.947,174.507,0
+854,28.4667,128.226,166.497,0
+855,28.5,129.194,160.21,0
+856,28.5333,129.085,155.317,0
+857,28.5667,130.781,150.095,0
+858,28.6,133.792,147.993,0
+859,28.6333,135.876,142.526,0
+860,28.6667,139.819,138.349,0
+861,28.7,143.669,136.422,0
+862,28.7333,147.529,131.455,0
+863,28.7667,150.196,126.85,0
+864,28.8,153.445,124.452,0
+865,28.8333,155.136,119.632,0
+866,28.8667,157.492,116.241,0
+867,28.9,160.815,111.909,0
+868,28.9333,162.16,111.922,0
+869,28.9667,164.206,110.572,0
+870,29.0,168.305,110.087,0
+871,29.0333,174.079,109.909,0
+872,29.0667,178.995,109.71,0
+873,29.1,184.195,111.405,0
+874,29.1333,190.082,113.989,0
+875,29.1667,195.686,114.719,0
+876,29.2,198.922,115.229,0
+877,29.2333,200.477,116.302,0
+878,29.2667,203.925,118.083,0
+879,29.3,206.477,119.528,0
+880,29.3333,209.758,121.86,0
+881,29.3667,215.208,124.831,0
+882,29.4,221.484,128.386,0
+883,29.4333,227.335,131.965,0
+884,29.4667,234.984,138.143,0
+885,29.5,241.869,143.59,0
+886,29.5333,246.156,150.917,0
+887,29.5667,251.959,155.767,0
+888,29.6,255.554,161.233,0
+889,29.6333,260.51,168.667,0
+890,29.6667,264.775,172.958,0
+891,29.7,268.911,178.971,0
+892,29.7333,270.661,184.245,0
+893,29.7667,277.579,188.762,0
+894,29.8,285.835,194.357,0
+895,29.8333,292.733,201.326,0
+896,29.8667,297.424,208.121,0
+897,29.9,305.34,215.674,0
+898,29.9333,311.534,224.271,0
+899,29.9667,317.593,232.274,0

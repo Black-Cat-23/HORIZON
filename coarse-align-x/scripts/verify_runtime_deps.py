@@ -4,7 +4,7 @@ import sys
 
 runtime_packages = [
     'numpy',
-    'opencv_python_headless',
+    'cv2',
     'PySide6',
     'onnxruntime',
     'scipy',

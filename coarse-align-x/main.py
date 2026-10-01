@@ -148,7 +148,8 @@ def main() -> None:
     setup_logging(config.logging.level, config.logging.output_directory)
 
     # 4. Launch GUI or execute headless simulation
-    if args.gui:
+    is_headless_override = any([args.trajectory, args.seed, args.duration, args.preset])
+    if args.gui or len(sys.argv) == 1 or (getattr(sys, "frozen", False) and not is_headless_override):
         from simulator.visualization.app_shell_view import main as launch_app_shell
         launch_app_shell()
     else:

@@ -41,6 +41,8 @@ from sources.video_timebase import VideoFrameTiming, VideoTimebase
 logger = logging.getLogger(__name__)
 
 
+from simulator.core.paths import get_resource_path
+
 class ExternalVideoSource:
     """Dedicated External Video Source adapter for MP4 sensor recordings.
 
@@ -49,7 +51,7 @@ class ExternalVideoSource:
     """
 
     def __init__(self, file_path: str | Path) -> None:
-        self._file_path = Path(file_path).resolve()
+        self._file_path = get_resource_path(file_path).resolve()
         self._cap: Optional[cv2.VideoCapture] = None
         self._is_open: bool = False
         self._is_paused: bool = False

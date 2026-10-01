@@ -34,6 +34,9 @@ from simulator.perception.preprocessing import apply_adaptive_median_filter, val
 logger = logging.getLogger(__name__)
 
 
+from simulator.core.paths import get_resource_path
+
+
 class NeuralBeaconDetector:
     """YOLOv8n ONNX Neural Beacon Detector.
 
@@ -52,8 +55,8 @@ class NeuralBeaconDetector:
 
     def _load_onnx_model(self) -> None:
         """Load ONNX model and metadata if available."""
-        model_path = Path(self._neural_cfg.onnx_model_path)
-        meta_path = Path(self._neural_cfg.metadata_path)
+        model_path = get_resource_path(self._neural_cfg.onnx_model_path)
+        meta_path = get_resource_path(self._neural_cfg.metadata_path)
 
         if not model_path.exists():
             logger.warning(

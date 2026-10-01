@@ -35,9 +35,17 @@ hiddenimports += [
 
 # Data files to bundle – include models, configs, fonts, icons, plugins, assets
 datas = []
-# Models (ONNX files)
+# Models (ONNX files & metadata)
 if os.path.isdir('models'):
     datas += collect_data_files('models', includes=['*.onnx'])
+if os.path.isdir('research/training/models'):
+    for root, _, files in os.walk('research/training/models'):
+        for f in files:
+            p = os.path.join(root, f)
+            rel_dir = os.path.relpath(root, '.')
+            datas.append((p, rel_dir))
+
+icon_file = 'icons/horizon.ico' if os.path.isfile('icons/horizon.ico') else None
 # Config files (YAML/JSON)
 if os.path.isdir('configs'):
     datas += collect_data_files('configs')
@@ -72,7 +80,7 @@ excludes = [
 ]
 
 # Build options – analysis
-exe = Analysis(
+a = Analysis(
     [entry_script],
     pathex=[os.getcwd()],
     binaries=[],
@@ -84,29 +92,28 @@ exe = Analysis(
     noarchive=False,
 )
 
-pyz = PYZ(exe.pure, exe.zipped_data, cipher=None)
+pyz = PYZ(a.pure, a.zipped_data, cipher=None)
 
 # Build one‑dir bundle
 exe = EXE(
     pyz,
-    exe.scripts,
-    exe.binaries,
-    exe.zipfiles,
-    exe.datas,
+    a.scripts,
+    [],
+    exclude_binaries=True,
     name='HORIZON',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=False,  # hide console; use --debug flag to re‑enable
-    icon='icons/horizon.ico'
+    console=False,  # hide console; set to True for CLI debug
+    icon=icon_file
 )
 
 coll = COLLECT(
     exe,
-    exe.binaries,
-    exe.zipfiles,
-    exe.datas,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
     strip=False,
     upx=True,
     name='HORIZON'

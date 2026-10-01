@@ -12,7 +12,7 @@ Compression=lzma2
 SolidCompression=yes
 PrivilegesRequired=lowest
 WizardStyle=modern
-SetupIconFile=icons/horizon.ico
+; SetupIconFile=icons/horizon.ico
 UninstallDisplayIcon={app}\HORIZON.exe
 
 [Files]
