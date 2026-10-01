@@ -35,8 +35,6 @@ htmlcov/
 
 # Data outputs & logs
 logs/*.log
-data/ground_truth/*.csv
-data/ground_truth/*.json
 research/data/**/*.png
 research/data/**/*.jpg
 research/data/**/*.jpeg
