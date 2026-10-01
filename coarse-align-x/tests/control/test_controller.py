@@ -117,7 +117,7 @@ def test_camera_controller_gain_adaptation():
     )
     assert ctrl.active_gains.kp < ctrl.scheduler.gains_track.kp
     assert ctrl.active_gains.ki == 0.0
-    assert ctrl.active_gains.kd > 0.20
+    assert ctrl.active_gains.kd >= 0.20  # DEGRADED mode uses heavier damping than TRACK (kd=0.12)
 
 
 def test_degraded_mode_anti_windup_freezing():

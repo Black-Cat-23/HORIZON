@@ -113,7 +113,7 @@ class MissionStatusStrip(QFrame):
         layout.addWidget(self.combo_preset)
 
         # 3. Suppress Detection Toggle (Forced Blackout Test)
-        self.btn_blackout = SecondaryButton("⚡ Suppress Detection (Test Loss)", parent=self)
+        self.btn_blackout = SecondaryButton("Suppress Detection (Loss Test)", parent=self)
         self.btn_blackout.setCheckable(True)
         self.btn_blackout.toggled.connect(self._on_blackout_toggle)
         layout.addWidget(self.btn_blackout)
@@ -121,7 +121,7 @@ class MissionStatusStrip(QFrame):
         layout.addStretch()
 
         # 4. Generate Report Action
-        self.btn_report = SecondaryButton("📄 Export Engineering Report", parent=self)
+        self.btn_report = SecondaryButton("Export Engineering Report", parent=self)
         self.btn_report.clicked.connect(lambda: self.report_clicked.emit())
         layout.addWidget(self.btn_report)
 
@@ -130,19 +130,19 @@ class MissionStatusStrip(QFrame):
     def _on_play_click(self) -> None:
         self._is_playing = not self._is_playing
         if self._is_playing:
-            self.btn_play.setText("⏸ Pause Simulation")
+            self.btn_play.setText("Pause Simulation")
         else:
-            self.btn_play.setText("▶ Resume Simulation")
+            self.btn_play.setText("Resume Simulation")
         self.play_toggled.emit(self._is_playing)
 
     def _on_blackout_toggle(self, checked: bool) -> None:
         if checked:
-            self.btn_blackout.setText("⚡ Detection SUPPRESSED")
+            self.btn_blackout.setText("Detection SUPPRESSED (Active Test)")
             self.btn_blackout.setStyleSheet(
                 f"background-color: rgba(232, 111, 127, 0.2); color: {COLOR_LOST_RED}; border: 1px solid {COLOR_LOST_RED}; font-weight: 700;"
             )
         else:
-            self.btn_blackout.setText("⚡ Suppress Detection (Test Loss)")
+            self.btn_blackout.setText("Suppress Detection (Loss Test)")
             self.btn_blackout.setStyleSheet("")
         self.blackout_toggled.emit(checked)
 

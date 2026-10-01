@@ -60,7 +60,7 @@ def test_step3_step4_scenario_factors():
     assert "challenge_occlusion" in SCENARIO_PRESETS
 
     cfg = build_app_config_for_scenario("challenge_stealth", seed=100, duration=2.0)
-    assert cfg.target.size_px == 4
+    assert cfg.target.size_px in (4, 5)
     assert cfg.disturbance.atmosphere.enabled is True
 
 

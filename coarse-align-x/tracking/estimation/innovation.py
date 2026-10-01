@@ -82,24 +82,30 @@ def compute_innovation(
     S = 0.5 * (S + S.T)  # enforce symmetry
 
     # Euclidean norm
-    res_norm = float(np.linalg.norm(y))
+    res_norm = float(math.hypot(y[0, 0], y[1, 0]))
 
-    # Mahalanobis distance d^2 = y^T * S^-1 * y
-    try:
-        # Solve S * v = y
-        v = np.linalg.solve(S, y)
-        d2 = float((y.T @ v).item())
-        # Numerical guard: variance cannot be negative
-        d2 = max(0.0, d2)
+    # Mahalanobis distance d^2 = y^T * S^-1 * y via exact 2x2 analytic solve
+    det = float(S[0, 0] * S[1, 1] - S[0, 1] * S[1, 0])
+    if det > 1e-12:
+        inv_det = 1.0 / det
+        y0, y1 = float(y[0, 0]), float(y[1, 0])
+        s00, s01, s11 = float(S[0, 0]), float(S[0, 1]), float(S[1, 1])
+        v0 = (s11 * y0 - s01 * y1) * inv_det
+        v1 = (-s01 * y0 + s00 * y1) * inv_det
+        d2 = max(0.0, float(y0 * v0 + y1 * v1))
         d = math.sqrt(d2)
-        valid = bool(np.isfinite(d2))
-    except np.linalg.LinAlgError:
-        # Ill-conditioned S fallback: pseudo-inverse
-        S_pinv = np.linalg.pinv(S)
-        d2 = float((y.T @ S_pinv @ y).item())
-        d2 = max(0.0, d2)
-        d = math.sqrt(d2)
-        valid = False
+        valid = bool(math.isfinite(d2))
+    else:
+        try:
+            S_pinv = np.linalg.pinv(S)
+            d2 = float((y.T @ S_pinv @ y).item())
+            d2 = max(0.0, d2)
+            d = math.sqrt(d2)
+            valid = False
+        except Exception:
+            d2 = 999.0
+            d = math.sqrt(d2)
+            valid = False
 
     return Innovation(
         residual=y,

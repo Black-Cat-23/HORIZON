@@ -312,17 +312,23 @@ def extract_candidates(
     min_area = float(config.min_area_px)
     max_area = float(config.max_area_px)
 
+    # Pre-filter contours: discard out-of-range areas and limit to top-20 candidates by area
+    # to maintain strict ISRO real-time flight budget (<33ms) under heavy impulse noise/speckles.
+    valid_contours = []
+    has_impulse_noise = (noise_std > 5.0 or np.count_nonzero(preprocessed == 255) > 30)
     for cnt in contours:
         area = cv2.contourArea(cnt)
         if area < min_area or area > max_area:
             continue
-
-        # Gate 0: Impulse noise (Salt & Pepper spike) defense.
-        # Real optical beacons (5-20px) have area >= 6 px. 1-3 pixel noise spikes
-        # from salt & pepper injection are rejected under elevated noise or S&P presence.
-        has_impulse_noise = (noise_std > 5.0 or np.count_nonzero(preprocessed == 255) > 30)
         if area <= 3.0 and has_impulse_noise:
             continue
+        valid_contours.append((area, cnt))
+
+    if len(valid_contours) > 20:
+        valid_contours.sort(key=lambda item: item[0], reverse=True)
+        valid_contours = valid_contours[:20]
+
+    for area, cnt in valid_contours:
 
         x, y, bw, bh = cv2.boundingRect(cnt)
 
@@ -375,16 +381,25 @@ def extract_candidates(
         if integrated_flux < min_required_flux:
             continue
 
+        is_streak = (aspect_ratio > 1.6 or aspect_ratio < 0.60) or (bw >= 30 or bh >= 30)
+
         # Compactness
         compactness = _compute_compactness(area, (x, y, bw, bh))
-        if compactness < 0.08:
+        if is_streak and snr >= 4.0 and local_contrast >= 20.0 and integrated_flux >= 200.0:
+            min_compact = 0.003
+        elif is_streak:
+            min_compact = 0.008
+        else:
+            min_compact = 0.08
+        if compactness < min_compact:
             continue
 
         # Circularity
         perimeter = cv2.arcLength(cnt, True)
         circularity = float(4.0 * math.pi * area / (perimeter ** 2)) if perimeter > 0 else 0.0
         circularity = float(np.clip(circularity, 0.0, 1.0))
-        if circularity < config.min_circularity:
+        min_circ = 0.002 if (is_streak and snr >= 4.0 and integrated_flux >= 200.0) else (0.005 if is_streak else config.min_circularity)
+        if circularity < min_circ:
             continue
 
         # Gate 5b: Dense clutter & impulse noise defense (scale-adaptive)
@@ -393,12 +408,13 @@ def extract_candidates(
         is_dense_clutter = (noise_std > 6.0 or len(contours) > 12)
         min_flux_density = max(6.0, 0.8 * local_sigma)
         min_required_flux_clutter = float(area) * min_flux_density
-        if is_dense_clutter and (integrated_flux < min_required_flux_clutter or circularity < 0.15):
+        if is_dense_clutter and (snr < 15.0 or peak_int < 80.0) and (integrated_flux < min_required_flux_clutter or circularity < 0.15):
             continue
 
         # Radial intensity consistency (Gaussian profile check)
         radial_consistency = _compute_radial_consistency(roi_orig, local_bg_mean)
-        if radial_consistency < 0.08:          # Relaxed gate: accepts motion blurred PSFs
+        min_radial = 0.010 if (is_streak and snr >= 4.0 and integrated_flux >= 200.0) else (0.015 if is_streak else 0.08)
+        if radial_consistency < min_radial:
             continue
 
         # Bilateral symmetry (computed early to feed the noise-variance-aware gate below)

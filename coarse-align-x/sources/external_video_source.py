@@ -127,6 +127,10 @@ class ExternalVideoSource:
         return self._duration_seconds
 
     @property
+    def duration_seconds(self) -> float:
+        return self._duration_seconds
+
+    @property
     def frame_count(self) -> int:
         return self._total_frames
 

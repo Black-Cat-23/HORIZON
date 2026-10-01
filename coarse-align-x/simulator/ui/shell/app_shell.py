@@ -83,6 +83,8 @@ class ApplicationShell(QMainWindow):
         track_view = self.mode_views[2]
         if hasattr(live_view, "track_data_ready") and hasattr(track_view, "update_track_displays"):
             live_view.track_data_ready.connect(track_view.update_track_displays)
+        if hasattr(live_view, "simulation_reset") and hasattr(track_view, "reset_telemetry"):
+            live_view.simulation_reset.connect(track_view.reset_telemetry)
 
         self._current_mode_index = 0
         self._anim_group: QParallelAnimationGroup | None = None

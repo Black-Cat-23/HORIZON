@@ -122,7 +122,7 @@ class DesignShowcaseWindow(QMainWindow):
 
         self.btn_primary = PrimaryButton("Execute Step", self)
         self.btn_secondary = SecondaryButton("Reset Controls", self)
-        self.btn_cycle = SecondaryButton("⚡ Cycle State Pills", self)
+        self.btn_cycle = SecondaryButton("Cycle State Pills", self)
         self.btn_cycle.clicked.connect(self._cycle_states)
 
         btn_layout.addWidget(self.btn_primary)

@@ -93,11 +93,20 @@ def clamp_covariance_spectrum(P: np.ndarray, min_eigenvalue: float = 1e-6) -> np
     Ensures positive definiteness and prevents ill-conditioning during matrix inversion.
     P_clamped = V * diag(max(lambda_i, min_eig)) * V^T
     """
-    P_sym = enforce_symmetry(P)
+    P_sym = 0.5 * (P + P.T)
+    # Fast path: If all diagonal entries exceed min_eigenvalue, verify positive-definiteness via Cholesky
+    d = np.diag(P_sym)
+    if np.all(d >= min_eigenvalue):
+        try:
+            np.linalg.cholesky(P_sym)
+            return P_sym
+        except np.linalg.LinAlgError:
+            pass
+
     eigvals, eigvecs = np.linalg.eigh(P_sym)
     eigvals_clamped = np.maximum(eigvals, float(min_eigenvalue))
     P_clamped = (eigvecs * eigvals_clamped) @ eigvecs.T
-    return enforce_symmetry(P_clamped)
+    return 0.5 * (P_clamped + P_clamped.T)
 
 
 

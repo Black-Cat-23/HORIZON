@@ -354,13 +354,13 @@ class SimulationDebugViewer(QMainWindow):
         diag_box = QGroupBox("Interactive Injections & Verification", self)
         diag_layout = QVBoxLayout(diag_box)
 
-        self._btn_test_blackout = QPushButton("⚡ Suppress Detection (Test Loss)", self)
+        self._btn_test_blackout = QPushButton("Suppress Detection (Loss Test)", self)
         self._btn_test_blackout.setCheckable(True)
         self._btn_test_blackout.toggled.connect(self._toggle_blackout_test)
         self._btn_test_blackout.setStyleSheet("background-color: #3a2020; color: #ff3b30; font-weight: bold;")
         diag_layout.addWidget(self._btn_test_blackout)
 
-        self._btn_gen_report = QPushButton("📊 Export Verification Report (MD)", self)
+        self._btn_gen_report = QPushButton("Export Verification Report (MD)", self)
         self._btn_gen_report.clicked.connect(self._generate_engineering_report)
         self._btn_gen_report.setStyleSheet("background-color: #1a3320; color: #4cd964; font-weight: bold;")
         diag_layout.addWidget(self._btn_gen_report)
@@ -448,10 +448,10 @@ class SimulationDebugViewer(QMainWindow):
     def _toggle_blackout_test(self, checked: bool) -> None:
         self._suppress_detection_test = checked
         if checked:
-            self._btn_test_blackout.setText("⚡ Detection SUPPRESSED (Active Test)")
+            self._btn_test_blackout.setText("Detection SUPPRESSED (Active Test)")
             self._btn_test_blackout.setStyleSheet("background-color: #ff3b30; color: #ffffff; font-weight: bold;")
         else:
-            self._btn_test_blackout.setText("⚡ Suppress Detection (Test Loss)")
+            self._btn_test_blackout.setText("Suppress Detection (Loss Test)")
             self._btn_test_blackout.setStyleSheet("background-color: #3a2020; color: #ff3b30; font-weight: bold;")
 
     def _generate_engineering_report(self) -> None:

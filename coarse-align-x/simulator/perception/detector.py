@@ -211,9 +211,8 @@ class ClassicalBeaconDetector:
                 roi_patch, self._config.preprocessing
             )
             bg_level, noise_std = estimate_background_statistics(preprocessed_roi)
-            preprocessed = valid_frame if not collect_diagnostics else valid_frame.copy()
-            if collect_diagnostics:
-                preprocessed[ry1:ry2, rx1:rx2] = preprocessed_roi
+            preprocessed = valid_frame.copy()
+            preprocessed[ry1:ry2, rx1:rx2] = preprocessed_roi
         else:
             preprocessed = apply_adaptive_median_filter(
                 valid_frame, self._config.preprocessing
@@ -304,13 +303,15 @@ class ClassicalBeaconDetector:
             if best_cand.score >= self._config.min_detection_confidence:
                 selected = best_cand
             # Secondary false-lock check: if edge-clipped candidate is the
-            # ONLY candidate and its score is marginal, prefer no detection
-            # over false lock (anti-edge hallucination)
+            # ONLY candidate and its score is marginal and small, prefer no detection
+            # over false lock (anti-edge noise artifact hallucination)
             if (
                 selected is not None
                 and selected.clipped_by_edge
                 and len(candidates) == 1
                 and selected.score < self._config.min_detection_confidence + 0.10
+                and selected.area_px < 30.0
+                and selected.snr < 10.0
             ):
                 selected = None
 
@@ -378,10 +379,17 @@ class ClassicalBeaconDetector:
                     method_used = "gaussian_fit_fallback_cog"
 
             else:  # default "weighted_cog"
-                u, v, sigma_u, sigma_v = compute_weighted_cog(
+                u, v, _, _ = compute_weighted_cog(
                     roi_orig, roi_mask, bg_for_centroid, x1, y1
                 )
                 centroid = (u, v)
+
+            # Astrometric photon-noise centroid uncertainty derived from candidate SNR & photons
+            sigma_u = selected.sigma_u_px
+            sigma_v = selected.sigma_v_px
+            if selected.clipped_by_edge:
+                sigma_u = max(sigma_u * 2.5, 1.5)
+                sigma_v = max(sigma_v * 2.5, 1.5)
 
         t_s5 = (time.perf_counter() - t_s5) * 1000.0
 

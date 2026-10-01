@@ -51,7 +51,7 @@ class ScenarioConfigFormWidget(QWidget):
     validation_failed = Signal(str)     # Emits error message
 
     TRAJECTORY_TYPES = ["figure8", "straight", "circular", "random", "sinusoidal", "spiral"]
-    DETECTOR_MODES = ["HYBRID", "CLASSICAL", "NEURAL"]
+    DETECTOR_MODES = ["HYBRID", "SOTA_FOURIER_GMM", "CLASSICAL", "NEURAL"]
     DISTURBANCE_PRESETS = ["NOMINAL", "DIFFICULT", "SEVERE", "RECOVERY", "ADVERSARIAL"]
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -89,7 +89,43 @@ class ScenarioConfigFormWidget(QWidget):
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         scroll_content = QWidget(scroll_area)
-        scroll_content.setStyleSheet("background: transparent;")
+        scroll_content.setStyleSheet(
+            """
+            QWidget {
+                background: transparent;
+            }
+            QLabel {
+                color: #C9D1D9;
+                font-family: 'General Sans', sans-serif;
+                font-size: 12px;
+                font-weight: 500;
+            }
+            QComboBox, QSpinBox, QDoubleSpinBox {
+                background-color: #161B22;
+                color: #F0F6FC;
+                border: 1px solid #30363D;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-family: 'General Sans', sans-serif;
+                font-size: 12px;
+                min-height: 26px;
+            }
+            QComboBox:hover, QSpinBox:hover, QDoubleSpinBox:hover {
+                border-color: #5B86AD;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #161B22;
+                color: #F0F6FC;
+                selection-background-color: #1F2D3D;
+                selection-color: #5B86AD;
+                border: 1px solid #30363D;
+            }
+            """
+        )
         form_main_layout = QVBoxLayout(scroll_content)
         form_main_layout.setContentsMargins(0, 0, SPACING_8, 0)
         form_main_layout.setSpacing(SPACING_12)
@@ -99,7 +135,10 @@ class ScenarioConfigFormWidget(QWidget):
         # ----------------------------------------------------------------------
         cont_target = ExpandableDiagnosticContainer("Target parameters", parent=scroll_content)
         cont_target.set_expanded(True)
-        layout_t = QFormLayout(cont_target.content_widget)
+        layout_t = QFormLayout()
+        layout_t.setHorizontalSpacing(16)
+        layout_t.setVerticalSpacing(10)
+        cont_target.content_layout.addLayout(layout_t)
 
         self.combo_traj = QComboBox(cont_target.content_widget)
         self.combo_traj.addItems(self.TRAJECTORY_TYPES)
@@ -125,7 +164,10 @@ class ScenarioConfigFormWidget(QWidget):
         # ----------------------------------------------------------------------
         cont_cam = ExpandableDiagnosticContainer("Camera parameters", parent=scroll_content)
         cont_cam.set_expanded(True)
-        layout_c = QFormLayout(cont_cam.content_widget)
+        layout_c = QFormLayout()
+        layout_c.setHorizontalSpacing(16)
+        layout_c.setVerticalSpacing(10)
+        cont_cam.content_layout.addLayout(layout_c)
 
         self.spin_fps = QSpinBox(cont_cam.content_widget)
         self.spin_fps.setRange(10, 120)
@@ -141,7 +183,10 @@ class ScenarioConfigFormWidget(QWidget):
         # ----------------------------------------------------------------------
         cont_percep = ExpandableDiagnosticContainer("Perception parameters", parent=scroll_content)
         cont_percep.set_expanded(True)
-        layout_p = QFormLayout(cont_percep.content_widget)
+        layout_p = QFormLayout()
+        layout_p.setHorizontalSpacing(16)
+        layout_p.setVerticalSpacing(10)
+        cont_percep.content_layout.addLayout(layout_p)
 
         self.combo_detector = QComboBox(cont_percep.content_widget)
         self.combo_detector.addItems(self.DETECTOR_MODES)
@@ -155,7 +200,10 @@ class ScenarioConfigFormWidget(QWidget):
         # ----------------------------------------------------------------------
         cont_dist = ExpandableDiagnosticContainer("Disturbance parameters", parent=scroll_content)
         cont_dist.set_expanded(True)
-        layout_d = QFormLayout(cont_dist.content_widget)
+        layout_d = QFormLayout()
+        layout_d.setHorizontalSpacing(16)
+        layout_d.setVerticalSpacing(10)
+        cont_dist.content_layout.addLayout(layout_d)
 
         self.combo_dist_preset = QComboBox(cont_dist.content_widget)
         self.combo_dist_preset.addItems(self.DISTURBANCE_PRESETS)
@@ -168,8 +216,11 @@ class ScenarioConfigFormWidget(QWidget):
         # 5. Advanced Parameters Container (Hidden / Collapsed by default)
         # ----------------------------------------------------------------------
         cont_adv = ExpandableDiagnosticContainer("Advanced configuration", parent=scroll_content)
-        cont_adv.set_expanded(False)  # Collapsed by default as per Section 5
-        layout_a = QFormLayout(cont_adv.content_widget)
+        cont_adv.set_expanded(False)
+        layout_a = QFormLayout()
+        layout_a.setHorizontalSpacing(16)
+        layout_a.setVerticalSpacing(10)
+        cont_adv.content_layout.addLayout(layout_a)
 
         self.spin_duration = QDoubleSpinBox(cont_adv.content_widget)
         self.spin_duration.setRange(1.0, 300.0)
@@ -262,6 +313,8 @@ class ScenarioConfigFormWidget(QWidget):
                 psf_sigma_px=max(1.0, b_dim / 6.0),
             ),
         )
+        object.__setattr__(resolved_config, "mission_detector_mode", self.combo_detector.currentText())
+        object.__setattr__(resolved_config, "mission_preset_name", self.combo_dist_preset.currentText())
         self._current_config = resolved_config
         self.config_changed.emit(resolved_config)
 

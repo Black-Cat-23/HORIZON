@@ -53,4 +53,6 @@ runs/
 .idea/
 *.swp
 scratch/
+reports/flight_telemetry/*.png
+
 

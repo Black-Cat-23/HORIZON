@@ -8,6 +8,7 @@ Restricted to short ALL-CAPS tags with 0.03em letter-spacing.
 
 from __future__ import annotations
 from enum import Enum
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLabel, QWidget
 from simulator.ui.foundation.tokens import (
     COLOR_CONFIRM_GREEN,
@@ -65,6 +66,8 @@ class StateIndicatorPill(QLabel):
             bg_color = "rgba(232, 111, 127, 0.15)"
 
         self.setText(f" {text} ")
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setMinimumWidth(self.fontMetrics().horizontalAdvance(f" {text} ") + 16)
         self.setStyleSheet(
             f"""
             QLabel {{

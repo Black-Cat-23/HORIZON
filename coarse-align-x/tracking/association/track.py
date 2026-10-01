@@ -127,13 +127,15 @@ class Track:
 
             if assoc_res.associated and assoc_res.selected_candidate is not None:
                 cand = assoc_res.selected_candidate
+                cand_spot = (cand.sigma_u_px, cand.sigma_v_px) if hasattr(cand, "sigma_u_px") else None
+                eff_spot = spot_uncertainty if spot_uncertainty is not None else cand_spot
                 estimate = self._filter.update(
                     measurement=cand.centroid,
                     confidence=cand.confidence,
                     timestamp=timestamp,
                     gimbal_pan_rate=gimbal_pan_rate,
                     gimbal_tilt_rate=gimbal_tilt_rate,
-                    spot_uncertainty=spot_uncertainty,
+                    spot_uncertainty=eff_spot,
                 )
             else:
                 # All candidates gated out: missing/coasting update

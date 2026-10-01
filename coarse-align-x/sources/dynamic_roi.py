@@ -194,6 +194,12 @@ class DynamicROIManager:
         if covariance is not None and covariance.ndim == 2 and covariance.shape[0] >= 2 and covariance.shape[1] >= 2:
             sigma_u = float(math.sqrt(max(0.01, float(covariance[0, 0]))))
             sigma_v = float(math.sqrt(max(0.01, float(covariance[1, 1]))))
+            if covariance.shape[0] >= 4 and covariance.shape[1] >= 4:
+                # Dynamic velocity jitter expansion across 1 frame interval (dt ~ 33ms)
+                v_unc_u = float(math.sqrt(max(0.0, float(covariance[2, 2])))) * 0.0333
+                v_unc_v = float(math.sqrt(max(0.0, float(covariance[3, 3])))) * 0.0333
+                sigma_u += v_unc_u
+                sigma_v += v_unc_v
         else:
             # Fallback uncertainty scaled inversely by confidence
             sigma_u = float(max(1.0, (1.0 - np.clip(confidence, 0.0, 1.0)) * 25.0 + 2.0))

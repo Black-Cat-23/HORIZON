@@ -24,7 +24,9 @@ import numpy as np
 @dataclass
 class SmithPredictorConfig:
     """Configuration for the Smith Predictor latency compensator."""
-    latency_seconds: float = 0.033  # Nominal transport lag [s]
+    latency_seconds: float = 0.007  # Calibrated transport lag [s] — matched to measured pipeline
+    # latency of ~5.26ms end-to-end (Phase 5 benchmark). Previous value of 33ms (=1 camera frame)
+    # caused the Smith Predictor to over-compensate by ~6×, generating a systematic pointing bias.
     plant_gain: float = 1.0         # Nominal open-loop plant gain
     rate_limit_deg_s: float = 20.0  # Matches CameraGimbal rate limit [deg/s]
     accel_limit_deg_s2: float = 300.0  # Matches CameraGimbal accel limit [deg/s^2]

@@ -74,6 +74,7 @@ class MonospaceTelemetryLabel(QWidget):
                 }}
                 """
             )
+            self._val_label.setMinimumWidth(self._val_label.fontMetrics().horizontalAdvance("N/A") + 4)
         else:
             text = f"{value:.2f}" if isinstance(value, float) else str(value)
             self._val_label.setText(text)
@@ -87,6 +88,7 @@ class MonospaceTelemetryLabel(QWidget):
                 }}
                 """
             )
+            self._val_label.setMinimumWidth(self._val_label.fontMetrics().horizontalAdvance(text) + 4)
 
         self._unit_label.setStyleSheet(
             f"""

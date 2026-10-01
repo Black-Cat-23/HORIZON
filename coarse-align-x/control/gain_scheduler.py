@@ -47,18 +47,18 @@ class GainScheduler:
 
     def __init__(
         self,
-        kp_track: float = 3.0,
-        ki_track: float = 0.12,
-        kd_track: float = 0.15,
-        kff_track: float = 1.0,
-        kp_acquire: float = 2.5,
-        ki_acquire: float = 0.05,
-        kd_acquire: float = 0.18,
-        kff_acquire: float = 0.85,
-        kp_degraded: float = 2.0,
+        kp_track: float = 5.5,
+        ki_track: float = 0.15,
+        kd_track: float = 0.12,
+        kff_track: float = 1.3,
+        kp_acquire: float = 3.5,
+        ki_acquire: float = 0.06,
+        kd_acquire: float = 0.15,
+        kff_acquire: float = 1.0,
+        kp_degraded: float = 2.2,
         ki_degraded: float = 0.0,
-        kd_degraded: float = 0.22,
-        kff_degraded: float = 0.70,
+        kd_degraded: float = 0.20,
+        kff_degraded: float = 0.75,
     ) -> None:
         self.gains_track = ScheduledGains(kp=kp_track, ki=ki_track, kd=kd_track, kff=kff_track)
         self.gains_acquire = ScheduledGains(kp=kp_acquire, ki=ki_acquire, kd=kd_acquire, kff=kff_acquire)

@@ -1,18 +1,18 @@
 """HORIZON Phase 11.4 Hybrid Perception Breakdown Component
 ===========================================================
 Displays real-time confidence breakdown for the Phase 8 Hybrid Perception Engine:
-  - Classical Detector Confidence (%)
-  - Neural Detector Confidence (%)
-  - Detector Agreement Confidence (%)
-  - Final Hybrid Confidence (%)
-  - Detector Source: Hybrid
+  - Classical Morphology Detector Confidence (%)
+  - Neural Attention Detector Confidence (%)
+  - Multi-Modal Agreement Confidence (%)
+  - Final Hybrid Fused Confidence (%)
+  - Active Detector Source / Pipeline
 
 Strictly uses real values from DetectionResult diagnostics. Displays explicit N/A when idle — never fake example numbers!
 """
 
 from __future__ import annotations
 from typing import Optional
-from PySide6.QtWidgets import QFormLayout, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFormLayout, QGridLayout, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from simulator.ui.foundation.tokens import (
     COLOR_FIELD,
@@ -35,37 +35,40 @@ from simulator.perception.detector import DetectionResult
 
 
 class HybridPerceptionBreakdownPanel(PanelSurface):
-    """Hybrid Perception Breakdown & Confidence Fusion Panel."""
+    """Hybrid Multi-Modal Perception Fusion & Confidence Panel."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(PanelVariant.FIELD, parent)
 
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(SPACING_16, SPACING_12, SPACING_16, SPACING_12)
-        main_layout.setSpacing(SPACING_8)
+        main_layout.setContentsMargins(SPACING_16, SPACING_8, SPACING_16, SPACING_8)
+        main_layout.setSpacing(6)
 
-        # Header Title: "Hybrid perception breakdown" (sentence case)
-        header = SectionHeaderLabel("Hybrid perception breakdown", self)
-        header.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY}; font-family: {FONT_BODY}; font-size: 13px; font-weight: 600;")
+        # Header Title: "Hybrid multi-modal perception fusion"
+        header = SectionHeaderLabel("Hybrid multi-modal perception fusion", self)
+        header.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY}; font-family: {FONT_BODY}; font-size: 12px; font-weight: 700; letter-spacing: 0.5px;")
         main_layout.addWidget(header)
 
-        grid = QFormLayout()
-        grid.setHorizontalSpacing(SPACING_16)
-        grid.setVerticalSpacing(SPACING_4)
+        # 2-Column Grid Layout for Confidence Fusion Channels
+        grid_container = QWidget(self)
+        grid = QGridLayout(grid_container)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setHorizontalSpacing(SPACING_12)
+        grid.setVerticalSpacing(4)
 
-        self.telem_classical = MonospaceTelemetryLabel(value=None, unit="%", label_text="Classical Confidence", parent=self)
-        self.telem_neural = MonospaceTelemetryLabel(value=None, unit="%", label_text="Neural Confidence", parent=self)
-        self.telem_agreement = MonospaceTelemetryLabel(value=None, unit="%", label_text="Detector Agreement", parent=self)
-        self.telem_final = MonospaceTelemetryLabel(value=None, unit="%", label_text="Final Hybrid Confidence", parent=self)
-        self.telem_source = MonospaceTelemetryLabel(value=None, unit="", label_text="Detector Pipeline", parent=self)
+        self.telem_classical = MonospaceTelemetryLabel(value=None, unit="%", label_text="Classical Morphology", font_size_px=11, parent=grid_container)
+        self.telem_neural = MonospaceTelemetryLabel(value=None, unit="%", label_text="Neural Attention", font_size_px=11, parent=grid_container)
+        self.telem_agreement = MonospaceTelemetryLabel(value=None, unit="%", label_text="Cross-Modal Agreement", font_size_px=11, parent=grid_container)
+        self.telem_final = MonospaceTelemetryLabel(value=None, unit="%", label_text="Final Fused Confidence", font_size_px=11, parent=grid_container)
+        self.telem_source = MonospaceTelemetryLabel(value=None, unit="", label_text="Pipeline Mode", font_size_px=11, parent=grid_container)
 
-        grid.addRow(self.telem_classical)
-        grid.addRow(self.telem_neural)
-        grid.addRow(self.telem_agreement)
-        grid.addRow(self.telem_final)
-        grid.addRow(self.telem_source)
+        grid.addWidget(self.telem_classical, 0, 0)
+        grid.addWidget(self.telem_neural, 0, 1)
+        grid.addWidget(self.telem_agreement, 1, 0)
+        grid.addWidget(self.telem_final, 1, 1)
+        grid.addWidget(self.telem_source, 2, 0, 1, 2)
 
-        main_layout.addLayout(grid)
+        main_layout.addWidget(grid_container)
 
     def update_breakdown(self, detection_res: Optional[DetectionResult]) -> None:
         """Update confidence breakdown safely from real DetectionResult data."""
@@ -78,7 +81,7 @@ class HybridPerceptionBreakdownPanel(PanelSurface):
             return
 
         source = getattr(detection_res, "detector_source", "HYBRID")
-        pipeline_name = f"Hybrid ({source.replace('_', ' ').title()})" if source != "HYBRID" else "Hybrid (Classical + Neural)"
+        pipeline_name = f"{source.replace('_', ' ').title()}" if source != "HYBRID" else "Hybrid (Classical + Neural)"
         self.telem_source.set_value(pipeline_name)
 
         if not detection_res.detected:
@@ -88,7 +91,6 @@ class HybridPerceptionBreakdownPanel(PanelSurface):
             self.telem_final.set_value(0.0, "%")
             return
 
-        # Safely check for diagnostics dict or dataclass attributes
         diag = getattr(detection_res, "diagnostics", None)
         c_conf = None
         n_conf = None
@@ -116,4 +118,3 @@ class HybridPerceptionBreakdownPanel(PanelSurface):
         self.telem_neural.set_value(n_val, "%")
         self.telem_agreement.set_value(a_val, "%")
         self.telem_final.set_value(f_val, "%")
-

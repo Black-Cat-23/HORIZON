@@ -56,10 +56,11 @@ class InteractingMultipleModelFilter:
         # Model 2: High-G Evasive Maneuver / Jerk (absorbs sudden platform shocks and break turns without gating loss)
         self._cv_filter = TargetKalmanFilter(
             KalmanFilterConfig(
-                accel_noise_sigma=20.0,
+                accel_noise_sigma=60.0,
                 base_measurement_sigma_px=self._config.base_measurement_sigma_px,
                 adaptive_motion_noise=True,
                 adaptive_process_noise=False,
+                adaptive_measurement_noise=True,
             )
         )
         self._ca_filter = TargetKalmanFilter(
@@ -68,6 +69,7 @@ class InteractingMultipleModelFilter:
                 base_measurement_sigma_px=self._config.base_measurement_sigma_px,
                 adaptive_motion_noise=True,
                 adaptive_process_noise=False,
+                adaptive_measurement_noise=True,
             )
         )
         self._maneuver_filter = TargetKalmanFilter(
@@ -76,6 +78,7 @@ class InteractingMultipleModelFilter:
                 base_measurement_sigma_px=self._config.base_measurement_sigma_px,
                 adaptive_motion_noise=True,
                 adaptive_process_noise=False,
+                adaptive_measurement_noise=True,
             )
         )
         self._filters = [self._cv_filter, self._ca_filter, self._maneuver_filter]
@@ -86,11 +89,12 @@ class InteractingMultipleModelFilter:
 
         # 3×3 Markov Transition Probability Matrix: P_ij = P(mode_j | mode_i)
         # Row i is origin mode, Col j is destination mode
+        # Maneuver mode captures transient shocks, then rapidly decays back to steady-state CV/CA
         self._trans_prob = np.array(
             [
-                [0.78, 0.18, 0.04],
-                [0.05, 0.88, 0.07],
-                [0.03, 0.12, 0.85],
+                [0.85, 0.12, 0.03],
+                [0.10, 0.85, 0.05],
+                [0.25, 0.35, 0.40],
             ],
             dtype=np.float64,
         )
@@ -190,10 +194,7 @@ class InteractingMultipleModelFilter:
         c_bar = c_bar / sum_c if sum_c > 0 else np.array([0.34, 0.33, 0.33], dtype=np.float64)
 
         # Mixing probabilities: mu_{i|j} = (P_ij * mu_i) / c_bar[j]
-        mu_mix = np.zeros((self._num_models, self._num_models), dtype=np.float64)
-        for i in range(self._num_models):
-            for j in range(self._num_models):
-                mu_mix[i, j] = (self._trans_prob[i, j] * self._mode_probs[i]) / c_bar[j]
+        mu_mix = (self._trans_prob * self._mode_probs[:, None]) / c_bar[None, :]
 
         # Extract current states of the 3 sub-filters
         x_sub = [f.state_vector for f in self._filters]
@@ -203,9 +204,7 @@ class InteractingMultipleModelFilter:
         mixed_x = []
         mixed_P = []
         for j in range(self._num_models):
-            x_0j = np.zeros((4, 1), dtype=np.float64)
-            for i in range(self._num_models):
-                x_0j += mu_mix[i, j] * x_sub[i]
+            x_0j = sum(mu_mix[i, j] * x_sub[i] for i in range(self._num_models))
             mixed_x.append(x_0j)
 
             P_0j = np.zeros((4, 4), dtype=np.float64)
@@ -267,6 +266,12 @@ class InteractingMultipleModelFilter:
         for j in range(self._num_models):
             dx = preds_x[j] - fused_px
             fused_pP += c_bar[j] * (preds_P[j] + (dx @ dx.T))
+
+        # Bound fused prediction: sensor plane and optical velocity limits
+        fused_px[0, 0] = float(np.clip(fused_px[0, 0], -50.0, 690.0))
+        fused_px[1, 0] = float(np.clip(fused_px[1, 0], -50.0, 530.0))
+        fused_px[2, 0] = float(np.clip(fused_px[2, 0], -800.0, 800.0))
+        fused_px[3, 0] = float(np.clip(fused_px[3, 0], -800.0, 800.0))
 
         self._fused_x_pred = fused_px
         self._fused_P_pred = fused_pP
@@ -330,7 +335,7 @@ class InteractingMultipleModelFilter:
                     P_pred_j = self._sub_preds_P[j]
                     S_mat = P_pred_j[:2, :2] + np.eye(2) * (self._config.base_measurement_sigma_px ** 2)
 
-                det_S = max(1e-6, float(np.linalg.det(S_mat)))
+                det_S = max(1e-6, float(S_mat[0, 0] * S_mat[1, 1] - S_mat[0, 1] * S_mat[1, 0]))
 
                 # Normalized Gaussian innovation likelihood
                 L_j = (1.0 / (2.0 * math.pi * math.sqrt(det_S))) * math.exp(-0.5 * min(d_j_sq, 45.0)) + 1e-12
@@ -372,30 +377,34 @@ class InteractingMultipleModelFilter:
 
         # 4. Weighted Fusion of 3 IMM Sub-Filter Estimates
         w = self._mode_probs
-        fused_x = sum(w[j] * sub_estimates[j].estimated_x for j in range(self._num_models))
-        fused_y = sum(w[j] * sub_estimates[j].estimated_y for j in range(self._num_models))
-        fused_vx = sum(w[j] * sub_estimates[j].estimated_vx for j in range(self._num_models))
-        fused_vy = sum(w[j] * sub_estimates[j].estimated_vy for j in range(self._num_models))
+        w0, w1, w2 = float(w[0]), float(w[1]), float(w[2])
+        e0, e1, e2 = sub_estimates[0], sub_estimates[1], sub_estimates[2]
 
-        fused_px = sum(w[j] * sub_estimates[j].predicted_x for j in range(self._num_models))
-        fused_py = sum(w[j] * sub_estimates[j].predicted_y for j in range(self._num_models))
-        fused_pvx = sum(w[j] * sub_estimates[j].predicted_vx for j in range(self._num_models))
-        fused_pvy = sum(w[j] * sub_estimates[j].predicted_vy for j in range(self._num_models))
+        fused_x = float(np.clip(w0 * e0.estimated_x + w1 * e1.estimated_x + w2 * e2.estimated_x, -50.0, 690.0))
+        fused_y = float(np.clip(w0 * e0.estimated_y + w1 * e1.estimated_y + w2 * e2.estimated_y, -50.0, 530.0))
+        fused_vx = float(np.clip(w0 * e0.estimated_vx + w1 * e1.estimated_vx + w2 * e2.estimated_vx, -800.0, 800.0))
+        fused_vy = float(np.clip(w0 * e0.estimated_vy + w1 * e1.estimated_vy + w2 * e2.estimated_vy, -800.0, 800.0))
+
+        fused_px = float(np.clip(w0 * e0.predicted_x + w1 * e1.predicted_x + w2 * e2.predicted_x, -50.0, 690.0))
+        fused_py = float(np.clip(w0 * e0.predicted_y + w1 * e1.predicted_y + w2 * e2.predicted_y, -50.0, 530.0))
+        fused_pvx = float(np.clip(w0 * e0.predicted_vx + w1 * e1.predicted_vx + w2 * e2.predicted_vx, -800.0, 800.0))
+        fused_pvy = float(np.clip(w0 * e0.predicted_vy + w1 * e1.predicted_vy + w2 * e2.predicted_vy, -800.0, 800.0))
 
         # Fused covariance with spread-of-the-means term:
         # P = \sum w_j * (P_j + (x_j - x_fused)(x_j - x_fused)^T)
-        fused_cov = sum(w[j] * sub_estimates[j].covariance for j in range(self._num_models)).copy()
-        for j in range(self._num_models):
+        fused_cov = w0 * e0.covariance + w1 * e1.covariance + w2 * e2.covariance
+        for j in range(3):
+            ej = sub_estimates[j]
             dx = np.array([
-                [sub_estimates[j].estimated_x - fused_x],
-                [sub_estimates[j].estimated_y - fused_y],
-                [sub_estimates[j].estimated_vx - fused_vx],
-                [sub_estimates[j].estimated_vy - fused_vy],
+                ej.estimated_x - fused_x,
+                ej.estimated_y - fused_y,
+                ej.estimated_vx - fused_vx,
+                ej.estimated_vy - fused_vy,
             ], dtype=np.float64)
-            fused_cov += w[j] * (dx @ dx.T)
+            fused_cov += float(w[j]) * np.outer(dx, dx)
 
         self._fused_x = np.array([[fused_x], [fused_y], [fused_vx], [fused_vy]], dtype=np.float64)
-        self._fused_P = fused_cov.copy()
+        self._fused_P = fused_cov
 
         self._track_age += 1
         self._last_timestamp = ts
@@ -407,8 +416,9 @@ class InteractingMultipleModelFilter:
 
         # Diagnostic health assembly
         gate_thresh = self._config.gate_chi2_threshold
-        inno_health = float(np.clip(math.exp(-0.5 * min(nis, 50.0) / gate_thresh), 0.0, 1.0)) if (measurement is not None) else 0.5
-        pos_health = float(np.clip(1.0 / (1.0 + pos_sigma / 20.0), 0.0, 1.0))
+        inno_val = math.exp(-0.5 * min(nis, 50.0) / gate_thresh) if (measurement is not None) else 0.5
+        inno_health = min(1.0, max(0.0, float(inno_val)))
+        pos_health = min(1.0, max(0.0, 1.0 / (1.0 + pos_sigma / 20.0)))
         track_health = float(0.5 * inno_health + 0.5 * pos_health)
 
         health = EstimatorHealth(
@@ -486,15 +496,6 @@ class InteractingMultipleModelFilter:
             gimbal_tilt_rate=gimbal_tilt_rate,
             is_sensor_step=is_sensor_step,
         )
-
-    def predict(
-        self,
-        dt: float,
-        gimbal_pan_rate: float = 0.0,
-        gimbal_tilt_rate: float = 0.0,
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        """Predict step forward by dt seconds."""
-        return self._cv_filter.predict(dt, gimbal_pan_rate, gimbal_tilt_rate)
 
     @property
     def health(self) -> Optional[EstimatorHealth]:

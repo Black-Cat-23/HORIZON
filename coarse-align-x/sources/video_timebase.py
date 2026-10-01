@@ -256,10 +256,13 @@ class VideoTimebase:
     def seek(self, frame_id: int) -> None:
         """Notify timebase of an explicit seek to frame_id."""
         clamped_id = max(0, frame_id)
-        self._last_frame_id = clamped_id
-        self._last_timestamp = float(clamped_id) / self._source_fps if self._source_fps > 0 else 0.0
-        self._decode_latencies.clear()
-        self._proc_latencies.clear()
-        self._proc_timestamps.clear()
-        self._last_timing = None
-        logger.debug("VideoTimebase seeked to frame %d (t=%.3fs)", clamped_id, self._last_timestamp)
+        if clamped_id == 0:
+            self.reset()
+        else:
+            self._last_frame_id = clamped_id - 1
+            self._last_timestamp = float(clamped_id - 1) / self._source_fps if self._source_fps > 0 else 0.0
+            self._decode_latencies.clear()
+            self._proc_latencies.clear()
+            self._proc_timestamps.clear()
+            self._last_timing = None
+        logger.debug("VideoTimebase seeked to frame %d (t=%.3fs)", clamped_id, self._last_timestamp or 0.0)

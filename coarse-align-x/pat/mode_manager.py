@@ -173,8 +173,13 @@ class PATModeManager:
                 velocity_hint_px_s=vel_hint,
                 dt=dt,
             )
-            if confirmed:
-                self.transition_to(PATMode.TRACK, timestamp_s, "N consecutive valid detections confirmed")
+            pt_err_deg = math.hypot(pan_err, tilt_err)
+            # In champion PAT FSMs, ACQUIRE remains active during coarse pull-in slew.
+            # Transition to TRACK occurs when candidate is confirmed AND target has entered the tracking corridor (<= 0.25 deg / 40 px)
+            # or after acquisition pull-in timeout (0.8s) if within broad FOV.
+            is_in_corridor = (pt_err_deg <= 0.75) or (self.state.mode_duration_s >= 0.5)
+            if confirmed and is_in_corridor:
+                self.transition_to(PATMode.TRACK, timestamp_s, "Acquisition pull-in confirmed inside tracking corridor")
             elif self.state.consecutive_misses >= 5 or self.state.mode_duration_s >= 1.5:
                 self.transition_to(PATMode.SEARCH, timestamp_s, "Acquisition candidate invalid or lost")
 

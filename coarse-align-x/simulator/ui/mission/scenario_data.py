@@ -32,10 +32,14 @@ class ScenarioDefinition:
     difficulty: str  # "Nominal", "Moderate", "Severe", "Adversarial", "Custom"
     param_summary: str
     config: AppConfig
+    mission_code: str = "ISRO-LEO-01"
+    slant_range_km: float = 700.0
+    orbit_regime: str = "LEO-to-Ground"
+    channel_model: str = "HV-5/7 (Clear Sky)"
 
-    def generate_preview_path(self, num_points: int = 100) -> List[Tuple[float, float]]:
+    def generate_preview_path(self, num_points: int = 100, traj_type: Optional[str] = None) -> List[Tuple[float, float]]:
         """Generate static (x, y) world coordinates for preview rendering."""
-        t_type = self.config.trajectory.type
+        t_type = traj_type if traj_type is not None else self.config.trajectory.type
         pts: List[Tuple[float, float]] = []
 
         if t_type == "straight":
@@ -133,6 +137,10 @@ def get_default_scenarios() -> List[ScenarioDefinition]:
             difficulty="Nominal",
             param_summary="Target: 10px · Motion: Figure-8 · Disturbance: Nominal",
             config=make_config("figure8", "NOMINAL"),
+            mission_code="ISRO-LEO-01",
+            slant_range_km=700.0,
+            orbit_regime="LEO-to-Ground",
+            channel_model="HV-5/7 Nominal (Cn² = 1e-14)",
         ),
         ScenarioDefinition(
             scenario_id="straight",
@@ -141,6 +149,10 @@ def get_default_scenarios() -> List[ScenarioDefinition]:
             difficulty="Nominal",
             param_summary="Target: 10px · Motion: Straight line · Disturbance: Nominal",
             config=make_config("straight", "NOMINAL"),
+            mission_code="ISRO-LIN-02",
+            slant_range_km=850.0,
+            orbit_regime="LEO Horizon Pass",
+            channel_model="HV-5/7 Nominal",
         ),
         ScenarioDefinition(
             scenario_id="circular",
@@ -149,6 +161,10 @@ def get_default_scenarios() -> List[ScenarioDefinition]:
             difficulty="Nominal",
             param_summary="Target: 10px · Motion: Circular · Disturbance: Nominal",
             config=make_config("circular", "NOMINAL"),
+            mission_code="ISRO-ISL-03",
+            slant_range_km=36000.0,
+            orbit_regime="GEO Intersatellite",
+            channel_model="Space Vacuum (Zero Atm)",
         ),
         ScenarioDefinition(
             scenario_id="figure8",
@@ -157,6 +173,10 @@ def get_default_scenarios() -> List[ScenarioDefinition]:
             difficulty="Moderate",
             param_summary="Target: 10px · Motion: Figure-8 · Disturbance: Nominal",
             config=make_config("figure8", "NOMINAL"),
+            mission_code="ISRO-PAT-04",
+            slant_range_km=1200.0,
+            orbit_regime="MEO Optical Relay",
+            channel_model="Moderate Turbulence",
         ),
         ScenarioDefinition(
             scenario_id="random",
@@ -165,6 +185,10 @@ def get_default_scenarios() -> List[ScenarioDefinition]:
             difficulty="Moderate",
             param_summary="Target: 10px · Motion: Random walk · Disturbance: Nominal",
             config=make_config("random", "NOMINAL"),
+            mission_code="ISRO-STOCH-05",
+            slant_range_km=650.0,
+            orbit_regime="Non-Cooperative Rendezvous",
+            channel_model="Dynamic Scintillation",
         ),
         ScenarioDefinition(
             scenario_id="low_light",
@@ -173,6 +197,10 @@ def get_default_scenarios() -> List[ScenarioDefinition]:
             difficulty="Moderate",
             param_summary="Target: 8px · Motion: Figure-8 · Disturbance: Low light",
             config=make_config("figure8", "RECOVERY"),
+            mission_code="ISRO-ECL-06",
+            slant_range_km=900.0,
+            orbit_regime="Earth Eclipse Ingress",
+            channel_model="Low Photon Flux (Shot Noise)",
         ),
         ScenarioDefinition(
             scenario_id="fog_haze",
@@ -181,6 +209,10 @@ def get_default_scenarios() -> List[ScenarioDefinition]:
             difficulty="Moderate",
             param_summary="Target: 10px · Motion: Figure-8 · Disturbance: Haze",
             config=make_config("figure8", "DIFFICULT"),
+            mission_code="ISRO-ATM-07",
+            slant_range_km=550.0,
+            orbit_regime="Ground Terminal Downlink",
+            channel_model="Aerosol Scattering (Haze)",
         ),
         ScenarioDefinition(
             scenario_id="jitter",
@@ -189,6 +221,10 @@ def get_default_scenarios() -> List[ScenarioDefinition]:
             difficulty="Moderate",
             param_summary="Target: 10px · Motion: Straight line · Disturbance: Jitter",
             config=make_config("straight", "DIFFICULT"),
+            mission_code="ISRO-VIB-08",
+            slant_range_km=1500.0,
+            orbit_regime="Reaction Wheel Harmonic Pass",
+            channel_model="Platform Micro-Jitter",
         ),
         ScenarioDefinition(
             scenario_id="platform_motion",
@@ -197,6 +233,10 @@ def get_default_scenarios() -> List[ScenarioDefinition]:
             difficulty="Severe",
             param_summary="Target: 10px · Motion: Circular · Disturbance: Platform motion",
             config=make_config("circular", "SEVERE"),
+            mission_code="ISRO-DYN-09",
+            slant_range_km=720.0,
+            orbit_regime="High-Rate Angular Slew",
+            channel_model="Kinematic Centripetal Slew",
         ),
         ScenarioDefinition(
             scenario_id="multi_distractor",
@@ -205,6 +245,10 @@ def get_default_scenarios() -> List[ScenarioDefinition]:
             difficulty="Severe",
             param_summary="Target: 10px · Motion: Figure-8 · Disturbance: Severe noise",
             config=make_config("figure8", "SEVERE"),
+            mission_code="ISRO-CLUT-10",
+            slant_range_km=600.0,
+            orbit_regime="Dense Debris Field",
+            channel_model="Multi-Beacon Clutter",
         ),
         ScenarioDefinition(
             scenario_id="recovery",
@@ -213,6 +257,10 @@ def get_default_scenarios() -> List[ScenarioDefinition]:
             difficulty="Severe",
             param_summary="Target: 10px · Motion: Figure-8 · Disturbance: Recovery spiral",
             config=make_config("figure8", "RECOVERY"),
+            mission_code="ISRO-REC-11",
+            slant_range_km=1100.0,
+            orbit_regime="Occultation Re-Acquisition",
+            channel_model="Autonomous Spiral Scan",
         ),
         ScenarioDefinition(
             scenario_id="severe_combined",
@@ -221,6 +269,10 @@ def get_default_scenarios() -> List[ScenarioDefinition]:
             difficulty="Adversarial",
             param_summary="Target: 10px · Motion: Figure-8 · Disturbance: Adversarial",
             config=make_config("figure8", "ADVERSARIAL"),
+            mission_code="ISRO-ADV-12",
+            slant_range_km=800.0,
+            orbit_regime="Solar Blinding & Cloud Deck",
+            channel_model="Max Combined Stress",
         ),
         ScenarioDefinition(
             scenario_id="custom",
@@ -229,5 +281,9 @@ def get_default_scenarios() -> List[ScenarioDefinition]:
             difficulty="Custom",
             param_summary="Target: User · Motion: Custom · Disturbance: Custom",
             config=make_config("figure8", "NOMINAL"),
+            mission_code="ISRO-CST-13",
+            slant_range_km=1000.0,
+            orbit_regime="User-Defined Profile",
+            channel_model="Custom Mission Vector",
         ),
     ]

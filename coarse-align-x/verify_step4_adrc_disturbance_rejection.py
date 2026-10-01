@@ -44,13 +44,15 @@ def test_1_nleso_peaking_suppression() -> Dict[str, float]:
         alpha1=1.0, alpha2=1.0, delta=0.05
     )
 
-    # Non-linear NLESO (alpha1 = 0.75, alpha2 = 0.50)
+    # Non-linear NLESO (alpha1 = 0.75, alpha2 = 0.33)
     nleso_adrc = ADRCAxisController(
         b0=1.0, omega_o=12.0, omega_c=2.8, output_limit=20.0,
-        alpha1=0.75, alpha2=0.50, delta=0.05
+        alpha1=0.75, alpha2=0.33, delta=0.05
     )
 
     def simulate_step_response(ctrl: ADRCAxisController) -> Tuple[List[float], List[float]]:
+        ctrl.reset()
+        ctrl.initialized = True  # Observer starts at rest (z1=0, z2=0) to evaluate transient peaking
         errors = []
         z2_estimates = []
         pos_error = initial_error
@@ -111,6 +113,8 @@ def test_2_actuator_anti_windup() -> Dict[str, float]:
 
     # Simulate with saturation on physical plant
     def run_saturation_sim(ctrl: ADRCAxisController, use_rate_feedback: bool) -> Tuple[List[float], List[float]]:
+        ctrl.reset()
+        ctrl.initialized = True
         y = 4.0  # 4 deg error requiring full saturation slew
         errors = []
         z2_vals = []

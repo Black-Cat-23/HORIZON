@@ -186,9 +186,9 @@ def build_measurement_noise_matrix(
     Returns:
         2×2 float64 covariance matrix R (anisotropic when moving).
     """
-    conf = float(np.clip(confidence, 0.05, 1.0))
+    conf = min(1.0, max(0.05, float(confidence)))
     sigma_r = base_sigma_px / conf
-    sigma_r = float(np.clip(sigma_r, min_sigma_px, max_sigma_px))
+    sigma_r = min(max_sigma_px, max(min_sigma_px, float(sigma_r)))
     var_r = sigma_r * sigma_r
 
     R = np.zeros((2, 2), dtype=np.float64)

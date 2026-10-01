@@ -50,7 +50,7 @@ from simulator.perception.consistency_features import (
 from simulator.perception.detector import ClassicalBeaconDetector, DetectionQuality, DetectionResult
 from simulator.perception.hybrid_candidate import CandidateSource, UnifiedCandidate
 from simulator.perception.neural_detector import NeuralBeaconDetector
-from simulator.perception.preprocessing import validate_input_frame
+from simulator.perception.preprocessing import apply_adaptive_median_filter, validate_input_frame
 
 logger = logging.getLogger(__name__)
 
@@ -133,16 +133,19 @@ class HybridBeaconDetector:
         elif mode != "HYBRID":
             logger.warning("Unknown perception_mode %s; falling back to HYBRID", mode)
 
-        # Mode == "HYBRID"
+        # Mode == "HYBRID" — Tiered Dual-Rate Consensus Perception
         sched_cfg = getattr(self._hybrid_cfg, "scheduling", None)
-        if sched_cfg is not None and getattr(sched_cfg, "enabled", False) and pat_mode is not None:
+        effective_pat_mode = (pat_mode or ("TRACK" if estimator_prediction is not None else "SEARCH")).upper()
+
+        if sched_cfg is not None and getattr(sched_cfg, "enabled", False):
             # 1. Eligibility Check
             needs_full_hybrid = False
-            if pat_mode.upper() in [m.upper() for m in sched_cfg.always_full_modes]:
+            always_full = [m.upper() for m in getattr(sched_cfg, "always_full_modes", ("SEARCH", "ACQUIRE", "DEGRADED", "REACQUIRE"))]
+            if effective_pat_mode in always_full:
                 needs_full_hybrid = True
-            elif track_quality < sched_cfg.high_quality_threshold:
+            elif track_quality < getattr(sched_cfg, "high_quality_threshold", 0.75):
                 needs_full_hybrid = True
-            elif consecutive_hits < sched_cfg.min_stable_hits:
+            elif consecutive_hits < getattr(sched_cfg, "min_stable_hits", 5):
                 needs_full_hybrid = True
             elif sched_cfg.recalibration_period_frames <= 1 or self._frames_since_full_hybrid >= sched_cfg.recalibration_period_frames:
                 needs_full_hybrid = True
@@ -153,9 +156,13 @@ class HybridBeaconDetector:
                     frame, timestamp, collect_diagnostics, estimator_prediction, prediction_covariance, velocity_hint_px_s, roi=roi
                 )
 
-            # 2. Fast Path Attempt (Classical Only)
+            # 2. Fast Path Attempt (Tier 1: Synchronous Subpixel CoG & Optical Consistency)
             t_fast_start = time.perf_counter()
-            res_c = self._classical_detector.detect(frame, timestamp, collect_diagnostics, roi=roi)
+            res_c = self._classical_detector.detect(
+                frame, timestamp, collect_diagnostics, roi=roi,
+                estimator_prediction=estimator_prediction,
+                prediction_covariance=prediction_covariance
+            )
 
             # 3. Escalation Evaluation
             escalate = False
@@ -177,27 +184,29 @@ class HybridBeaconDetector:
                     escalate = True
                     escalation_reason = f"Fast-path candidate failed Kalman gate (d2={d2_est:.2f} > 9.21)"
 
-            if escalate:
-                self._frames_since_full_hybrid = 0
-                res_hybrid = self._detect_hybrid(
-                    frame, timestamp, collect_diagnostics, estimator_prediction, prediction_covariance, velocity_hint_px_s, roi=roi
-                )
+            if not escalate:
+                # Tier 1 Accepted with subpixel CoG refinement (< 2.5 ms)
+                self._frames_since_full_hybrid += 1
+                t_fast_end = time.perf_counter()
                 return replace(
-                    res_hybrid,
-                    decision_reason=f"ESCALATED: {escalation_reason} | {res_hybrid.decision_reason}"
+                    res_c,
+                    processing_time_ms=(t_fast_end - t_fast_start) * 1000.0,
+                    method_used="classical_fast_path",
+                    detector_source="HYBRID_FAST_PATH",
+                    agreement_state="AGREEMENT",
+                    fused_confidence=res_c.confidence,
+                    decision_reason=f"Tier-1 Consensus track ({consecutive_hits} hits, quality={track_quality:.2f})"
                 )
 
-            # Fast path accepted safely
-            self._frames_since_full_hybrid += 1
-            t_fast_end = time.perf_counter()
+            # Tier 2: Neural Escalation / Reacquisition
+            self._frames_since_full_hybrid = 0
+            res_hybrid = self._detect_hybrid(
+                frame, timestamp, collect_diagnostics, estimator_prediction, prediction_covariance, velocity_hint_px_s, roi=roi,
+                precomputed_classical_result=res_c,
+            )
             return replace(
-                res_c,
-                processing_time_ms=(t_fast_end - t_fast_start) * 1000.0,
-                method_used="classical_fast_path",
-                detector_source="HYBRID_FAST_PATH",
-                agreement_state="FAST_PATH_NOMINAL",
-                fused_confidence=res_c.confidence,
-                decision_reason=f"Fast-path nominal track ({consecutive_hits} hits, quality={track_quality:.2f})"
+                res_hybrid,
+                decision_reason=f"ESCALATED: {escalation_reason} | {res_hybrid.decision_reason}"
             )
 
         return self._detect_hybrid(
@@ -213,6 +222,7 @@ class HybridBeaconDetector:
         prediction_covariance: Optional[np.ndarray],
         velocity_hint_px_s: float = 0.0,
         roi: Optional[Union[Any, Tuple[int, int, int, int]]] = None,
+        precomputed_classical_result: Optional[DetectionResult] = None,
     ) -> DetectionResult:
         t_start = time.perf_counter()
 
@@ -237,14 +247,17 @@ class HybridBeaconDetector:
                 roi_bbox = (rx1, ry1, rx2 - rx1, ry2 - ry1) if is_roi else None
 
         # 1. Execute Classical and Neural Detectors Concurrently (within ROI if specified)
-        res_c = self._classical_detector.detect(
-            valid_frame,
-            timestamp,
-            collect_diagnostics,
-            roi=roi,
-            estimator_prediction=estimator_prediction,
-            prediction_covariance=prediction_covariance,
-        )
+        if precomputed_classical_result is not None:
+            res_c = precomputed_classical_result
+        else:
+            res_c = self._classical_detector.detect(
+                valid_frame,
+                timestamp,
+                collect_diagnostics,
+                roi=roi,
+                estimator_prediction=estimator_prediction,
+                prediction_covariance=prediction_covariance,
+            )
         res_n = self._neural_detector.detect(
             valid_frame,
             timestamp,
@@ -576,8 +589,9 @@ class HybridBeaconDetector:
             )
 
         # 6. Optical Subpixel Centroid Refinement on Selected ROI
+        denoised_refine_frame = apply_adaptive_median_filter(valid_frame, self._config.preprocessing)
         final_centroid, centroid_method = self._refine_centroid(
-            valid_frame, top_candidate
+            denoised_refine_frame, top_candidate
         )
 
         # 7. Physical Centroid Uncertainty & Candidate Quality Derivation

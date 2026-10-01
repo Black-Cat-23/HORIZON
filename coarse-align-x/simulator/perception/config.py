@@ -118,13 +118,13 @@ class HybridFusionConfig:
 class AdaptiveSchedulingConfig:
     """Configuration for Compute-Adaptive Perception Scheduling."""
     enabled: bool = True
-    high_quality_threshold: float = 0.75
-    min_stable_hits: int = 5
-    recalibration_period_frames: int = 10
+    high_quality_threshold: float = 0.50
+    min_stable_hits: int = 3
+    recalibration_period_frames: int = 30
     escalate_on_low_confidence: bool = True
-    classical_escalation_confidence: float = 0.50
+    classical_escalation_confidence: float = 0.40
     escalate_on_multiple_candidates: bool = True
-    always_full_modes: Tuple[str, ...] = ("SEARCH", "ACQUIRE", "DEGRADED", "REACQUIRE")
+    always_full_modes: Tuple[str, ...] = ("SEARCH", "ACQUIRE", "REACQUIRE")
 
 
 @dataclass(frozen=True)

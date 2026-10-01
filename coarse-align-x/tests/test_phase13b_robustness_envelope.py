@@ -115,7 +115,7 @@ class TestEmpiricalRobustnessSweeps:
 
     def test_fps_and_latency_vs_load(self):
         fps_curve, lat_curve = self.harness.measure_fps_and_latency_vs_load(
-            load_delays_ms=(0.0, 40.0),
+            load_delays_ms=(0.0, 60.0),
             frames_per_step=4,
         )
 

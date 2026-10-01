@@ -1,21 +1,12 @@
 # HORIZON PHASE 10 EXISTING VALIDATION UPGRADE REPORT
 
 ## Step 1 — Data Integrity Audit Summary
-- **Total Trial Files Inspected:** 46
-- **Validated Trials:** 40
+- **Total Trial Files Inspected:** 49
+- **Validated Trials:** 43
 - **Corrupted / Invalid Files:** 6
 - **Duplicate Trial Seeds:** 4
 - **Incomplete Trials:** 0
 - **Configuration Mismatches:** 0
-
-## Step 1.5 — Active Benchmark & Trial Profile
-- **Input Mode:** EXTERNAL_VIDEO
-- **Source File:** isro_sample_beacon_30s.mp4
-- **Video Resolution:** 640x480 @ 30.0 FPS (628 frames)
-- **Pipeline Engines:** Perception=HYBRID | Estimator=IMM_ADAPTIVE_EKF | Controller=ADRC_NONLINEAR
-- **Lock Retention Rate:** 99.8%
-- **RMSE Centroid Error:** 8.54 px
-- **P95 Processing Latency:** 38.89 ms
 
 ## Step 2 — Full Metric Distributions (P50, P95, P99, Max)
 | Algorithm | Success Rate | Lock Retention | Mean Error | Median (P50) | P95 Error | P99 Error | Max Error | Mean Latency |
@@ -23,19 +14,19 @@
 | **B0** | 0.0% | 0.0% | 300.00 px | 300.00 px | 300.00 px | 300.00 px | 300.00 px | 10.03 ms |
 | **B1** | 0.0% | 54.0% | 78.95 px | 79.15 px | 85.53 px | 85.56 px | 85.56 px | 8.59 ms |
 | **B2** | 0.0% | 51.4% | 86.71 px | 87.43 px | 94.83 px | 94.86 px | 94.86 px | 39.20 ms |
-| **OURS** | 0.0% | 51.4% | 86.77 px | 87.45 px | 94.96 px | 94.97 px | 94.97 px | 41.90 ms |
+| **OURS** | 7.7% | 61.2% | 105.57 px | 94.48 px | 212.47 px | 293.81 px | 314.15 px | 33.43 ms |
 
 ---
 
 ## Step 3 & 4 — Seed-Matched Differences & Non-Parametric Statistics
 | Pairwise Comparison | Mean Delta | Test Method | P-Value (BH-FDR) | Cohen's d | Vargha-Delaney A12 | Significant? |
 |---|---|---|---|---|---|---|
-| B0 vs B1 | +221.05 px | Paired Wilcoxon Signed-Rank (Non-Parametric) | 0.0061 | 46.62 | 1.00 | **YES** |
-| B0 vs B2 | +213.29 px | Paired Wilcoxon Signed-Rank (Non-Parametric) | 0.0061 | 35.67 | 1.00 | **YES** |
-| B0 vs OURS | +213.23 px | Paired Wilcoxon Signed-Rank (Non-Parametric) | 0.0061 | 35.64 | 1.00 | **YES** |
-| B1 vs B2 | -7.76 px | Paired Wilcoxon Signed-Rank (Non-Parametric) | 0.0061 | -1.02 | 0.25 | **YES** |
-| B1 vs OURS | -7.83 px | Paired Wilcoxon Signed-Rank (Non-Parametric) | 0.0061 | -1.03 | 0.25 | **YES** |
-| B2 vs OURS | -0.06 px | Paired Wilcoxon Signed-Rank (Non-Parametric) | 0.0218 | -0.01 | 0.45 | **YES** |
+| B0 vs B1 | +221.05 px | Paired Wilcoxon Signed-Rank (Non-Parametric) | 0.0101 | 46.62 | 1.00 | **YES** |
+| B0 vs B2 | +213.29 px | Paired Wilcoxon Signed-Rank (Non-Parametric) | 0.0101 | 35.67 | 1.00 | **YES** |
+| B0 vs OURS | +194.43 px | Insufficient Samples | 1.0000 | 3.60 | 0.92 | **NO** |
+| B1 vs B2 | -7.76 px | Paired Wilcoxon Signed-Rank (Non-Parametric) | 0.0101 | -1.02 | 0.25 | **YES** |
+| B1 vs OURS | -26.63 px | Insufficient Samples | 1.0000 | -0.49 | 0.27 | **NO** |
+| B2 vs OURS | -18.87 px | Insufficient Samples | 1.0000 | -0.35 | 0.42 | **NO** |
 
 ---
 
@@ -45,7 +36,7 @@
 | **B0** | 10 | 0 | 0 | 0 | 10 | 0 | 0 | 0 |
 | **B1** | 10 | 0 | 0 | 5 | 5 | 0 | 0 | 0 |
 | **B2** | 10 | 0 | 0 | 0 | 0 | 0 | 10 | 0 |
-| **OURS** | 10 | 0 | 0 | 0 | 0 | 0 | 10 | 0 |
+| **OURS** | 13 | 0 | 0 | 2 | 0 | 0 | 10 | 0 |
 
 ---
 
@@ -58,14 +49,14 @@
 <line x1='60' y1='40' x2='60' y2='260' stroke='#52525b' stroke-width='1.5'/>
 <text x='250.0' y='290' fill='#a1a1aa' font-family='sans-serif' font-size='11' text-anchor='middle'>Latency (ms)</text>
 <text x='15' y='150.0' fill='#a1a1aa' font-family='sans-serif' font-size='11' text-anchor='middle' transform='rotate(-90 15 150.0)'>Accuracy</text>
-<circle cx='135.8' cy='259.3' r='7' fill='#ef4444' stroke='#ffffff' stroke-width='1.5'/>
-<text x='145.8' y='263.3' fill='#f4f4f5' font-family='sans-serif' font-size='12' font-weight='600'>B0 (10.0ms, 0.3)</text>
-<circle cx='124.9' cy='258.5' r='7' fill='#f59e0b' stroke='#ffffff' stroke-width='1.5'/>
-<text x='134.9' y='262.5' fill='#f4f4f5' font-family='sans-serif' font-size='12' font-weight='600'>B1 (8.6ms, 0.8)</text>
-<circle cx='356.2' cy='258.6' r='7' fill='#3b82f6' stroke='#ffffff' stroke-width='1.5'/>
-<text x='366.2' y='262.6' fill='#f4f4f5' font-family='sans-serif' font-size='12' font-weight='600'>B2 (39.2ms, 0.7)</text>
-<circle cx='376.7' cy='258.6' r='7' fill='#10b981' stroke='#ffffff' stroke-width='1.5'/>
-<text x='386.7' y='262.6' fill='#f4f4f5' font-family='sans-serif' font-size='12' font-weight='600'>OURS (41.9ms, 0.7)</text>
+<circle cx='141.0' cy='259.3' r='7' fill='#ef4444' stroke='#ffffff' stroke-width='1.5'/>
+<text x='151.0' y='263.3' fill='#f4f4f5' font-family='sans-serif' font-size='12' font-weight='600'>B0 (10.0ms, 0.3)</text>
+<circle cx='129.4' cy='258.5' r='7' fill='#f59e0b' stroke='#ffffff' stroke-width='1.5'/>
+<text x='139.4' y='262.5' fill='#f4f4f5' font-family='sans-serif' font-size='12' font-weight='600'>B1 (8.6ms, 0.8)</text>
+<circle cx='376.7' cy='258.6' r='7' fill='#3b82f6' stroke='#ffffff' stroke-width='1.5'/>
+<text x='386.7' y='262.6' fill='#f4f4f5' font-family='sans-serif' font-size='12' font-weight='600'>B2 (39.2ms, 0.7)</text>
+<circle cx='330.1' cy='258.8' r='7' fill='#10b981' stroke='#ffffff' stroke-width='1.5'/>
+<text x='340.1' y='262.8' fill='#f4f4f5' font-family='sans-serif' font-size='12' font-weight='600'>OURS (33.4ms, 0.6)</text>
 </svg>
 
 ---
@@ -83,9 +74,9 @@
 | `B2_MEAN_ERR` | **86.71 px** | `BENCHMARK_SUITE_P9` | `AGGREGATED_ALL` | `ALL_COMBINED` | `mean_tracking_error` | `Bootstrap Mean (N=1000)` |
 | `B2_P95_ERR` | **94.83 px** | `BENCHMARK_SUITE_P9` | `AGGREGATED_ALL` | `ALL_COMBINED` | `P95_tracking_error` | `Percentile P95` |
 | `B2_LATENCY` | **39.20 ms** | `BENCHMARK_SUITE_P9` | `AGGREGATED_ALL` | `ALL_COMBINED` | `processing_time` | `Sample Mean` |
-| `OURS_MEAN_ERR` | **86.77 px** | `BENCHMARK_SUITE_P9` | `AGGREGATED_ALL` | `ALL_COMBINED` | `mean_tracking_error` | `Bootstrap Mean (N=1000)` |
-| `OURS_P95_ERR` | **94.96 px** | `BENCHMARK_SUITE_P9` | `AGGREGATED_ALL` | `ALL_COMBINED` | `P95_tracking_error` | `Percentile P95` |
-| `OURS_LATENCY` | **41.90 ms** | `BENCHMARK_SUITE_P9` | `AGGREGATED_ALL` | `ALL_COMBINED` | `processing_time` | `Sample Mean` |
+| `OURS_MEAN_ERR` | **105.57 px** | `BENCHMARK_SUITE_P9` | `AGGREGATED_ALL` | `ALL_COMBINED` | `mean_tracking_error` | `Bootstrap Mean (N=1000)` |
+| `OURS_P95_ERR` | **212.47 px** | `BENCHMARK_SUITE_P9` | `AGGREGATED_ALL` | `ALL_COMBINED` | `P95_tracking_error` | `Percentile P95` |
+| `OURS_LATENCY` | **33.43 ms** | `BENCHMARK_SUITE_P9` | `AGGREGATED_ALL` | `ALL_COMBINED` | `processing_time` | `Sample Mean` |
 
 ---
 

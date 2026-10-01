@@ -83,6 +83,9 @@ class KalmanFilterConfig:
     # True for single-model filters, False for IMM sub-filters where each model is a fixed hypothesis
     adaptive_process_noise: bool = True
 
+    # Enable innovation-adaptive measurement noise scaling for optical jitter mitigation:
+    adaptive_measurement_noise: bool = False
+
 
 class TargetKalmanFilter:
     """Discrete-time Constant-Velocity Kalman Filter for optical beacon tracking.
@@ -111,6 +114,9 @@ class TargetKalmanFilter:
         self._consecutive_hits: int = 0
         self._consecutive_misses: int = 0
         self._last_innovation: Optional[Innovation] = None
+        self._cached_dt: Optional[float] = None
+        self._cached_F: Optional[np.ndarray] = None
+        self._cached_Q: Optional[np.ndarray] = None
 
     @property
     def config(self) -> KalmanFilterConfig:
@@ -231,15 +237,18 @@ class TargetKalmanFilter:
         # Clamp dt if unexpectedly large (e.g. system pause)
         dt_clamped = min(dt, self._config.max_dt_seconds)
 
-        # 1. State transition matrix F(dt)
-        F = build_transition_matrix(dt_clamped)
+        # 1. State transition matrix F(dt) and process noise matrix Q(dt)
+        if self._cached_dt != dt_clamped:
+            self._cached_dt = dt_clamped
+            self._cached_F = build_transition_matrix(dt_clamped)
+            self._cached_Q = build_process_noise_matrix(
+                dt=dt_clamped,
+                accel_noise_sigma=self._config.accel_noise_sigma,
+                model_type=self._config.process_model_type,  # type: ignore
+            )
 
-        # 2. Process noise covariance matrix Q(dt)
-        Q = build_process_noise_matrix(
-            dt=dt_clamped,
-            accel_noise_sigma=self._config.accel_noise_sigma,
-            model_type=self._config.process_model_type,  # type: ignore
-        )
+        F = self._cached_F
+        Q = self._cached_Q
 
         # NIS-driven process noise adaptive multiplier for maneuver recovery (standalone filters only)
         if (
@@ -259,6 +268,12 @@ class TargetKalmanFilter:
             shift_v = -gimbal_tilt_rate * (480.0 / 3.0) * dt_clamped
             self._x_pred[0, 0] += shift_u
             self._x_pred[1, 0] += shift_v
+
+        # Physical bounds clamp on prediction: sensor plane and optical velocity limits
+        self._x_pred[0, 0] = float(np.clip(self._x_pred[0, 0], -50.0, 690.0))
+        self._x_pred[1, 0] = float(np.clip(self._x_pred[1, 0], -50.0, 530.0))
+        self._x_pred[2, 0] = float(np.clip(self._x_pred[2, 0], -800.0, 800.0))
+        self._x_pred[3, 0] = float(np.clip(self._x_pred[3, 0], -800.0, 800.0))
 
         # 4. Propagate covariance: P_pred = F * P * F^T + Q
         P_pred = (F @ self._P @ F.T) + Q
@@ -326,6 +341,28 @@ class TargetKalmanFilter:
         # Compute innovation: y = z - H * x_pred, S = H P_pred H^T + R
         assert self._x_pred is not None and self._P_pred is not None
         inno = compute_innovation(z, self._x_pred, self._P_pred, self._H, R)
+
+        # Optical Jitter & High-Frequency Sensor Noise Mitigation (Root Cause 2 Fix):
+        # When 30 Hz optical jitter is injected, consecutive innovation residuals alternate direction
+        # or exhibit large variance (> 16 px^2). Adaptively inflate R so the Kalman filter
+        # does not treat high-frequency sensor noise as physical target velocity, preventing
+        # the mechanical gimbal from hunting and oscillating at 30 Hz.
+        if (
+            self._config.adaptive_measurement_noise
+            and self._last_innovation is not None
+            and self._last_innovation.residual is not None
+        ):
+            prev_y = self._last_innovation.residual
+            curr_y = z - self._H @ self._x_pred
+            dot_y = float(prev_y[0, 0] * curr_y[0, 0] + prev_y[1, 0] * curr_y[1, 0])
+            norm_sq = float(curr_y[0, 0]**2 + curr_y[1, 0]**2)
+            # Alternating sign with significant magnitude or severe optical jitter (> 25 px^2)
+            if (dot_y < 0.0 and norm_sq > 4.0) or norm_sq > 25.0:
+                jitter_inflate = float(np.clip(0.35 * norm_sq, 1.0, 64.0))
+                R[0, 0] += jitter_inflate
+                R[1, 1] += jitter_inflate
+                inno = compute_innovation(z, self._x_pred, self._P_pred, self._H, R)
+
         self._last_innovation = inno
 
         # Mahalanobis gating test: d^2 <= gamma_gate
@@ -339,10 +376,11 @@ class TargetKalmanFilter:
         is_initializing = (self._track_age <= 1)
         if not is_initializing and inno.mahalanobis_sq > effective_gate_sq:
             # If rejected for consecutive frames and a high-confidence beacon detection is present,
-            # re-acquire so the estimator never gets permanently stuck on a stale trajectory
+            # re-acquire so the estimator never gets permanently stuck on a stale trajectory.
+            # Require at least 5 consecutive misses to prevent false-alarm jumps on noise spikes.
             if (
-                self._consecutive_misses >= 1
-                and confidence >= 0.60
+                self._consecutive_misses >= 5
+                and confidence >= 0.70
             ):
                 logger.info("Re-acquiring track after %d consecutive gate rejections", self._consecutive_misses)
                 ts = timestamp if timestamp is not None else self._last_timestamp
@@ -364,25 +402,37 @@ class TargetKalmanFilter:
             )
 
         # Kalman Gain: K = P_pred * H^T * S^-1
-        # Computed via numerically stable solve: S^T * K^T = H * P_pred^T
+        # For optical observation matrix H = [[1,0,0,0],[0,1,0,0]], P_pred * H^T is P_pred[:, :2]
         S = inno.covariance
         H = self._H
         P_pred = self._P_pred
         x_pred = self._x_pred
 
-        try:
-            # Solve K = (P_pred * H^T) * S^-1 ==> K * S = P_pred * H^T
-            # Using S.T * K.T = H * P_pred
-            K = np.linalg.solve(S, H @ P_pred).T
-        except np.linalg.LinAlgError:
-            K = P_pred @ H.T @ np.linalg.pinv(S)
+        det_S = float(S[0, 0] * S[1, 1] - S[0, 1] * S[1, 0])
+        if det_S > 1e-12:
+            inv_det = 1.0 / det_S
+            inv_S = np.array([
+                [S[1, 1] * inv_det, -S[0, 1] * inv_det],
+                [-S[1, 0] * inv_det, S[0, 0] * inv_det],
+            ], dtype=np.float64)
+            K = P_pred[:, :2] @ inv_S
+        else:
+            try:
+                K = np.linalg.solve(S, H @ P_pred).T
+            except np.linalg.LinAlgError:
+                K = P_pred @ H.T @ np.linalg.pinv(S)
 
         # State Update: x = x_pred + K * y
         self._x = x_pred + (K @ inno.residual)
+        # Physical bounds clamp on state: sensor plane and optical velocity limits
+        self._x[0, 0] = float(np.clip(self._x[0, 0], -50.0, 690.0))
+        self._x[1, 0] = float(np.clip(self._x[1, 0], -50.0, 530.0))
+        self._x[2, 0] = float(np.clip(self._x[2, 0], -800.0, 800.0))
+        self._x[3, 0] = float(np.clip(self._x[3, 0], -800.0, 800.0))
 
         # Covariance Update
-        I_4 = np.eye(4, dtype=np.float64)
-        I_KH = I_4 - (K @ H)
+        I_KH = np.eye(4, dtype=np.float64)
+        I_KH[:, :2] -= K
 
         if self._config.use_joseph_form:
             # Joseph stabilized covariance form:
@@ -517,8 +567,9 @@ class TargetKalmanFilter:
 
         # Compute composite estimator health score [0.0, 1.0]
         gate_thresh = self._config.gate_chi2_threshold
-        inno_health = float(np.clip(math.exp(-0.5 * min(nis, 50.0) / gate_thresh), 0.0, 1.0)) if measurement_available else 0.5
-        pos_health = float(np.clip(1.0 / (1.0 + pos_sigma / 20.0), 0.0, 1.0))
+        inno_val = math.exp(-0.5 * min(nis, 50.0) / gate_thresh) if measurement_available else 0.5
+        inno_health = min(1.0, max(0.0, float(inno_val)))
+        pos_health = min(1.0, max(0.0, 1.0 / (1.0 + pos_sigma / 20.0)))
         track_health = float(0.5 * inno_health + 0.5 * pos_health)
 
         health = EstimatorHealth(

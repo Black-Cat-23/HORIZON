@@ -27,6 +27,8 @@ class CameraGimbal:
         accel_limit_deg_s2: Optional[float] = 300.0,
         initial_pan_deg: float = 0.0,
         initial_tilt_deg: float = 0.0,
+        max_pan_deg: Optional[float] = None,
+        max_tilt_deg: Optional[float] = None,
     ) -> None:
         if rate_limit_deg_s <= 0:
             raise ValueError(f"rate_limit_deg_s must be positive, got {rate_limit_deg_s}")
@@ -35,6 +37,8 @@ class CameraGimbal:
 
         self._rate_limit = float(rate_limit_deg_s)
         self._accel_limit = float(accel_limit_deg_s2) if accel_limit_deg_s2 else None
+        self._max_pan_deg = float(max_pan_deg) if max_pan_deg is not None else None
+        self._max_tilt_deg = float(max_tilt_deg) if max_tilt_deg is not None else None
 
         self._pan_deg = float(initial_pan_deg)
         self._tilt_deg = float(initial_tilt_deg)
@@ -110,9 +114,29 @@ class CameraGimbal:
         self._actual_pan_rate = max(-self._rate_limit, min(self._rate_limit, self._actual_pan_rate))
         self._actual_tilt_rate = max(-self._rate_limit, min(self._rate_limit, self._actual_tilt_rate))
 
-        # 3. Integrate position continuously (no teleportation)
+        # 3. Integrate position continuously with physical travel limits (prevents camera escaping 2000x2000 world)
         self._pan_deg += self._actual_pan_rate * dt
         self._tilt_deg += self._actual_tilt_rate * dt
+
+        if self._max_pan_deg is not None:
+            if self._pan_deg > self._max_pan_deg:
+                self._pan_deg = self._max_pan_deg
+                if self._actual_pan_rate > 0.0:
+                    self._actual_pan_rate = 0.0
+            elif self._pan_deg < -self._max_pan_deg:
+                self._pan_deg = -self._max_pan_deg
+                if self._actual_pan_rate < 0.0:
+                    self._actual_pan_rate = 0.0
+
+        if self._max_tilt_deg is not None:
+            if self._tilt_deg > self._max_tilt_deg:
+                self._tilt_deg = self._max_tilt_deg
+                if self._actual_tilt_rate > 0.0:
+                    self._actual_tilt_rate = 0.0
+            elif self._tilt_deg < -self._max_tilt_deg:
+                self._tilt_deg = -self._max_tilt_deg
+                if self._actual_tilt_rate < 0.0:
+                    self._actual_tilt_rate = 0.0
 
     def reset(self, pan_deg: float = 0.0, tilt_deg: float = 0.0) -> None:
         """Reset gimbal angles and rates."""

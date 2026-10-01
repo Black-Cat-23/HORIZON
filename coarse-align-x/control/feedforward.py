@@ -75,23 +75,20 @@ class SCurveFeedForward:
         if not self.enabled or dt <= 0.0:
             return (0.0, 0.0)
 
-        # Pan axis S-curve profiling with square-root deceleration braking curve
+        # Pan axis critically damped S-curve profiling with acceleration and jerk clamping
         des_v_pan = self.kff_pan * target_pan_vel_deg_s
-        e_v_pan = des_v_pan - self._current_v_pan
-        a_limit_pan = math.sqrt(max(0.0, 2.0 * self.max_jerk * abs(e_v_pan)))
-        target_a_pan = math.copysign(min(self.max_accel, a_limit_pan), e_v_pan)
-
-        da_pan = float(np.clip(target_a_pan - self._current_a_pan, -self.max_jerk * dt, self.max_jerk * dt))
+        err_pan = des_v_pan - self._current_v_pan
+        wn = 25.0
+        target_a_pan = float(np.clip(wn * err_pan, -self.max_accel, self.max_accel))
+        da_pan = float(np.clip((target_a_pan - self._current_a_pan) / dt, -self.max_jerk, self.max_jerk)) * dt
         self._current_a_pan += da_pan
         self._current_v_pan += self._current_a_pan * dt
 
-        # Tilt axis S-curve profiling
+        # Tilt axis critically damped S-curve profiling with acceleration and jerk clamping
         des_v_tilt = self.kff_tilt * target_tilt_vel_deg_s
-        e_v_tilt = des_v_tilt - self._current_v_tilt
-        a_limit_tilt = math.sqrt(max(0.0, 2.0 * self.max_jerk * abs(e_v_tilt)))
-        target_a_tilt = math.copysign(min(self.max_accel, a_limit_tilt), e_v_tilt)
-
-        da_tilt = float(np.clip(target_a_tilt - self._current_a_tilt, -self.max_jerk * dt, self.max_jerk * dt))
+        err_tilt = des_v_tilt - self._current_v_tilt
+        target_a_tilt = float(np.clip(wn * err_tilt, -self.max_accel, self.max_accel))
+        da_tilt = float(np.clip((target_a_tilt - self._current_a_tilt) / dt, -self.max_jerk, self.max_jerk)) * dt
         self._current_a_tilt += da_tilt
         self._current_v_tilt += self._current_a_tilt * dt
 

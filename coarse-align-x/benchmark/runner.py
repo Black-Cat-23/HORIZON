@@ -25,7 +25,9 @@ from benchmark.manifest import DeterministicSeedSystem, ExperimentManifest
 from benchmark.metrics import MetricEngine
 from benchmark.profiles import build_app_config_for_scenario, get_algorithm_profile
 from control.camera_controller import PATCameraController
-from tracking.estimation.kalman import TargetKalmanFilter
+from tracking.estimation.kalman import TargetKalmanFilter, EstimatorStatus
+from tracking.association.track import Track
+from tracking.association.association import MeasurementCandidate
 from pat.mode_manager import PATModeManager
 from simulator.core.simulation import SimulationEngine
 from simulator.perception.config import DetectorConfig
@@ -107,25 +109,35 @@ def run_single_trial(manifest: ExperimentManifest) -> TrialResult:
             detector = HybridBeaconDetector(DetectorConfig(perception_mode="HYBRID"))
 
         # Estimator & PAT Controllers
-        estimator = TargetKalmanFilter() if manifest.algorithm != "B0" else None
-        pat_mgr = PATModeManager() if manifest.algorithm != "B0" else None
-        camera_ctrl = PATCameraController() if manifest.algorithm != "B0" else None
+        if manifest.algorithm == "B0":
+            track = None
+            pat_mgr = None
+            camera_ctrl = None
+        else:
+            filter_type = "IMM_ADAPTIVE_EKF" if manifest.algorithm == "OURS" else "KALMAN_CV"
+            track = Track(track_id=1, filter_type=filter_type)
+            pat_mgr = PATModeManager()
+            camera_ctrl = PATCameraController(controller_type="PID")
 
         telemetry_records: List[Dict[str, Any]] = []
 
         total_frames = cfg.simulation.total_frames
         dt = cfg.simulation.dt
 
-        current_pan = 0.0
-        current_tilt = 0.0
+        pending_cmd_pan = 0.0
+        pending_cmd_tilt = 0.0
 
         for frame_idx in range(total_frames):
-            frame_start = time.perf_counter()
+            # Pre-step gimbal rate application (eliminates 1-frame dead-band lag)
+            if (pending_cmd_pan != 0.0 or pending_cmd_tilt != 0.0) and manifest.algorithm != "B0":
+                engine.camera.gimbal.set_rate_command(pending_cmd_pan, pending_cmd_tilt)
+
             engine.step()
+            frame_start = time.perf_counter()
 
             gt_state = engine.recorder.records[-1] if engine.recorder.records else None
-            true_u = gt_state.target_pixel_u if gt_state else 320.0
-            true_v = gt_state.target_pixel_v if gt_state else 240.0
+            true_u = gt_state.physical_pixel_u if gt_state else 320.0
+            true_v = gt_state.physical_pixel_v if gt_state else 240.0
 
             frame_img = engine.camera.last_observation if engine.camera.last_observation is not None else np.zeros((480, 640), dtype=np.uint8)
 
@@ -133,12 +145,31 @@ def run_single_trial(manifest: ExperimentManifest) -> TrialResult:
             detected = False
             proc_ms = 0.0
 
-            if detector is not None and frame_img is not None:
-                det_res = detector.detect(frame_img, timestamp=engine.clock.current_time)
+            # Perception Detection (runs on fresh camera observations)
+            if detector is not None and frame_img is not None and engine.camera.is_new_observation:
+                if manifest.algorithm == "OURS" and track is not None and pat_mgr is not None:
+                    p_m = pat_mgr.state.mode.value
+                    p_q = pat_mgr.state.track_quality
+                    p_h = pat_mgr.state.consecutive_hits
+                    v_est = (track.last_estimate.predicted_x, track.last_estimate.predicted_y) if track.last_estimate else None
+
+                    det_res = detector.detect(
+                        frame_img,
+                        timestamp=engine.clock.current_time,
+                        estimator_prediction=v_est,
+                        pat_mode=p_m,
+                        track_quality=p_q,
+                        consecutive_hits=p_h,
+                    )
+                else:
+                    det_res = detector.detect(frame_img, timestamp=engine.clock.current_time)
+
                 proc_ms = det_res.processing_time_ms
                 if det_res.detected and det_res.centroid is not None:
                     detected = True
                     det_x, det_y = det_res.centroid
+            else:
+                det_res = None
 
             # Estimation & Control
             est_u, est_v = None, None
@@ -150,36 +181,44 @@ def run_single_trial(manifest: ExperimentManifest) -> TrialResult:
                 est_u, est_v = 320.0, 240.0
                 state_str = "SEARCH"
             else:
-                # Active Closed-Loop PAT
-                if estimator is not None:
-                    if detected and det_x is not None and det_y is not None:
-                        est_res = estimator.update((det_x, det_y), timestamp=engine.clock.current_time)
-                        est_u, est_v = est_res.estimated_x, est_res.estimated_y
-                    elif estimator.is_initialized:
-                        x_pred, _ = estimator.predict(dt=dt)
-                        est_u, est_v = float(x_pred[0, 0]), float(x_pred[1, 0])
-                    else:
-                        est_u, est_v = None, None
+                # Active Closed-Loop Tracking (IMM / Adaptive EKF)
+                meas = det_res.centroid if (det_res and det_res.detected) else None
+                conf = det_res.confidence if (det_res and det_res.detected) else 0.0
+                spot_unc = (det_res.sigma_u_px, det_res.sigma_v_px) if (det_res and det_res.detected and hasattr(det_res, "sigma_u_px")) else None
+
+                estimate = track.step(
+                    measurement=meas,
+                    confidence=conf,
+                    timestamp=engine.clock.current_time,
+                    gimbal_pan_rate=engine.camera.gimbal.actual_pan_rate,
+                    gimbal_tilt_rate=engine.camera.gimbal.actual_tilt_rate,
+                    is_sensor_step=engine.camera.is_new_observation,
+                    spot_uncertainty=spot_unc,
+                )
 
                 if pat_mgr is not None and camera_ctrl is not None:
-                    u_val = est_u if est_u is not None else 320.0
-                    v_val = est_v if est_v is not None else 240.0
+                    tel = engine.last_disturbance_telemetry
+                    p_vx = getattr(tel, "platform_velocity_x", 0.0) if tel else 0.0
+                    p_vy = getattr(tel, "platform_velocity_y", 0.0) if tel else 0.0
+
                     pat_state = pat_mgr.process_step(
                         dt=dt,
                         timestamp_s=engine.clock.current_time,
                         detection_valid=detected,
-                        detection_confidence=0.9 if detected else 0.0,
-                        mahalanobis_d2=0.5 if detected else 10.0,
-                        covariance_trace=5.0,
-                        estimated_u_px=u_val,
-                        estimated_v_px=v_val,
-                        estimated_vx_px_s=0.0,
-                        estimated_vy_px_s=0.0,
-                        current_pan_deg=current_pan,
-                        current_tilt_deg=current_tilt,
+                        detection_confidence=conf,
+                        mahalanobis_d2=estimate.mahalanobis_distance**2,
+                        covariance_trace=float(estimate.position_uncertainty**2),
+                        estimated_u_px=estimate.estimated_x,
+                        estimated_v_px=estimate.estimated_y,
+                        estimated_vx_px_s=estimate.estimated_vx,
+                        estimated_vy_px_s=estimate.estimated_vy,
+                        current_pan_deg=engine.camera.gimbal.pan_deg,
+                        current_tilt_deg=engine.camera.gimbal.tilt_deg,
+                        is_new_frame=engine.camera.is_new_observation,
                     )
                     state_str = pat_state.mode.name
 
+                    # Disturbance-Compensated Inertial Rate Feedforward Control
                     cmd_pan, cmd_tilt, _, _, _, _, is_sat = camera_ctrl.compute_control_command(
                         dt=dt,
                         pat_state=pat_state,
@@ -187,8 +226,17 @@ def run_single_trial(manifest: ExperimentManifest) -> TrialResult:
                         search_tilt_rate=0.0,
                         reacquire_pan_rate=0.0,
                         reacquire_tilt_rate=0.0,
+                        estimated_vx_px_s=estimate.estimated_vx,
+                        estimated_vy_px_s=estimate.estimated_vy,
+                        gimbal=engine.camera.gimbal,
+                        platform_vx_px_s=p_vx,
+                        platform_vy_px_s=p_vy,
                     )
-                    current_pan, current_tilt, _, _ = camera_ctrl.actuator_interface.update_actuator(dt)
+                    pending_cmd_pan, pending_cmd_tilt = cmd_pan, cmd_tilt
+
+                is_init = (track.status != EstimatorStatus.UNINITIALIZED)
+                est_u = estimate.estimated_x if (is_init and engine.camera.is_new_observation) else None
+                est_v = estimate.estimated_y if (is_init and engine.camera.is_new_observation) else None
 
             frame_proc_time = (time.perf_counter() - frame_start) * 1000.0
 
@@ -203,7 +251,7 @@ def run_single_trial(manifest: ExperimentManifest) -> TrialResult:
                 "det_x": det_x,
                 "det_y": det_y,
                 "detected": detected,
-                "processing_time_ms": max(proc_ms, frame_proc_time),
+                "processing_time_ms": proc_ms if proc_ms > 0 else frame_proc_time,
                 "is_saturated": is_sat,
             })
 

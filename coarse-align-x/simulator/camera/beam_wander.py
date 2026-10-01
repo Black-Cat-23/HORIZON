@@ -126,6 +126,24 @@ class BeamWanderEngine:
         """
         return self._config.sigma_px / math.sqrt(2.0 * self._config.theta_rad_s)
 
+    def get_effective_target_pos(
+        self, target_world_x: float, target_world_y: float
+    ) -> tuple[float, float]:
+        """Return the apparent (beam-wandered) world position of the target.
+
+        Adds the current OU wander displacement to the true world coordinates.
+        The ground-truth position is never modified; this only affects the
+        apparent centroid position visible in the rendered image.
+
+        Args:
+            target_world_x: True target world X coordinate (pixels).
+            target_world_y: True target world Y coordinate (pixels).
+
+        Returns:
+            (eff_x, eff_y): Apparent position after beam-wander offset.
+        """
+        return (target_world_x + self._wander_x, target_world_y + self._wander_y)
+
     def step(self, dt: float) -> tuple[float, float]:
         """Advance beam-wander by one simulation step.
 

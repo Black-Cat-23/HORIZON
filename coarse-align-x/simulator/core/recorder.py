@@ -68,6 +68,25 @@ class GroundTruthRecord:
     contrast_factor: float = 1.0
     brightness_factor: float = 0.0
 
+    @property
+    def physical_pixel_u(self) -> float:
+        """Ground-truth beacon centroid in physical sensor pixel coordinates (incorporating platform displacement and jitter)."""
+        ox = self.platform_offset_x if self.platform_motion_enabled else 0.0
+        jx = self.camera_jitter_x if self.camera_jitter_enabled else 0.0
+        return self.target_pixel_u + ox + jx
+
+    @property
+    def physical_pixel_v(self) -> float:
+        """Ground-truth beacon centroid in physical sensor pixel coordinates (incorporating platform displacement and jitter)."""
+        oy = self.platform_offset_y if self.platform_motion_enabled else 0.0
+        jy = self.camera_jitter_y if self.camera_jitter_enabled else 0.0
+        return self.target_pixel_v + oy + jy
+
+    @property
+    def is_physical_in_sensor(self) -> bool:
+        """True if the physical optical beacon is currently inside the 640x480 active sensor focal plane."""
+        return 0.0 <= self.physical_pixel_u < 640.0 and 0.0 <= self.physical_pixel_v < 480.0
+
 
 class GroundTruthRecorder:
     """Collects and exports per-frame ground truth records.

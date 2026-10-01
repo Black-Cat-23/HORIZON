@@ -117,33 +117,37 @@ class TrackGeometryView(QWidget):
         # 1. Header Bar: Title + Dual-Mode View Switcher + Ground-Truth Firewall
         header_bar = QHBoxLayout()
         header_bar.setContentsMargins(0, 0, 0, 0)
-        header_bar.setSpacing(SPACING_8)
+        header_bar.setSpacing(8)
 
-        lbl_title = SectionHeaderLabel("Filter geometry & state observation", self)
-        lbl_title.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY}; font-family: {FONT_BODY}; font-size: 14px; font-weight: 600;")
+        lbl_title = SectionHeaderLabel("FPA Sensor Geometry", self)
+        lbl_title.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY}; font-family: {FONT_BODY}; font-size: 13.5px; font-weight: 700;")
         header_bar.addWidget(lbl_title)
 
-        header_bar.addSpacing(12)
+        header_bar.addStretch()
 
-        # Dual-Mode View Switcher Buttons
-        self.btn_mode_wide = QPushButton("🔭 Full FOV", self)
-        self.btn_mode_subpixel = QPushButton("🔬 8x Subpixel Lock", self)
+        # Dual-Mode View Switcher Buttons (Concise research-grade segmented buttons)
+        self.btn_mode_wide = QPushButton("Full FOV", self)
+        self.btn_mode_subpixel = QPushButton("Airy PSF", self)
         self.btn_mode_wide.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_mode_subpixel.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_mode_wide.setToolTip("640x480 Full Sensor Field of View")
+        self.btn_mode_subpixel.setToolTip("11.1x Laser Spot Optical Profiler (Airy Pattern)")
 
         self.btn_mode_wide.clicked.connect(lambda: self.set_view_mode(self.MODE_WIDE_FIELD))
         self.btn_mode_subpixel.clicked.connect(lambda: self.set_view_mode(self.MODE_SUBPIXEL_LOCK))
 
         mode_btn_row = QHBoxLayout()
+        mode_btn_row.setContentsMargins(0, 0, 0, 0)
         mode_btn_row.setSpacing(4)
         mode_btn_row.addWidget(self.btn_mode_wide)
         mode_btn_row.addWidget(self.btn_mode_subpixel)
         header_bar.addLayout(mode_btn_row)
 
-        header_bar.addStretch()
+        header_bar.addSpacing(6)
 
-        # Ground-Truth Firewall Toggle (OFF by default, labeled offline reference only)
-        self.chk_eval_mode = QCheckBox("GT [OFFLINE EVAL ONLY]", self)
+        # Ground-Truth Firewall Toggle (Concise label, full tooltip)
+        self.chk_eval_mode = QCheckBox("GT Eval", self)
+        self.chk_eval_mode.setToolTip("Ground-Truth Marker [Offline Evaluation Reference Only]")
         self.chk_eval_mode.setStyleSheet(
             f"color: {COLOR_TEXT_SECONDARY}; font-family: {FONT_BODY}; font-size: 11px; font-weight: 500;"
         )
@@ -168,18 +172,18 @@ class TrackGeometryView(QWidget):
     def _update_mode_button_styles(self) -> None:
         active_style = (
             "QPushButton {"
-            f"  background-color: #162B38; color: {COLOR_LOCK_CYAN}; "
-            f"  border: 1px solid {COLOR_LOCK_CYAN}; border-radius: 4px; "
-            "  font-weight: 700; font-size: 11px; padding: 3px 10px;"
+            "  background-color: #1F2E3D; color: #58A6FF; "
+            "  border: 1px solid #388BFD; border-radius: 4px; "
+            "  font-weight: 600; font-size: 11px; padding: 3px 8px;"
             "}"
         )
         inactive_style = (
             "QPushButton {"
-            f"  background-color: {COLOR_VOID}; color: {COLOR_TEXT_SECONDARY}; "
-            "  border: 1px solid #30363D; border-radius: 4px; "
-            "  font-weight: 500; font-size: 11px; padding: 3px 10px;"
+            f"  background-color: #16161A; color: {COLOR_TEXT_SECONDARY}; "
+            "  border: 1px solid #1F2430; border-radius: 4px; "
+            "  font-weight: 500; font-size: 11px; padding: 3px 8px;"
             "}"
-            "QPushButton:hover { background-color: #21262D; color: #C9D1D9; border-color: #58A6FF; }"
+            "QPushButton:hover { background-color: #21262D; color: #F0F6FC; border-color: #388BFD; }"
         )
 
         if self._view_mode == self.MODE_WIDE_FIELD:
@@ -249,39 +253,41 @@ class TrackGeometryView(QWidget):
         h, w = sensor_frame.shape[:2]
         canvas = cv2.cvtColor(sensor_frame, cv2.COLOR_GRAY2BGR) if sensor_frame.ndim == 2 else sensor_frame.copy()
 
-        # 1. Image Center Reference Crosshair (320, 240)
+        # 1. Calibrated Image Center Reference Boresight (320, 240) with FSM basin tick (2.5px)
         cx, cy = w // 2, h // 2
-        cv2.line(canvas, (cx - 10, cy), (cx + 10, cy), (90, 90, 95), 1)
-        cv2.line(canvas, (cx, cy - 10), (cx, cy + 10), (90, 90, 95), 1)
+        cv2.line(canvas, (cx - 12, cy), (cx + 12, cy), (110, 118, 129), 1)
+        cv2.line(canvas, (cx, cy - 12), (cx, cy + 12), (110, 118, 129), 1)
+        # 2.5px fine pointing basin circle
+        cv2.circle(canvas, (cx, cy), 3, (88, 166, 255), 1, cv2.LINE_AA)
 
         # 2. Ground-Truth Marker — ONLY rendered when Evaluation Mode is active (Ground-truth firewall)
         if self._eval_mode_enabled and ground_truth_pos is not None:
             gt_x, gt_y = int(round(ground_truth_pos[0])), int(round(ground_truth_pos[1]))
             if 0 <= gt_x < w and 0 <= gt_y < h:
-                cv2.circle(canvas, (gt_x, gt_y), 5, (255, 255, 255), 1, cv2.LINE_AA)
-                cv2.line(canvas, (gt_x - 8, gt_y), (gt_x + 8, gt_y), (255, 255, 255), 1)
-                cv2.line(canvas, (gt_x, gt_y - 8), (gt_x, gt_y + 8), (255, 255, 255), 1)
-                cv2.putText(canvas, "GT [EVAL]", (gt_x + 8, gt_y - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+                cv2.circle(canvas, (gt_x, gt_y), 5, (230, 235, 240), 1, cv2.LINE_AA)
+                cv2.line(canvas, (gt_x - 8, gt_y), (gt_x + 8, gt_y), (230, 235, 240), 1)
+                cv2.line(canvas, (gt_x, gt_y - 8), (gt_x, gt_y + 8), (230, 235, 240), 1)
+                cv2.putText(canvas, "GT [EVAL]", (gt_x + 8, gt_y - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (230, 235, 240), 1, cv2.LINE_AA)
 
-        # 3. Measured Centroid Marker (Bright Red Reticle)
+        # 3. Measured Centroid Marker (Muted Emerald Green Reticle)
         meas_x, meas_y = None, None
         if detection_res and detection_res.detected and detection_res.centroid:
             meas_x, meas_y = int(round(detection_res.centroid[0])), int(round(detection_res.centroid[1]))
             if 0 <= meas_x < w and 0 <= meas_y < h:
-                cv2.line(canvas, (meas_x - 7, meas_y), (meas_x + 7, meas_y), (0, 0, 240), 1)
-                cv2.line(canvas, (meas_x, meas_y - 7), (meas_x, meas_y + 7), (0, 0, 240), 1)
-                cv2.circle(canvas, (meas_x, meas_y), 2, (0, 0, 255), -1)
-                cv2.putText(canvas, "MEAS", (meas_x + 8, meas_y - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 255), 1, cv2.LINE_AA)
+                cv2.line(canvas, (meas_x - 7, meas_y), (meas_x + 7, meas_y), (80, 185, 63), 1)
+                cv2.line(canvas, (meas_x, meas_y - 7), (meas_x, meas_y + 7), (80, 185, 63), 1)
+                cv2.circle(canvas, (meas_x, meas_y), 2, (80, 185, 63), -1)
+                cv2.putText(canvas, "MEASURED", (meas_x + 8, meas_y - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (80, 185, 63), 1, cv2.LINE_AA)
 
         # 4. Filter State Estimate & Covariance Ellipse
         if estimate is not None:
             est_x, est_y = int(round(estimate.estimated_x)), int(round(estimate.estimated_y))
 
-            # Predicted Centroid Marker (Amber 'x' Marker)
+            # Predicted Centroid Marker (Muted Amber 'x' Marker)
             pred_x, pred_y = int(round(estimate.predicted_x)), int(round(estimate.predicted_y))
             if 0 <= pred_x < w and 0 <= pred_y < h:
-                cv2.drawMarker(canvas, (pred_x, pred_y), (0, 215, 255), cv2.MARKER_TILTED_CROSS, 8, 1)
-                cv2.putText(canvas, "PRED", (pred_x + 8, pred_y - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 215, 255), 1, cv2.LINE_AA)
+                cv2.drawMarker(canvas, (pred_x, pred_y), (50, 150, 210), cv2.MARKER_TILTED_CROSS, 8, 1)
+                cv2.putText(canvas, "PRED", (pred_x + 8, pred_y - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (50, 150, 210), 1, cv2.LINE_AA)
 
             # Mathematically Accurate Covariance Ellipse on full FOV
             if estimate.covariance is not None:
@@ -308,23 +314,23 @@ class TrackGeometryView(QWidget):
                             angle=ang,
                             startAngle=0,
                             endAngle=360,
-                            color=(232, 212, 127),
+                            color=(255, 166, 88),
                             thickness=1,
                             lineType=cv2.LINE_AA,
                         )
                 except Exception:
                     pass
 
-            # Estimated Position Reticle (Bright Cyan)
+            # Estimated Position Reticle (Steel Blue)
             if 0 <= est_x < w and 0 <= est_y < h:
-                cv2.circle(canvas, (est_x, est_y), 5, (232, 212, 127), 1, cv2.LINE_AA)
-                cv2.line(canvas, (est_x - 8, est_y), (est_x + 8, est_y), (232, 212, 127), 1)
-                cv2.line(canvas, (est_x, est_y - 8), (est_x, est_y + 8), (232, 212, 127), 1)
-                cv2.putText(canvas, f"EST (+/-{int(self._sigma_level)}s)", (est_x + 8, est_y + 12), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (232, 212, 127), 1, cv2.LINE_AA)
+                cv2.circle(canvas, (est_x, est_y), 5, (255, 166, 88), 1, cv2.LINE_AA)
+                cv2.line(canvas, (est_x - 8, est_y), (est_x + 8, est_y), (255, 166, 88), 1)
+                cv2.line(canvas, (est_x, est_y - 8), (est_x, est_y + 8), (255, 166, 88), 1)
+                cv2.putText(canvas, f"EST (+/-{int(self._sigma_level)}s)", (est_x + 8, est_y + 12), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 166, 88), 1, cv2.LINE_AA)
 
                 # Tracking Error Vector Line (connecting measurement to estimate)
                 if meas_x is not None and meas_y is not None:
-                    cv2.line(canvas, (meas_x, meas_y), (est_x, est_y), (0, 165, 255), 1, cv2.LINE_AA)
+                    cv2.line(canvas, (meas_x, meas_y), (est_x, est_y), (88, 166, 255), 1, cv2.LINE_AA)
 
             # 5. Picture-in-Picture 4x Subpixel Magnifying Lens
             try:
@@ -510,19 +516,19 @@ class TrackGeometryView(QWidget):
         if self._eval_mode_enabled and ground_truth_pos is not None:
             gt_mx, gt_my = to_micro_coords(ground_truth_pos[0], ground_truth_pos[1])
             if 0 <= gt_mx < view_size and 0 <= gt_my < view_size:
-                cv2.circle(magnified_view, (gt_mx, gt_my), 10, (255, 255, 255), 1, cv2.LINE_AA)
-                cv2.drawMarker(magnified_view, (gt_mx, gt_my), (255, 255, 255), cv2.MARKER_CROSS, 16, 1)
-                cv2.putText(magnified_view, "GT EVAL", (gt_mx + 8, gt_my - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+                cv2.circle(magnified_view, (gt_mx, gt_my), 10, (230, 235, 240), 1, cv2.LINE_AA)
+                cv2.drawMarker(magnified_view, (gt_mx, gt_my), (230, 235, 240), cv2.MARKER_CROSS, 16, 1)
+                cv2.putText(magnified_view, "GT EVAL", (gt_mx + 8, gt_my - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (230, 235, 240), 1, cv2.LINE_AA)
 
-        # 4. Measurement Centroid Reticle
+        # 4. Measurement Centroid Reticle (Muted Emerald)
         meas_pt = None
         if detection_res and detection_res.detected and detection_res.centroid:
             meas_mx, meas_my = to_micro_coords(detection_res.centroid[0], detection_res.centroid[1])
             if 0 <= meas_mx < view_size and 0 <= meas_my < view_size:
                 meas_pt = (meas_mx, meas_my)
-                cv2.circle(magnified_view, meas_pt, 8, (0, 0, 240), 1, cv2.LINE_AA)
-                cv2.drawMarker(magnified_view, meas_pt, (0, 0, 240), cv2.MARKER_TILTED_CROSS, 14, 1)
-                cv2.putText(magnified_view, "MEAS", (meas_mx + 8, meas_my - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 240), 1, cv2.LINE_AA)
+                cv2.circle(magnified_view, meas_pt, 8, (80, 185, 63), 1, cv2.LINE_AA)
+                cv2.drawMarker(magnified_view, meas_pt, (80, 185, 63), cv2.MARKER_TILTED_CROSS, 14, 1)
+                cv2.putText(magnified_view, "MEAS", (meas_mx + 8, meas_my - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (80, 185, 63), 1, cv2.LINE_AA)
 
         # 5. Kalman Filter State Estimate, Error Vector & Reactive Covariance Ellipses
         if estimate is not None:
@@ -531,9 +537,9 @@ class TrackGeometryView(QWidget):
             # Draw Concentric 1-sigma, 2-sigma, 3-sigma Ellipses (Scaled to Micro View!)
             if estimate.covariance is not None:
                 sigma_configs = [
-                    (1.0, 0.683, (120, 180, 240), "1s"),
-                    (2.0, 0.954, (111, 232, 168), "2s"),
-                    (3.0, 0.997, (92, 161, 232), "3s"),
+                    (1.0, 0.683, (180, 190, 200), "1s"),
+                    (2.0, 0.954, (255, 166, 88), "2s"),
+                    (3.0, 0.997, (88, 166, 255), "3s"),
                 ]
                 for s_lvl, c_lvl, col, s_tag in sigma_configs:
                     try:
@@ -552,31 +558,28 @@ class TrackGeometryView(QWidget):
 
                         if ax_micro[0] < view_size * 2 and ax_micro[1] < view_size * 2:
                             if is_active:
-                                # Active ring: Highlighted bold neon outline
-                                cv2.ellipse(magnified_view, (est_mx, est_my), ax_micro, ang, 0, 360, (255, 230, 80), 2, cv2.LINE_AA)
-                                # Semi-transparent filled overlay
+                                cv2.ellipse(magnified_view, (est_mx, est_my), ax_micro, ang, 0, 360, (255, 166, 88), 2, cv2.LINE_AA)
                                 overlay = magnified_view.copy()
-                                cv2.ellipse(overlay, (est_mx, est_my), ax_micro, ang, 0, 360, (255, 230, 80), -1)
-                                cv2.addWeighted(overlay, 0.18, magnified_view, 0.82, 0, magnified_view)
+                                cv2.ellipse(overlay, (est_mx, est_my), ax_micro, ang, 0, 360, (255, 166, 88), -1)
+                                cv2.addWeighted(overlay, 0.12, magnified_view, 0.88, 0, magnified_view)
                             else:
-                                # Inactive ring: subtle thin contour
                                 cv2.ellipse(magnified_view, (est_mx, est_my), ax_micro, ang, 0, 360, col, 1, cv2.LINE_AA)
                     except Exception:
                         pass
 
             # Error Ray (Measurement to Estimate)
             if meas_pt is not None and 0 <= est_mx < view_size and 0 <= est_my < view_size:
-                cv2.line(magnified_view, meas_pt, (est_mx, est_my), (0, 165, 255), 1, cv2.LINE_AA)
+                cv2.line(magnified_view, meas_pt, (est_mx, est_my), (88, 166, 255), 1, cv2.LINE_AA)
                 dist_px = math.hypot(detection_res.centroid[0] - estimate.estimated_x, detection_res.centroid[1] - estimate.estimated_y)
                 mid_x = (meas_pt[0] + est_mx) // 2
                 mid_y = (meas_pt[1] + est_my) // 2
-                cv2.putText(magnified_view, f"err={dist_px:.2f}px", (mid_x + 6, mid_y), cv2.FONT_HERSHEY_SIMPLEX, 0.32, (0, 165, 255), 1, cv2.LINE_AA)
+                cv2.putText(magnified_view, f"e={dist_px:.2f}px", (mid_x + 6, mid_y), cv2.FONT_HERSHEY_SIMPLEX, 0.32, (88, 166, 255), 1, cv2.LINE_AA)
 
-            # Subpixel Centroid Reticle
+            # Subpixel Centroid Reticle (Steel Blue)
             if 0 <= est_mx < view_size and 0 <= est_my < view_size:
-                cv2.circle(magnified_view, (est_mx, est_my), 7, (232, 212, 127), 1, cv2.LINE_AA)
-                cv2.drawMarker(magnified_view, (est_mx, est_my), (232, 212, 127), cv2.MARKER_CROSS, 18, 1)
-                cv2.putText(magnified_view, f"EST ({estimate.estimated_x:.2f}, {estimate.estimated_y:.2f})", (est_mx + 8, est_my + 14), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (232, 212, 127), 1, cv2.LINE_AA)
+                cv2.circle(magnified_view, (est_mx, est_my), 7, (255, 166, 88), 1, cv2.LINE_AA)
+                cv2.drawMarker(magnified_view, (est_mx, est_my), (255, 166, 88), cv2.MARKER_CROSS, 18, 1)
+                cv2.putText(magnified_view, f"EST ({estimate.estimated_x:.2f}, {estimate.estimated_y:.2f})", (est_mx + 8, est_my + 14), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 166, 88), 1, cv2.LINE_AA)
 
             # Velocity Vector Arrow
             vx, vy = estimate.estimated_vx, estimate.estimated_vy
@@ -585,33 +588,33 @@ class TrackGeometryView(QWidget):
                 v_len = min(60.0, v_spd * scale_micro * 0.15)
                 end_x = int(round(est_mx + (vx / v_spd) * v_len))
                 end_y = int(round(est_my + (vy / v_spd) * v_len))
-                cv2.arrowedLine(magnified_view, (est_mx, est_my), (end_x, end_y), (0, 215, 255), 2, tipLength=0.25)
-                cv2.putText(magnified_view, f"{v_spd:.1f} px/s", (end_x + 4, end_y + 4), cv2.FONT_HERSHEY_SIMPLEX, 0.32, (0, 215, 255), 1, cv2.LINE_AA)
+                cv2.arrowedLine(magnified_view, (est_mx, est_my), (end_x, end_y), (88, 166, 255), 1, tipLength=0.25)
+                cv2.putText(magnified_view, f"{v_spd:.1f} px/s", (end_x + 4, end_y + 4), cv2.FONT_HERSHEY_SIMPLEX, 0.32, (88, 166, 255), 1, cv2.LINE_AA)
 
         # Embed magnified viewport into canvas
         canvas[vy0:vy0 + view_size, vx0:vx0 + view_size] = magnified_view
 
         # Reticle Border around microscope viewport
-        cv2.rectangle(canvas, (vx0 - 1, vy0 - 1), (vx0 + view_size + 1, vy0 + view_size + 1), (127, 212, 232), 1)
+        cv2.rectangle(canvas, (vx0 - 1, vy0 - 1), (vx0 + view_size + 1, vy0 + view_size + 1), (48, 54, 61), 1)
 
-        # Corner reticles for high-tech aerospace look
-        c_len = 12
+        # Clean corner reticles for aerospace instrument feel
+        c_len = 10
         for cx_c, cy_c, dx, dy in [(vx0, vy0, 1, 1), (vx0 + view_size, vy0, -1, 1), (vx0, vy0 + view_size, 1, -1), (vx0 + view_size, vy0 + view_size, -1, -1)]:
-            cv2.line(canvas, (cx_c, cy_c), (cx_c + dx * c_len, cy_c), (255, 230, 80), 2)
-            cv2.line(canvas, (cx_c, cy_c), (cx_c, cy_c + dy * c_len), (255, 230, 80), 2)
+            cv2.line(canvas, (cx_c, cy_c), (cx_c + dx * c_len, cy_c), (110, 118, 129), 1)
+            cv2.line(canvas, (cx_c, cy_c), (cx_c, cy_c + dy * c_len), (110, 118, 129), 1)
 
         # HUD Top Banner Overlay
-        top_title = f"11.1x OPTICAL BEAM PROFILER | D86: {d86_val_px:.1f}px | SNR: {snr_db:.1f}dB" if d86_val_px > 0 else "11.1x OPTICAL BEAM PROFILER"
-        cv2.putText(canvas, top_title, (vx0, vy0 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (127, 212, 232), 1, cv2.LINE_AA)
+        top_title = f"OPTICAL BEAM PROFILER (11.1x) | D86: {d86_val_px:.2f}px | SNR: {snr_db:.1f}dB" if d86_val_px > 0 else "OPTICAL BEAM PROFILER (11.1x)"
+        cv2.putText(canvas, top_title, (vx0, vy0 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (139, 148, 158), 1, cv2.LINE_AA)
         conf_pct = 68.3 if self._sigma_level == 1.0 else (95.4 if self._sigma_level == 2.0 else 99.7)
         active_conf_str = f"BOUND: +/-{int(self._sigma_level)}s ({conf_pct:.1f}%)"
-        cv2.putText(canvas, active_conf_str, (vx0 + view_size - 150, vy0 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 230, 80), 1, cv2.LINE_AA)
+        cv2.putText(canvas, active_conf_str, (vx0 + view_size - 140, vy0 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 166, 88), 1, cv2.LINE_AA)
 
         # HUD Bottom Telemetry Readout
         if estimate is not None:
             hud_bot = f"SENSOR ROI: [{rx0_clamped}:{rx0_clamped+roi_span}, {ry0_clamped}:{ry0_clamped+roi_span}]  |  EST: ({estimate.estimated_x:.2f}, {estimate.estimated_y:.2f}) px  |  PITCH: 12.5 um"
         else:
             hud_bot = f"SENSOR ROI: [{rx0_clamped}:{rx0_clamped+roi_span}, {ry0_clamped}:{ry0_clamped+roi_span}]  |  AWAITING ESTIMATOR LOCK"
-        cv2.putText(canvas, hud_bot, (vx0, vy0 + view_size + 18), cv2.FONT_HERSHEY_SIMPLEX, 0.32, (180, 190, 205), 1, cv2.LINE_AA)
+        cv2.putText(canvas, hud_bot, (vx0, vy0 + view_size + 18), cv2.FONT_HERSHEY_SIMPLEX, 0.32, (139, 148, 158), 1, cv2.LINE_AA)
 
         self.canvas.update_frame(canvas)

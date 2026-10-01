@@ -75,11 +75,11 @@ class ModeSelectorBank(QFrame):
     mode_changed = Signal(int)  # Emits 0-indexed selected mode index
 
     MODES = [
-        ("🎯", "Mission"),
-        ("📡", "Live"),
-        ("📈", "Track"),
-        ("⚡", "Stress"),
-        ("📊", "Benchmark"),
+        ("01", "MISSION"),
+        ("02", "LIVE"),
+        ("03", "TRACK"),
+        ("04", "STRESS"),
+        ("05", "BENCHMARK"),
     ]
 
     def __init__(self, parent: QWidget | None = None) -> None:

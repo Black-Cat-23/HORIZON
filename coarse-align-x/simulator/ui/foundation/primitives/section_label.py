@@ -7,8 +7,9 @@ Structural header for grouped content (Title Case / Sentence Case, 12px, text-se
 from __future__ import annotations
 from PySide6.QtWidgets import QLabel, QWidget
 from simulator.ui.foundation.tokens import (
-    COLOR_TEXT_SECONDARY,
-    TYPE_SCALE_MICRO,
+    COLOR_TEXT_PRIMARY,
+    FONT_BODY,
+    TYPE_SCALE_BODY,
 )
 
 
@@ -20,10 +21,11 @@ class SectionHeaderLabel(QLabel):
         self.setStyleSheet(
             f"""
             QLabel {{
-                color: {COLOR_TEXT_SECONDARY};
-                font-family: 'General Sans', -apple-system, sans-serif;
-                font-size: {TYPE_SCALE_MICRO}px;
-                font-weight: 600;
+                color: {COLOR_TEXT_PRIMARY};
+                font-family: 'Magnolia Script', cursive, sans-serif;
+                font-size: 20px;
+                font-weight: 700;
+                letter-spacing: 0.5px;
             }}
             """
         )

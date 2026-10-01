@@ -39,7 +39,7 @@ class PATCameraController:
         controller_type: str = "PID",
         lead_time_s: float = 0.05,
         smoothing_factor: float = 0.85,
-        max_rate_change_deg_s2: float = 120.0,
+        max_rate_change_deg_s2: float = 800.0,
     ):
         self.thresholds = thresholds or PATThresholds()
         self.scheduler = scheduler or GainScheduler()
@@ -79,6 +79,10 @@ class PATCameraController:
         # Command smoothing state
         self._prev_cmd_pan = 0.0
         self._prev_cmd_tilt = 0.0
+        # Effective acceleration limit is mode-adaptive:
+        # In TRACK (steady-state): 800 deg/s² — firm smoothing prevents jitter chasing
+        # In ACQUIRE/REACQUIRE: effectively unlimited — fast pull-in response required
+        self._track_mode_rate_limit = float(max_rate_change_deg_s2)  # used only in TRACK
 
     def reset(self) -> None:
         self.pan_pid.reset()
@@ -89,6 +93,7 @@ class PATCameraController:
         self.active_gains = self.scheduler.gains_inactive
         self._prev_cmd_pan = 0.0
         self._prev_cmd_tilt = 0.0
+        self._track_mode_rate_limit = self.max_rate_change_deg_s2
 
     def compute_control_command(
         self,
@@ -104,6 +109,8 @@ class PATCameraController:
         estimated_omega_y_deg_s: Optional[float] = None,
         gimbal: Optional[Any] = None,
         measured_latency_s: Optional[float] = None,
+        platform_vx_px_s: float = 0.0,
+        platform_vy_px_s: float = 0.0,
     ) -> Tuple[float, float, float, float, float, float, bool]:
         """
         Calculates commanded pan and tilt rates with dynamic predictive delay compensation,
@@ -157,79 +164,103 @@ class PATCameraController:
             else:
                 tilt_vel_deg_s = math.degrees(math.atan(estimated_vy_px_s / fy_px))
 
-            # 3. Dynamic Transport Delay Measurement & Relative Kinematic Forward Extrapolation
+            # Platform kinematic rate from onboard IMU telemetry
+            plat_pan_vel_deg_s = math.degrees(math.atan(platform_vx_px_s / fx_px))
+            plat_tilt_vel_deg_s = math.degrees(math.atan(platform_vy_px_s / fy_px))
+
+            # 3. Closed-Loop Regulation (ADRC, LQG, or PID)
             act_pan_r = gimbal.actual_pan_rate if gimbal is not None else self._prev_cmd_pan
             act_tilt_r = gimbal.actual_tilt_rate if gimbal is not None else self._prev_cmd_tilt
 
-            # Calculate dynamic effective transport lag:
-            # tau_eff = measured_perception_time + 0.5 * dt (ZOH midpoint) + tau_actuator (motor response)
-            if measured_latency_s is not None and measured_latency_s > 0.0:
-                tau_motor = 0.0167  # Physical actuator acceleration time constant (~16.7 ms)
-                base_latency = measured_latency_s + 0.5 * dt + tau_motor
-            else:
-                base_latency = self.lead_time_s
-
-            # Uncertainty-weighted attenuation to prevent over-projection under noisy/degraded conditions
-            q_factor = float(np.clip(pat_state.track_quality, 0.0, 1.0))
-            eff_lead_time = base_latency * q_factor
-
-            # Relative velocity between moving target and gimbal (true relative drift rate)
-            rel_pan_vel = pan_vel_deg_s - act_pan_r
-            rel_tilt_vel = tilt_vel_deg_s - act_tilt_r
-
-            # Relative kinematic extrapolation: true pointing error projected to actuation instant
-            pan_error_pred = pat_state.pan_error_deg + rel_pan_vel * eff_lead_time
-            tilt_error_pred = pat_state.tilt_error_deg + rel_tilt_vel * eff_lead_time
-
-            # Pass through modernized continuous-time Smith Predictor
-            pan_error_pred, tilt_error_pred = self.smith_predictor.predict_error(
-                pan_error_pred, tilt_error_pred, self._prev_cmd_pan, self._prev_cmd_tilt, dt, latency_s=eff_lead_time
-            )
-
-            # 4. Closed-Loop Regulation (ADRC, LQG, or PID)
-            if self.controller_type == "ADRC":
-                pid_pan, pid_tilt = self.adrc.compute(
-                    pan_error_pred,
-                    tilt_error_pred,
-                    dt,
-                    gain_scale=gains.kp,
-                    actual_pan_rate=act_pan_r,
-                    actual_tilt_rate=act_tilt_r,
-                )
-            elif self.controller_type == "LQG":
-                pid_pan = self.lqg_pan.compute(pan_error_pred, rel_pan_vel, dt)
-                pid_tilt = self.lqg_tilt.compute(tilt_error_pred, rel_tilt_vel, dt)
-            else:
-                # Calculate PID pointing error commands using scheduled gains
-                pid_pan = self.pan_pid.compute(
-                    pan_error_pred,
-                    dt,
-                    kp=gains.kp,
-                    ki=gains.ki,
-                    kd=gains.kd,
-                )
-                pid_tilt = self.tilt_pid.compute(
-                    tilt_error_pred,
-                    dt,
-                    kp=gains.kp,
-                    ki=gains.ki,
-                    kd=gains.kd,
-                )
-
-            # 5. Apply velocity feedforward anticipation (3rd-order Jerk-Limited S-Curve Profiler)
+            # 3. Calculate target angular velocity S-Curve feedforward & platform feedforward
             ff_quality = float(np.clip(pat_state.track_quality, 0.2, 1.0)) if not pat_state.prediction_only else 0.4
             self.scurve_ff.enabled = (gains.kff > 0.0)
             self.scurve_ff.kff_pan = gains.kff * ff_quality
             self.scurve_ff.kff_tilt = gains.kff * ff_quality
-
             ff_pan, ff_tilt = self.scurve_ff.compute(pan_vel_deg_s, tilt_vel_deg_s, dt=dt)
+            k_plat_ff = 1.0 if mode in (PATMode.TRACK, PATMode.ACQUIRE, PATMode.DEGRADED) else 0.0
+            plat_ff_pan = k_plat_ff * plat_pan_vel_deg_s
+            plat_ff_tilt = k_plat_ff * plat_tilt_vel_deg_s
 
-            raw_cmd_pan = pid_pan + ff_pan
-            raw_cmd_tilt = pid_tilt + ff_tilt
+            if self.controller_type == "ADRC":
+                # ADRC's Extended State Observer (ESO) observes lumped disturbance dynamics.
+                # In 2-DOF ADRC, total gimbal rate = feedback (ADRC) + feedforward (target + platform).
+                # To prevent the ESO from misidentifying feedforward as an external disturbance,
+                # the ESO observes the feedback velocity component: actual_rate - plat_ff - ff.
+                adrc_scale = gains.kp / max(1e-3, self.scheduler.gains_track.kp)
+                eso_pan_rate = act_pan_r - plat_ff_pan - ff_pan
+                eso_tilt_rate = act_tilt_r - plat_ff_tilt - ff_tilt
+                pid_pan, pid_tilt = self.adrc.compute(
+                    pat_state.pan_error_deg,
+                    pat_state.tilt_error_deg,
+                    dt,
+                    gain_scale=adrc_scale,
+                    actual_pan_rate=eso_pan_rate,
+                    actual_tilt_rate=eso_tilt_rate,
+                )
+                raw_cmd_pan = pid_pan + ff_pan + plat_ff_pan
+                raw_cmd_tilt = pid_tilt + ff_tilt + plat_ff_tilt
+            else:
+                # Dynamic Transport Delay Measurement & Relative Kinematic Forward Extrapolation
+                if measured_latency_s is not None and measured_latency_s > 0.0:
+                    tau_motor = 0.0167  # Physical actuator acceleration time constant (~16.7 ms)
+                    base_latency = measured_latency_s + 0.5 * dt + tau_motor
+                else:
+                    base_latency = self.lead_time_s
 
-            # 6. Anti-Hunting Command Rate-of-Change Damping Filter
-            # Limits commanded acceleration to prevent noise chatter
-            max_delta = self.max_rate_change_deg_s2 * dt
+                # Uncertainty-weighted attenuation to prevent over-projection under noisy/degraded conditions
+                q_factor = float(np.clip(pat_state.track_quality, 0.0, 1.0))
+                eff_lead_time = base_latency * q_factor
+
+                # Relative velocity between moving target, platform motion, and gimbal
+                # Clamped to ±2.5 deg/s to prevent optical high-frequency jitter from blowing up predictive projection
+                max_rel_vel = 2.5  # deg/s
+                rel_pan_vel = float(np.clip((pan_vel_deg_s + plat_pan_vel_deg_s) - act_pan_r, -max_rel_vel, max_rel_vel))
+                rel_tilt_vel = float(np.clip((tilt_vel_deg_s + plat_tilt_vel_deg_s) - act_tilt_r, -max_rel_vel, max_rel_vel))
+
+                # Relative kinematic extrapolation: true pointing error projected to actuation instant
+                pan_error_pred = pat_state.pan_error_deg + rel_pan_vel * eff_lead_time
+                tilt_error_pred = pat_state.tilt_error_deg + rel_tilt_vel * eff_lead_time
+
+                # Pass through modernized continuous-time Smith Predictor
+                pan_error_pred, tilt_error_pred = self.smith_predictor.predict_error(
+                    pan_error_pred, tilt_error_pred, self._prev_cmd_pan, self._prev_cmd_tilt, dt, latency_s=eff_lead_time
+                )
+
+                if self.controller_type == "LQG":
+                    pid_pan = self.lqg_pan.compute(pan_error_pred, rel_pan_vel, dt)
+                    pid_tilt = self.lqg_tilt.compute(tilt_error_pred, rel_tilt_vel, dt)
+                else:
+                    # Calculate PID pointing error commands using scheduled gains
+                    pid_pan = self.pan_pid.compute(
+                        pan_error_pred,
+                        dt,
+                        kp=gains.kp,
+                        ki=gains.ki,
+                        kd=gains.kd,
+                    )
+                    pid_tilt = self.tilt_pid.compute(
+                        tilt_error_pred,
+                        dt,
+                        kp=gains.kp,
+                        ki=gains.ki,
+                        kd=gains.kd,
+                    )
+
+                raw_cmd_pan = pid_pan + ff_pan + plat_ff_pan
+                raw_cmd_tilt = pid_tilt + ff_tilt + plat_ff_tilt
+
+            # 6. Mode-Adaptive Anti-Hunting Command Rate-of-Change Damping Filter
+            # In TRACK (steady-state): tight smoothing (800 deg/s²) damps noise chatter
+            # In ACQUIRE/DEGRADED: looser limit (3000 deg/s²) ensures fast pull-in response
+            # This prevents the old 120 deg/s² clamp from creating a 1-2 frame dead-band
+            # during acquisition and reacquisition phases.
+            if mode == PATMode.TRACK and pat_state.track_quality > 0.6:
+                eff_accel_limit = self._track_mode_rate_limit  # 800 deg/s² — steady-state
+            else:
+                eff_accel_limit = 3000.0  # near-instantaneous response for pull-in
+
+            max_delta = eff_accel_limit * dt
             delta_pan = float(np.clip(raw_cmd_pan - self._prev_cmd_pan, -max_delta, max_delta))
             delta_tilt = float(np.clip(raw_cmd_tilt - self._prev_cmd_tilt, -max_delta, max_delta))
 

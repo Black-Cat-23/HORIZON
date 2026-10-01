@@ -67,11 +67,11 @@ class ScenarioThumbnailCanvas(QLabel):
 
         if len(pixel_pts) > 1:
             pts_arr = np.array(pixel_pts, dtype=np.int32).reshape((-1, 1, 2))
-            cv2.polylines(canvas, [pts_arr], isClosed=False, color=(232, 212, 127), thickness=1, lineType=cv2.LINE_AA)
+            cv2.polylines(canvas, [pts_arr], isClosed=False, color=(173, 134, 91), thickness=1, lineType=cv2.LINE_AA)
 
         # Draw start position dot
         if pixel_pts:
-            cv2.circle(canvas, pixel_pts[0], 2, (0, 165, 255), -1, cv2.LINE_AA)
+            cv2.circle(canvas, pixel_pts[0], 2, (98, 128, 78), -1, cv2.LINE_AA)
 
         qimg = QImage(canvas.data, 90, 60, 90 * 3, QImage.Format.Format_RGB888)
         self.setPixmap(QPixmap.fromImage(qimg))
@@ -103,12 +103,16 @@ class ScenarioTileWidget(QFrame):
         info_stack = QVBoxLayout()
         info_stack.setSpacing(4)
 
-        # Name + Difficulty Pill Bar
+        # Name + Mission Code + Difficulty Pill Bar
         title_bar = QHBoxLayout()
         title_bar.setSpacing(SPACING_8)
 
+        self.lbl_code = QLabel(scenario.mission_code, self)
+        self.lbl_code.setStyleSheet("color: #5B86AD; font-family: 'Consolas', monospace; font-size: 11px; font-weight: 700;")
+        title_bar.addWidget(self.lbl_code)
+
         self.lbl_name = QLabel(scenario.name, self)
-        self.lbl_name.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY}; font-family: {FONT_BODY}; font-size: 14px; font-weight: 700;")
+        self.lbl_name.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY}; font-family: {FONT_BODY}; font-size: 13.5px; font-weight: 700;")
         title_bar.addWidget(self.lbl_name)
 
         diff_state = StatePillState.IDLE if scenario.difficulty == "Nominal" else (
@@ -124,13 +128,14 @@ class ScenarioTileWidget(QFrame):
 
         # One-line Objective
         self.lbl_obj = QLabel(scenario.objective, self)
-        self.lbl_obj.setStyleSheet(f"color: {COLOR_TEXT_SECONDARY}; font-family: {FONT_BODY}; font-size: 12px;")
+        self.lbl_obj.setStyleSheet(f"color: {COLOR_TEXT_SECONDARY}; font-family: {FONT_BODY}; font-size: 11.5px;")
         self.lbl_obj.setWordWrap(True)
         info_stack.addWidget(self.lbl_obj)
 
-        # Parameter Summary
-        self.lbl_summary = QLabel(scenario.param_summary, self)
-        self.lbl_summary.setStyleSheet(f"color: {COLOR_LOCK_CYAN}; font-family: {FONT_BODY}; font-size: 11px; font-weight: 500;")
+        # Parameter & Mission Orbit Summary
+        full_summary = f"{scenario.orbit_regime} ({scenario.slant_range_km:.0f}km)  |  {scenario.channel_model}"
+        self.lbl_summary = QLabel(full_summary, self)
+        self.lbl_summary.setStyleSheet("color: #8A94A0; font-family: 'Consolas', monospace; font-size: 10.5px; font-weight: 500;")
         info_stack.addWidget(self.lbl_summary)
 
         main_layout.addLayout(info_stack, stretch=1)
@@ -141,12 +146,12 @@ class ScenarioTileWidget(QFrame):
         self.is_selected = selected
         if selected:
             self.setStyleSheet(
-                f"""
-                QFrame {{
-                    background-color: {COLOR_FIELD_RAISED};
-                    border: 1px solid {COLOR_LOCK_CYAN};
+                """
+                QFrame {
+                    background-color: #161D27;
+                    border: 1px solid #5B86AD;
                     border-radius: 6px;
-                }}
+                }
                 """
             )
         else:
@@ -158,8 +163,8 @@ class ScenarioTileWidget(QFrame):
                     border-radius: 6px;
                 }}
                 QFrame:hover {{
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    background-color: rgba(255, 255, 255, 0.02);
+                    border: 1px solid #36506E;
+                    background-color: rgba(91, 134, 173, 0.05);
                 }}
                 """
             )

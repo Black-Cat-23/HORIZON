@@ -37,6 +37,12 @@ class MeasurementCandidate:
     bbox: Optional[Tuple[int, int, int, int]] = None
     score: float = 0.0
     reason: str = ""
+    # Astrometric uncertainty and optical morphology features
+    sigma_u_px: float = 1.0
+    sigma_v_px: float = 1.0
+    snr: float = 0.0
+    compactness: float = 1.0
+    circularity: float = 1.0
 
     @property
     def centroid(self) -> Tuple[float, float]:
@@ -66,6 +72,8 @@ class TrackAssociator:
         alpha_confidence: float = 2.0,
         beta_score: float = 1.0,
         base_sigma_px: float = 0.5,
+        use_adaptive_gate: bool = True,
+        gamma_shape: float = 0.5,
     ) -> None:
         """Initialize associator.
 
@@ -74,10 +82,18 @@ class TrackAssociator:
             alpha_confidence: Weight for detector confidence reward.
             beta_score: Weight for optical feature score reward.
             base_sigma_px: Base measurement noise standard deviation.
+            use_adaptive_gate: If True, uses AdaptiveMahalanobisGate with velocity & covariance expansion.
+            gamma_shape: Weight for morphological spot quality (circularity * compactness).
         """
-        self._gate = MahalanobisGate(threshold=gate_threshold)
+        if use_adaptive_gate:
+            from tracking.association.gate import AdaptiveMahalanobisGate
+            self._gate = AdaptiveMahalanobisGate(base_threshold=gate_threshold)
+        else:
+            self._gate = MahalanobisGate(threshold=gate_threshold)
+
         self._alpha = float(alpha_confidence)
         self._beta = float(beta_score)
+        self._gamma_shape = float(gamma_shape)
         self._base_sigma_px = float(base_sigma_px)
         self._H = build_measurement_matrix()
 
@@ -119,15 +135,23 @@ class TrackAssociator:
                 rejection_reasons={},
             )
 
+        active_threshold = (
+            self._gate.compute_adaptive_threshold(x_pred, P_pred)
+            if hasattr(self._gate, "compute_adaptive_threshold")
+            else self._gate.threshold
+        )
+
         valid_gated: List[Tuple[float, float, float, MeasurementCandidate]] = []
         rejected: List[MeasurementCandidate] = []
         rejection_reasons: Dict[int, str] = {}
 
         for cand in candidates:
             z = np.array([[cand.centroid_x], [cand.centroid_y]], dtype=np.float64)
+            cand_spot = (cand.sigma_u_px, cand.sigma_v_px) if hasattr(cand, "sigma_u_px") else None
             R = build_measurement_noise_matrix(
                 confidence=cand.confidence,
                 base_sigma_px=self._base_sigma_px,
+                spot_uncertainty=cand_spot,
             )
 
             is_valid, d2, d = self._gate.test(z, x_pred, P_pred, self._H, R)
@@ -135,12 +159,15 @@ class TrackAssociator:
             if not is_valid:
                 rejected.append(cand)
                 rejection_reasons[cand.candidate_id] = (
-                    f"Candidate rejected because Mahalanobis distance d²={d2:.2f} exceeded validation gate {self._gate.threshold:.2f}"
+                    f"Candidate rejected because Mahalanobis distance d²={d2:.2f} exceeded validation gate {active_threshold:.2f}"
                 )
             else:
-                # Cost function: Lower is better.
-                # Penalize large statistical distance d^2; reward high detector confidence and score
-                cost = float(d2 - (self._alpha * cand.confidence) - (self._beta * cand.score))
+                # Multi-criteria ranking cost: Lower is better.
+                # Penalize large statistical distance d^2; reward high confidence, score, and morphology
+                circ = getattr(cand, "circularity", 1.0)
+                comp = getattr(cand, "compactness", 1.0)
+                shape_bonus = self._gamma_shape * (circ * comp)
+                cost = float(d2 - (self._alpha * cand.confidence) - (self._beta * cand.score) - shape_bonus)
                 valid_gated.append((cost, d2, d, cand))
 
         if not valid_gated:
@@ -149,7 +176,7 @@ class TrackAssociator:
                 selected_candidate=None,
                 rejected_candidates=rejected,
                 all_candidates_count=len(candidates),
-                decision_reason=f"All {len(candidates)} candidate(s) rejected by Mahalanobis validation gate (threshold={self._gate.threshold:.2f})",
+                decision_reason=f"All {len(candidates)} candidate(s) rejected by Mahalanobis validation gate (threshold={active_threshold:.2f})",
                 rejection_reasons=rejection_reasons,
             )
 
@@ -167,7 +194,7 @@ class TrackAssociator:
 
         decision_reason = (
             f"Candidate #{best_cand.candidate_id} selected because minimal ranking cost J={best_cost:.2f} "
-            f"(d²={best_d2:.2f} <= {self._gate.threshold:.2f}, conf={best_cand.confidence:.2f}, score={best_cand.score:.2f})"
+            f"(d²={best_d2:.2f} <= {active_threshold:.2f}, conf={best_cand.confidence:.2f}, score={best_cand.score:.2f})"
         )
 
         return AssociationResult(

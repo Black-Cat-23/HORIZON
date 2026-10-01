@@ -24,7 +24,7 @@ tr:hover { background-color: #334155; }
 <h1>HORIZON Coarse-Align-X — Phase 10 Technical Validation Report</h1>
 <div class='card'>
 <h2>1. Data Integrity Audit Summary (Step 1)</h2>
-<p><strong>Validated Trials:</strong> 40 / 46 files passed.</p>
+<p><strong>Validated Trials:</strong> 43 / 49 files passed.</p>
 <p><strong>Duplicates Found:</strong> 4 | <strong>Incomplete Trials:</strong> 0 | <strong>Config Mismatches:</strong> 0</p>
 </div>
 <div class='card'>
@@ -35,19 +35,19 @@ tr:hover { background-color: #334155; }
 <tr><td><strong>B0</strong></td><td>0.0%</td><td>0.0%</td><td>300.00 px</td><td>300.00 px</td><td>300.00 px</td><td>300.00 px</td><td>300.00 px</td><td>10.03 ms</td></tr>
 <tr><td><strong>B1</strong></td><td>0.0%</td><td>54.0%</td><td>78.95 px</td><td>79.15 px</td><td>85.53 px</td><td>85.56 px</td><td>85.56 px</td><td>8.59 ms</td></tr>
 <tr><td><strong>B2</strong></td><td>0.0%</td><td>51.4%</td><td>86.71 px</td><td>87.43 px</td><td>94.83 px</td><td>94.86 px</td><td>94.86 px</td><td>39.20 ms</td></tr>
-<tr><td><strong>OURS</strong></td><td>0.0%</td><td>51.4%</td><td>86.77 px</td><td>87.45 px</td><td>94.96 px</td><td>94.97 px</td><td>94.97 px</td><td>41.90 ms</td></tr>
+<tr><td><strong>OURS</strong></td><td>7.7%</td><td>61.2%</td><td>105.57 px</td><td>94.48 px</td><td>212.47 px</td><td>293.81 px</td><td>314.15 px</td><td>33.43 ms</td></tr>
 </tbody></table></div></div>
 <div class='card'>
 <h2>3. Statistical Superiority & Pairwise Hypothesis Tests (Steps 3 & 4)</h2>
 <div class='table-responsive'><table>
 <thead><tr><th>Pairwise Comparison</th><th>Mean Delta</th><th>Test Method</th><th>P-Value (FDR)</th><th>Cohen's d</th><th>Vargha-Delaney A12</th><th>Significant?</th></tr></thead>
 <tbody>
-<tr><td>B0 vs B1</td><td>+221.05 px</td><td>Paired Wilcoxon Signed-Rank (Non-Parametric)</td><td>0.0061</td><td>46.62</td><td>1.00</td><td><span class='badge-success'>YES</span></td></tr>
-<tr><td>B0 vs B2</td><td>+213.29 px</td><td>Paired Wilcoxon Signed-Rank (Non-Parametric)</td><td>0.0061</td><td>35.67</td><td>1.00</td><td><span class='badge-success'>YES</span></td></tr>
-<tr><td>B0 vs OURS</td><td>+213.23 px</td><td>Paired Wilcoxon Signed-Rank (Non-Parametric)</td><td>0.0061</td><td>35.64</td><td>1.00</td><td><span class='badge-success'>YES</span></td></tr>
-<tr><td>B1 vs B2</td><td>-7.76 px</td><td>Paired Wilcoxon Signed-Rank (Non-Parametric)</td><td>0.0061</td><td>-1.02</td><td>0.25</td><td><span class='badge-success'>YES</span></td></tr>
-<tr><td>B1 vs OURS</td><td>-7.83 px</td><td>Paired Wilcoxon Signed-Rank (Non-Parametric)</td><td>0.0061</td><td>-1.03</td><td>0.25</td><td><span class='badge-success'>YES</span></td></tr>
-<tr><td>B2 vs OURS</td><td>-0.06 px</td><td>Paired Wilcoxon Signed-Rank (Non-Parametric)</td><td>0.0218</td><td>-0.01</td><td>0.45</td><td><span class='badge-success'>YES</span></td></tr>
+<tr><td>B0 vs B1</td><td>+221.05 px</td><td>Paired Wilcoxon Signed-Rank (Non-Parametric)</td><td>0.0101</td><td>46.62</td><td>1.00</td><td><span class='badge-success'>YES</span></td></tr>
+<tr><td>B0 vs B2</td><td>+213.29 px</td><td>Paired Wilcoxon Signed-Rank (Non-Parametric)</td><td>0.0101</td><td>35.67</td><td>1.00</td><td><span class='badge-success'>YES</span></td></tr>
+<tr><td>B0 vs OURS</td><td>+194.43 px</td><td>Insufficient Samples</td><td>1.0000</td><td>3.60</td><td>0.92</td><td><span class='badge-warning'>NO</span></td></tr>
+<tr><td>B1 vs B2</td><td>-7.76 px</td><td>Paired Wilcoxon Signed-Rank (Non-Parametric)</td><td>0.0101</td><td>-1.02</td><td>0.25</td><td><span class='badge-success'>YES</span></td></tr>
+<tr><td>B1 vs OURS</td><td>-26.63 px</td><td>Insufficient Samples</td><td>1.0000</td><td>-0.49</td><td>0.27</td><td><span class='badge-warning'>NO</span></td></tr>
+<tr><td>B2 vs OURS</td><td>-18.87 px</td><td>Insufficient Samples</td><td>1.0000</td><td>-0.35</td><td>0.42</td><td><span class='badge-warning'>NO</span></td></tr>
 </tbody></table></div></div>
 <div class='card'>
 <h2>4. Subsystem Telemetry Failure Forensics (Step 7)</h2>
@@ -57,7 +57,7 @@ tr:hover { background-color: #334155; }
 <tr><td><strong>B0</strong></td><td>10</td><td>0</td><td>0</td><td>0</td><td>10</td><td>0</td><td>0</td><td>0</td></tr>
 <tr><td><strong>B1</strong></td><td>10</td><td>0</td><td>0</td><td>5</td><td>5</td><td>0</td><td>0</td><td>0</td></tr>
 <tr><td><strong>B2</strong></td><td>10</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>10</td><td>0</td></tr>
-<tr><td><strong>OURS</strong></td><td>10</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>10</td><td>0</td></tr>
+<tr><td><strong>OURS</strong></td><td>13</td><td>0</td><td>0</td><td>2</td><td>0</td><td>0</td><td>10</td><td>0</td></tr>
 </tbody></table></div></div>
 <div class='card'>
 <h2>5. Accuracy / Latency Pareto Efficiency Frontier (Step 10)</h2>
@@ -67,14 +67,14 @@ tr:hover { background-color: #334155; }
 <line x1='60' y1='40' x2='60' y2='260' stroke='#52525b' stroke-width='1.5'/>
 <text x='250.0' y='290' fill='#a1a1aa' font-family='sans-serif' font-size='11' text-anchor='middle'>Latency (ms)</text>
 <text x='15' y='150.0' fill='#a1a1aa' font-family='sans-serif' font-size='11' text-anchor='middle' transform='rotate(-90 15 150.0)'>Accuracy</text>
-<circle cx='135.8' cy='259.3' r='7' fill='#ef4444' stroke='#ffffff' stroke-width='1.5'/>
-<text x='145.8' y='263.3' fill='#f4f4f5' font-family='sans-serif' font-size='12' font-weight='600'>B0 (10.0ms, 0.3)</text>
-<circle cx='124.9' cy='258.5' r='7' fill='#f59e0b' stroke='#ffffff' stroke-width='1.5'/>
-<text x='134.9' y='262.5' fill='#f4f4f5' font-family='sans-serif' font-size='12' font-weight='600'>B1 (8.6ms, 0.8)</text>
-<circle cx='356.2' cy='258.6' r='7' fill='#3b82f6' stroke='#ffffff' stroke-width='1.5'/>
-<text x='366.2' y='262.6' fill='#f4f4f5' font-family='sans-serif' font-size='12' font-weight='600'>B2 (39.2ms, 0.7)</text>
-<circle cx='376.7' cy='258.6' r='7' fill='#10b981' stroke='#ffffff' stroke-width='1.5'/>
-<text x='386.7' y='262.6' fill='#f4f4f5' font-family='sans-serif' font-size='12' font-weight='600'>OURS (41.9ms, 0.7)</text>
+<circle cx='141.0' cy='259.3' r='7' fill='#ef4444' stroke='#ffffff' stroke-width='1.5'/>
+<text x='151.0' y='263.3' fill='#f4f4f5' font-family='sans-serif' font-size='12' font-weight='600'>B0 (10.0ms, 0.3)</text>
+<circle cx='129.4' cy='258.5' r='7' fill='#f59e0b' stroke='#ffffff' stroke-width='1.5'/>
+<text x='139.4' y='262.5' fill='#f4f4f5' font-family='sans-serif' font-size='12' font-weight='600'>B1 (8.6ms, 0.8)</text>
+<circle cx='376.7' cy='258.6' r='7' fill='#3b82f6' stroke='#ffffff' stroke-width='1.5'/>
+<text x='386.7' y='262.6' fill='#f4f4f5' font-family='sans-serif' font-size='12' font-weight='600'>B2 (39.2ms, 0.7)</text>
+<circle cx='330.1' cy='258.8' r='7' fill='#10b981' stroke='#ffffff' stroke-width='1.5'/>
+<text x='340.1' y='262.8' fill='#f4f4f5' font-family='sans-serif' font-size='12' font-weight='600'>OURS (33.4ms, 0.6)</text>
 </svg>
 </div>
 <div class='card'>
@@ -92,9 +92,9 @@ tr:hover { background-color: #334155; }
 <tr><td><code>B2_MEAN_ERR</code></td><td><strong>86.71 px</strong></td><td><code>BENCHMARK_SUITE_P9</code></td><td><code>AGGREGATED_ALL</code></td><td><code>ALL_COMBINED</code></td><td><code>mean_tracking_error</code></td><td><code>Bootstrap Mean (N=1000)</code></td></tr>
 <tr><td><code>B2_P95_ERR</code></td><td><strong>94.83 px</strong></td><td><code>BENCHMARK_SUITE_P9</code></td><td><code>AGGREGATED_ALL</code></td><td><code>ALL_COMBINED</code></td><td><code>P95_tracking_error</code></td><td><code>Percentile P95</code></td></tr>
 <tr><td><code>B2_LATENCY</code></td><td><strong>39.20 ms</strong></td><td><code>BENCHMARK_SUITE_P9</code></td><td><code>AGGREGATED_ALL</code></td><td><code>ALL_COMBINED</code></td><td><code>processing_time</code></td><td><code>Sample Mean</code></td></tr>
-<tr><td><code>OURS_MEAN_ERR</code></td><td><strong>86.77 px</strong></td><td><code>BENCHMARK_SUITE_P9</code></td><td><code>AGGREGATED_ALL</code></td><td><code>ALL_COMBINED</code></td><td><code>mean_tracking_error</code></td><td><code>Bootstrap Mean (N=1000)</code></td></tr>
-<tr><td><code>OURS_P95_ERR</code></td><td><strong>94.96 px</strong></td><td><code>BENCHMARK_SUITE_P9</code></td><td><code>AGGREGATED_ALL</code></td><td><code>ALL_COMBINED</code></td><td><code>P95_tracking_error</code></td><td><code>Percentile P95</code></td></tr>
-<tr><td><code>OURS_LATENCY</code></td><td><strong>41.90 ms</strong></td><td><code>BENCHMARK_SUITE_P9</code></td><td><code>AGGREGATED_ALL</code></td><td><code>ALL_COMBINED</code></td><td><code>processing_time</code></td><td><code>Sample Mean</code></td></tr>
+<tr><td><code>OURS_MEAN_ERR</code></td><td><strong>105.57 px</strong></td><td><code>BENCHMARK_SUITE_P9</code></td><td><code>AGGREGATED_ALL</code></td><td><code>ALL_COMBINED</code></td><td><code>mean_tracking_error</code></td><td><code>Bootstrap Mean (N=1000)</code></td></tr>
+<tr><td><code>OURS_P95_ERR</code></td><td><strong>212.47 px</strong></td><td><code>BENCHMARK_SUITE_P9</code></td><td><code>AGGREGATED_ALL</code></td><td><code>ALL_COMBINED</code></td><td><code>P95_tracking_error</code></td><td><code>Percentile P95</code></td></tr>
+<tr><td><code>OURS_LATENCY</code></td><td><strong>33.43 ms</strong></td><td><code>BENCHMARK_SUITE_P9</code></td><td><code>AGGREGATED_ALL</code></td><td><code>ALL_COMBINED</code></td><td><code>processing_time</code></td><td><code>Sample Mean</code></td></tr>
 </tbody></table></div>
 </div>
 </div></body></html>

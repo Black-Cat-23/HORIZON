@@ -57,8 +57,8 @@ class CoarseToFineRadarWidget(PanelSurface):
         layout.setContentsMargins(12, 8, 12, 8)
         layout.setSpacing(4)
 
-        header = SectionHeaderLabel("Optical alignment radar [coarse-to-fine]", self)
-        header.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY}; font-family: {FONT_BODY}; font-size: 13px; font-weight: 600;")
+        header = SectionHeaderLabel("Optical Alignment Radar", self)
+        header.setStyleSheet(f"color: {COLOR_TEXT_PRIMARY}; font-family: {FONT_BODY}; font-size: 13.5px; font-weight: 700;")
         layout.addWidget(header)
 
         # Sub-status indicator label
@@ -67,6 +67,18 @@ class CoarseToFineRadarWidget(PanelSurface):
         layout.addWidget(self._lbl_status)
 
         layout.addStretch()
+
+    def reset(self) -> None:
+        """Reset radar history, alignment errors, and status label to initial state."""
+        self._history.clear()
+        self._curr_pan_err_deg = 0.0
+        self._curr_tilt_err_deg = 0.0
+        self._curr_err_px = 0.0
+        self._coupling_pct = 0.0
+        self._fps_locked = False
+        self._lbl_status.setText("COUPLING: INITIALIZING")
+        self._lbl_status.setStyleSheet(f"color: {COLOR_TEXT_SECONDARY}; font-family: {FONT_TELEMETRY}; font-size: 10px; font-weight: bold;")
+        self.update()
 
     def update_alignment(
         self,
@@ -84,25 +96,29 @@ class CoarseToFineRadarWidget(PanelSurface):
         total_urad = math.hypot(pan_error_deg, tilt_error_deg) * 17453.3
 
         # Coupling efficiency model: Gaussian beam coupling eta = exp(-2 * (theta / w0)^2)
-        # w0 ~ 140 urad beam divergence
+        # ISRO FSO optical link beam waist parameter w0 = 800.0 µrad (~5.0 px)
+        w0_urad = 800.0
         if coupling_efficiency is not None:
             self._coupling_pct = float(np.clip(coupling_efficiency, 0.0, 100.0))
         else:
-            self._coupling_pct = float(np.clip(100.0 * math.exp(-2.0 * (min(total_urad, 500.0) / 140.0) ** 2), 0.0, 100.0))
+            self._coupling_pct = float(np.clip(100.0 * math.exp(-2.0 * (min(total_urad, 2500.0) / w0_urad) ** 2), 0.0, 100.0))
 
-        # Fine pointing handoff criteria: inside 50 urad gate or error < 2.5 px
-        self._fps_locked = (total_urad <= 60.0) or (self._curr_err_px <= 2.5)
+        # Fine pointing handoff criteria: inside FSM pull-in basin (error <= 2.5 px / 275 µrad)
+        self._fps_locked = (self._curr_err_px <= 2.5) or (total_urad <= 275.0)
 
         # Update HUD status label
         if self._fps_locked:
-            self._lbl_status.setText(f"COUPLING: ACTIVE ({self._coupling_pct:.1f}%) [FPS GATE LOCKED]")
+            self._lbl_status.setText(f"COUPLING: ACTIVE ({self._coupling_pct:.1f}%) [FSM LOCKED]")
             self._lbl_status.setStyleSheet(f"color: {COLOR_CONFIRM_GREEN}; font-family: {FONT_TELEMETRY}; font-size: 10px; font-weight: bold;")
-        elif total_urad <= 200.0 or self._curr_err_px <= 8.0:
-            self._lbl_status.setText(f"COUPLING: COARSE SLEW ({self._coupling_pct:.1f}%) [CONVERGING]")
+        elif self._curr_err_px <= 6.0 or total_urad <= 650.0:
+            self._lbl_status.setText(f"COUPLING: HANDOFF ZONE ({self._coupling_pct:.1f}%) [COARSE PULL-IN]")
             self._lbl_status.setStyleSheet(f"color: {COLOR_LOCK_CYAN}; font-family: {FONT_TELEMETRY}; font-size: 10px; font-weight: bold;")
-        else:
-            self._lbl_status.setText(f"COUPLING: ACQUIRING ({self._coupling_pct:.1f}%) [COARSE PULL-IN]")
+        elif self._curr_err_px <= 25.0 or total_urad <= 2750.0:
+            self._lbl_status.setText(f"COUPLING: TRACKING ({self._coupling_pct:.1f}%) [COARSE CONVERGING]")
             self._lbl_status.setStyleSheet(f"color: {COLOR_DISTURBANCE_AMBER}; font-family: {FONT_TELEMETRY}; font-size: 10px; font-weight: bold;")
+        else:
+            self._lbl_status.setText(f"COUPLING: SLEWING ({self._coupling_pct:.1f}%) [GIMBAL ACQUISITION]")
+            self._lbl_status.setStyleSheet(f"color: {COLOR_LOST_RED}; font-family: {FONT_TELEMETRY}; font-size: 10px; font-weight: bold;")
 
         # Push to history
         self._history.append((self._curr_pan_err_deg, self._curr_tilt_err_deg))
@@ -155,8 +171,8 @@ class CoarseToFineRadarWidget(PanelSurface):
             painter.setPen(QPen(QColor(127, 212, 232, 110), 1, Qt.PenStyle.DotLine))
             painter.drawEllipse(QPointF(cx, cy), r_mid, r_mid)
 
-        # Inner Fine Pointing Sensor Capture Core (Green Zone: 50 µrad ≈ 0.00286°, drawn with visible minimum ~14 px)
-        r_fps = max(14.0, 0.05 * scale_deg_to_r)
+        # Inner Fine Pointing Sensor Capture Core (Green Zone: 2.5 px ≈ 273 µrad ≈ 0.0156°, drawn with visible minimum ~14 px)
+        r_fps = max(14.0, 0.015625 * scale_deg_to_r)
         fps_grad = QRadialGradient(cx, cy, r_fps)
         fps_grad.setColorAt(0.0, QColor(111, 232, 168, 60))
         fps_grad.setColorAt(1.0, QColor(111, 232, 168, 15))
@@ -167,7 +183,7 @@ class CoarseToFineRadarWidget(PanelSurface):
         # Label FPS Gate
         painter.setFont(QFont("Inter", 7, QFont.Weight.Bold))
         painter.setPen(QPen(QColor(111, 232, 168, 180)))
-        painter.drawText(int(cx - 24), int(cy - r_fps - 3), "FPS GATE (±50µrad)")
+        painter.drawText(int(cx - 36), int(cy - r_fps - 3), "FPS GATE (≤ 2.5 px)")
 
         # 3. Crosshair Axes & Azimuth Radians
         axis_pen = QPen(QColor(50, 60, 75), 1)

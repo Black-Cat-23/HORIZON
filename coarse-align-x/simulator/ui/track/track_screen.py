@@ -16,6 +16,7 @@ Strict Ground-Truth Firewall: Ground-truth marker appears ONLY in Evaluation Mod
 from __future__ import annotations
 import logging
 import math
+import os
 import time
 from typing import List, Optional, Tuple
 import cv2
@@ -27,6 +28,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
+    QPushButton,
     QScrollArea,
     QVBoxLayout,
     QWidget,
@@ -62,18 +64,22 @@ from simulator.ui.track.state_estimate_panel import StateEstimatePanel
 
 
 class ExecutiveKPICard(QWidget):
-    """Single glassmorphic Executive KPI status card for high-level mission situational awareness."""
+    """Clean research-grade Executive KPI status card for optical tracking situational awareness."""
 
     def __init__(self, title: str, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setStyleSheet(
-            f"background-color: {COLOR_FIELD}; "
-            f"border: 1px solid {COLOR_HAIRLINE_BORDER_HEX}; "
-            "border-radius: 6px;"
+            """
+            QWidget {
+                background-color: #12151B;
+                border: 1px solid #1F2430;
+                border-radius: 4px;
+            }
+            """
         )
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 7, 10, 7)
-        layout.setSpacing(3)
+        layout.setContentsMargins(12, 8, 12, 8)
+        layout.setSpacing(4)
 
         top_row = QHBoxLayout()
         top_row.setContentsMargins(0, 0, 0, 0)
@@ -81,27 +87,28 @@ class ExecutiveKPICard(QWidget):
 
         self.lbl_title = QLabel(title.upper(), self)
         self.lbl_title.setStyleSheet(
-            f"color: {COLOR_TEXT_SECONDARY}; font-family: {FONT_BODY}; "
-            "font-size: 10px; font-weight: 700; letter-spacing: 0.5px;"
+            f"color: #8B949E; font-family: {FONT_TELEMETRY}; "
+            "font-size: 9.5px; font-weight: 700; letter-spacing: 0.6px; border: none; background: transparent;"
         )
         top_row.addWidget(self.lbl_title)
 
         top_row.addStretch()
 
         self.pill = StateIndicatorPill(StatePillState.IDLE, label_text="STANDBY", parent=self)
+        self.pill.setMinimumWidth(80)
         top_row.addWidget(self.pill)
         layout.addLayout(top_row)
 
         self.lbl_value = QLabel("--", self)
         self.lbl_value.setStyleSheet(
-            f"color: {COLOR_TEXT_PRIMARY}; font-family: {FONT_TELEMETRY}; "
-            "font-size: 14px; font-weight: 700;"
+            f"color: #F0F6FC; font-family: {FONT_TELEMETRY}; "
+            "font-size: 14.5px; font-weight: 700; border: none; background: transparent;"
         )
         layout.addWidget(self.lbl_value)
 
         self.lbl_subtitle = QLabel("Awaiting telemetry stream", self)
         self.lbl_subtitle.setStyleSheet(
-            f"color: {COLOR_TEXT_SECONDARY}; font-family: {FONT_BODY}; font-size: 10px;"
+            f"color: #8B949E; font-family: {FONT_BODY}; font-size: 10px; border: none; background: transparent;"
         )
         layout.addWidget(self.lbl_subtitle)
 
@@ -114,16 +121,16 @@ class ExecutiveKPICard(QWidget):
         value_color: str | None = None,
     ) -> None:
         self.lbl_value.setText(value_text)
-        col = value_color or COLOR_TEXT_PRIMARY
+        col = value_color or "#F0F6FC"
         self.lbl_value.setStyleSheet(
-            f"color: {col}; font-family: {FONT_TELEMETRY}; font-size: 14px; font-weight: 700;"
+            f"color: {col}; font-family: {FONT_TELEMETRY}; font-size: 14.5px; font-weight: 700; border: none; background: transparent;"
         )
         self.pill.set_state(pill_state, label_text=pill_text)
         self.lbl_subtitle.setText(subtitle_text)
 
 
 class ExecutiveKPIStripWidget(QWidget):
-    """Four-pillar Executive Mission KPI Header Strip for PAT Track Workstation."""
+    """Four-pillar Executive Mission KPI Header Strip for PAT Track Workstation (CCSDS 141.0-B-1)."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -131,10 +138,11 @@ class ExecutiveKPIStripWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
 
-        self.card_handoff = ExecutiveKPICard("🎯 Optical Handoff Gate", self)
-        self.card_coupling = ExecutiveKPICard("⚡ Link Coupling η", self)
-        self.card_nis = ExecutiveKPICard("🛡️ NIS Consistency (χ²)", self)
-        self.card_integrity = ExecutiveKPICard("⏱️ Track Integrity & Age", self)
+        # Formal aerospace titles without emojis
+        self.card_handoff = ExecutiveKPICard("FSM Handoff Gate", self)
+        self.card_coupling = ExecutiveKPICard("Link Coupling (η)", self)
+        self.card_nis = ExecutiveKPICard("NIS Consistency (χ²)", self)
+        self.card_integrity = ExecutiveKPICard("Track Continuity", self)
 
         layout.addWidget(self.card_handoff, stretch=1)
         layout.addWidget(self.card_coupling, stretch=1)
@@ -146,24 +154,56 @@ class ExecutiveKPIStripWidget(QWidget):
         self._recent_errors_px: List[float] = []
         self._max_recent_errors: int = 30
 
+    def reset(self) -> None:
+        """Reset all four KPI cards and history buffers to standby state."""
+        self._consecutive_lock_frames = 0
+        self._recent_errors_px.clear()
+        self.card_handoff.set_data(
+            value_text="--",
+            pill_text="STANDBY",
+            pill_state=StatePillState.IDLE,
+            subtitle_text="Awaiting coarse alignment",
+        )
+        self.card_coupling.set_data(
+            value_text="0.0% (-40.00 dB)",
+            pill_text="STANDBY",
+            pill_state=StatePillState.IDLE,
+            subtitle_text="Zero optical flux coupled",
+        )
+        self.card_nis.set_data(
+            value_text="χ² = 0.00",
+            pill_text="IDLE",
+            pill_state=StatePillState.IDLE,
+            subtitle_text="Zero innovation residual",
+        )
+        self.card_integrity.set_data(
+            value_text="--",
+            pill_text="STANDBY",
+            pill_state=StatePillState.IDLE,
+            subtitle_text="Awaiting track initiation",
+        )
+
     def update_kpis(
         self,
         estimate: Optional[StateEstimate],
         pat_state: Optional[PATState],
         detection_res: Optional[DetectionResult],
-    ) -> None:
+    ) -> float:
+        coupling_pct = 0.0
+
         # 1. Optical Handoff Gate & Consecutive Lock Tracking
         if pat_state is not None:
             err_deg = math.hypot(pat_state.pan_error_deg, pat_state.tilt_error_deg)
-            err_px = err_deg * 60.0
+            # Physical camera optical conversion factor: 640 px / 4.0 deg FOV = 160.0 px/deg
+            err_px = err_deg * 160.0
             err_urad = err_deg * 17453.3
 
             self._recent_errors_px.append(err_px)
             if len(self._recent_errors_px) > self._max_recent_errors:
                 self._recent_errors_px.pop(0)
 
-            # FSM capture basin threshold is <= 2.5 px (~50-60 urad)
-            is_in_basin = (err_px <= 2.5) or (err_urad <= 60.0)
+            # FSM capture basin threshold is <= 2.5 px (~275 urad)
+            is_in_basin = (err_px <= 2.5) or (err_urad <= 275.0)
             if is_in_basin:
                 self._consecutive_lock_frames += 1
             else:
@@ -175,7 +215,7 @@ class ExecutiveKPIStripWidget(QWidget):
                     pill_text="FSM LOCKED",
                     pill_state=StatePillState.CONFIRMED,
                     subtitle_text=f"Handoff Verified ({self._consecutive_lock_frames} frames) | Basin ≤ 2.5 px",
-                    value_color="#38EF7D",
+                    value_color="#3FB950",
                 )
             elif is_in_basin:
                 self.card_handoff.set_data(
@@ -183,15 +223,23 @@ class ExecutiveKPIStripWidget(QWidget):
                     pill_text="LOCKED",
                     pill_state=StatePillState.CONFIRMED,
                     subtitle_text=f"Within Basin ({self._consecutive_lock_frames}/20 frames to FSM Handoff)",
-                    value_color=COLOR_LOCK_CYAN,
+                    value_color="#58A6FF",
                 )
-            elif err_px <= 6.0:
+            elif err_px <= 6.0 or err_urad <= 650.0:
                 self.card_handoff.set_data(
                     value_text=f"±{err_urad:.1f} µrad ({err_px:.2f} px)",
-                    pill_text="ACQUIRING",
+                    pill_text="HANDOFF",
                     pill_state=StatePillState.ACTIVE,
                     subtitle_text=f"Coarse Gimbal Converging | Basin Δ: {err_px - 2.5:.1f} px",
-                    value_color="#E8D47F",
+                    value_color="#58A6FF",
+                )
+            elif err_px <= 25.0 or err_urad <= 2750.0:
+                self.card_handoff.set_data(
+                    value_text=f"±{err_urad:.1f} µrad ({err_px:.2f} px)",
+                    pill_text="COARSE TRACK",
+                    pill_state=StatePillState.ACTIVE,
+                    subtitle_text=f"Gimbal Tracking Corridor | Basin Δ: {err_px - 2.5:.1f} px",
+                    value_color="#D29922",
                 )
             else:
                 self.card_handoff.set_data(
@@ -199,7 +247,7 @@ class ExecutiveKPIStripWidget(QWidget):
                     pill_text="SLEWING",
                     pill_state=StatePillState.LOST,
                     subtitle_text=f"Sensor FOV Slew Active | Basin Δ: {err_px - 2.5:.1f} px",
-                    value_color=COLOR_LOST_RED,
+                    value_color="#F85149",
                 )
         else:
             self._consecutive_lock_frames = 0
@@ -213,7 +261,9 @@ class ExecutiveKPIStripWidget(QWidget):
         # 2. Link Coupling η & Physical Optical Loss / Strehl / BER
         if pat_state is not None:
             total_urad = math.hypot(pat_state.pan_error_deg, pat_state.tilt_error_deg) * 17453.3
-            spatial_coupling = math.exp(-2.0 * (min(total_urad, 600.0) / 140.0) ** 2)
+            # ISRO FSO optical link beam waist parameter w0 = 800.0 µrad (~5.0 px)
+            w0_urad = 800.0
+            spatial_coupling = math.exp(-2.0 * (min(total_urad, 2500.0) / w0_urad) ** 2)
 
             if len(self._recent_errors_px) >= 5:
                 jitter_px = float(np.std(self._recent_errors_px))
@@ -226,21 +276,21 @@ class ExecutiveKPIStripWidget(QWidget):
             db_loss = 10.0 * math.log10(eta)
             margin_db = 18.0 + db_loss
 
-            if coupling_pct >= 85.0:
+            if coupling_pct >= 80.0:
                 self.card_coupling.set_data(
                     value_text=f"{coupling_pct:.1f}% ({db_loss:+.2f} dB)",
                     pill_text="OPTIMAL",
                     pill_state=StatePillState.CONFIRMED,
                     subtitle_text=f"Margin: {margin_db:+.1f} dB | BER < 1e-9 | Strehl: {strehl:.2f}",
-                    value_color="#6FE8A8",
+                    value_color="#3FB950",
                 )
-            elif coupling_pct >= 50.0:
+            elif coupling_pct >= 40.0:
                 self.card_coupling.set_data(
                     value_text=f"{coupling_pct:.1f}% ({db_loss:+.2f} dB)",
                     pill_text="DEGRADED",
                     pill_state=StatePillState.DEGRADED,
                     subtitle_text=f"Margin: {margin_db:+.1f} dB | BER ~ 1e-6 (FEC Active)",
-                    value_color="#E8D47F",
+                    value_color="#D29922",
                 )
             else:
                 self.card_coupling.set_data(
@@ -248,7 +298,7 @@ class ExecutiveKPIStripWidget(QWidget):
                     pill_text="LOSS RISK",
                     pill_state=StatePillState.LOST,
                     subtitle_text=f"Margin: {margin_db:+.1f} dB | Decoupled (BER > 1e-2)",
-                    value_color=COLOR_LOST_RED,
+                    value_color="#F85149",
                 )
         else:
             self.card_coupling.set_data(
@@ -274,7 +324,7 @@ class ExecutiveKPIStripWidget(QWidget):
                     pill_text="CONSISTENT",
                     pill_state=StatePillState.CONFIRMED,
                     subtitle_text="Innovation inside 95% Confidence Ellipsoid",
-                    value_color="#6FE8A8",
+                    value_color="#3FB950",
                 )
             elif nis_val <= 9.21:
                 self.card_nis.set_data(
@@ -282,7 +332,7 @@ class ExecutiveKPIStripWidget(QWidget):
                     pill_text="MARGINAL",
                     pill_state=StatePillState.ACTIVE,
                     subtitle_text="Within 99% Bound | Filter Adapting",
-                    value_color="#E8D47F",
+                    value_color="#D29922",
                 )
             else:
                 self.card_nis.set_data(
@@ -290,7 +340,7 @@ class ExecutiveKPIStripWidget(QWidget):
                     pill_text="MANEUVER",
                     pill_state=StatePillState.DEGRADED,
                     subtitle_text="Dynamic Acceleration / Process Covariance Adapted",
-                    value_color="#E8D47F",
+                    value_color="#D29922",
                 )
         else:
             self.card_nis.set_data(
@@ -312,7 +362,7 @@ class ExecutiveKPIStripWidget(QWidget):
                     pill_text="CONTINUOUS",
                     pill_state=StatePillState.CONFIRMED,
                     subtitle_text=f"Conf: {conf:.1f}% | {duty_text} | Hybrid Lock",
-                    value_color=COLOR_LOCK_CYAN,
+                    value_color="#58A6FF",
                 )
             elif misses > 0:
                 self.card_integrity.set_data(
@@ -320,7 +370,7 @@ class ExecutiveKPIStripWidget(QWidget):
                     pill_text="COASTING",
                     pill_state=StatePillState.DEGRADED,
                     subtitle_text="Kalman Dead-Reckoning Extrapolation Active",
-                    value_color="#E8D47F",
+                    value_color="#D29922",
                 )
             else:
                 self.card_integrity.set_data(
@@ -328,7 +378,7 @@ class ExecutiveKPIStripWidget(QWidget):
                     pill_text="ACQUIRING",
                     pill_state=StatePillState.ACTIVE,
                     subtitle_text="Establishing temporal filter convergence",
-                    value_color=COLOR_TEXT_PRIMARY,
+                    value_color="#F0F6FC",
                 )
         else:
             self.card_integrity.set_data(
@@ -337,6 +387,8 @@ class ExecutiveKPIStripWidget(QWidget):
                 pill_state=StatePillState.IDLE,
                 subtitle_text="Awaiting track initiation",
             )
+
+        return coupling_pct
 
 
 class TrackScreenView(QWidget):
@@ -360,10 +412,49 @@ class TrackScreenView(QWidget):
         self._history_confidences: List[float] = []
         self._max_history = 200
 
+        # Cached state for instant flight telemetry snapshots
+        self._last_sensor_frame: Optional[np.ndarray] = None
+        self._last_detection_res: Optional[DetectionResult] = None
+        self._last_estimate: Optional[StateEstimate] = None
+        self._last_pat_state: Optional[PATState] = None
+
         # Build Root Layout Architecture
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(12, 10, 12, 10)
         root_layout.setSpacing(10)
+
+        # Workstation Action Bar: Title + Instant Telemetry Snapshot Button
+        top_action_bar = QHBoxLayout()
+        top_action_bar.setContentsMargins(0, 0, 0, 0)
+        top_action_bar.setSpacing(10)
+
+        lbl_screen_title = QLabel("TRACK DIAGNOSTICS & PRECISION ANALYSIS WORKSTATION", self)
+        lbl_screen_title.setStyleSheet(
+            f"color: {COLOR_TEXT_PRIMARY}; font-family: {FONT_BODY}; font-size: 12.5px; font-weight: 700; letter-spacing: 0.6px;"
+        )
+        top_action_bar.addWidget(lbl_screen_title)
+
+        top_action_bar.addStretch()
+
+        self.lbl_snapshot_toast = QLabel("", self)
+        self.lbl_snapshot_toast.setStyleSheet(
+            "color: #3FB950; font-family: 'Consolas', monospace; font-size: 11px; font-weight: bold;"
+        )
+        top_action_bar.addWidget(self.lbl_snapshot_toast)
+
+        self.btn_export_snapshot = QPushButton("Export Telemetry Snapshot (CCSDS)", self)
+        self.btn_export_snapshot.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_export_snapshot.setStyleSheet(
+            "QPushButton {"
+            "  background-color: #1A2634; color: #5B86AD; border: 1px solid #36506E; "
+            "  border-radius: 4px; font-size: 11px; font-weight: 600; padding: 4px 10px;"
+            "}"
+            "QPushButton:hover { background-color: #243548; color: #C9D1D9; border-color: #5B86AD; }"
+        )
+        self.btn_export_snapshot.clicked.connect(self._on_export_snapshot_clicked)
+        top_action_bar.addWidget(self.btn_export_snapshot)
+
+        root_layout.addLayout(top_action_bar)
 
         # Top Bar: Executive Mission KPI Header Strip
         self.kpi_strip = ExecutiveKPIStripWidget(self)
@@ -430,6 +521,53 @@ class TrackScreenView(QWidget):
         # Initial UI update in idle state
         self.update_track_displays()
 
+    def reset_telemetry(self) -> None:
+        """Clear all historical telemetry buffers and reset UI components to standby."""
+        self._history_times.clear()
+        self._history_errors_px.clear()
+        self._history_qualities.clear()
+        self._history_innovations.clear()
+        self._history_pan_errors.clear()
+        self._history_tilt_errors.clear()
+        self._history_confidences.clear()
+        self._last_sensor_frame = None
+        self._last_detection_res = None
+        self._last_estimate = None
+        self._last_pat_state = None
+
+        try:
+            self.kpi_strip.reset()
+        except Exception:
+            pass
+        try:
+            self.radar_widget.reset()
+        except Exception:
+            pass
+        try:
+            self.estimate_panel.update_estimate(None, None)
+        except Exception:
+            pass
+        try:
+            self.perception_panel.update_breakdown(None)
+        except Exception:
+            pass
+        try:
+            self.cov_panel.update_covariance(None)
+        except Exception:
+            pass
+        try:
+            self.analytics_panel.update_analytics(
+                times=[],
+                errors_px=[],
+                qualities=[],
+                innovations=[],
+                pan_errors=[],
+                tilt_errors=[],
+                confidences=[],
+            )
+        except Exception:
+            pass
+
     def update_track_displays(
         self,
         dist_frame: Optional[np.ndarray] = None,
@@ -442,12 +580,15 @@ class TrackScreenView(QWidget):
         """Update all Track screen components from real backend data pushed via signal."""
 
         # 0. Update Executive Mission KPI Header Strip
+        coupling_pct = None
         try:
-            self.kpi_strip.update_kpis(
+            c_val = self.kpi_strip.update_kpis(
                 estimate=estimate,
                 pat_state=pat_state,
                 detection_res=detection_res,
             )
+            if c_val is not None:
+                coupling_pct = float(c_val)
         except Exception:
             pass
 
@@ -471,7 +612,7 @@ class TrackScreenView(QWidget):
 
         # 3. Update State Estimate Panel
         try:
-            self.estimate_panel.update_estimate(estimate)
+            self.estimate_panel.update_estimate(estimate, pat_state=pat_state)
         except Exception:
             pass
 
@@ -484,11 +625,12 @@ class TrackScreenView(QWidget):
         # 5. Update Coarse-to-Fine Alignment Radar Widget
         try:
             if pat_state is not None:
-                err_px = float(np.hypot(pat_state.pan_error_deg, pat_state.tilt_error_deg) * 60.0)
+                err_px = float(np.hypot(pat_state.pan_error_deg, pat_state.tilt_error_deg) * 160.0)
                 self.radar_widget.update_alignment(
                     pan_error_deg=pat_state.pan_error_deg,
                     tilt_error_deg=pat_state.tilt_error_deg,
                     error_px=err_px,
+                    coupling_efficiency=coupling_pct,
                 )
         except Exception:
             pass
@@ -498,20 +640,20 @@ class TrackScreenView(QWidget):
             t_curr = float(sim_time)
 
             if pat_state is not None:
-                err_px = float(np.hypot(pat_state.pan_error_deg, pat_state.tilt_error_deg) * 60.0)
+                err_px = float(np.hypot(pat_state.pan_error_deg, pat_state.tilt_error_deg) * 160.0)
                 quality = float(pat_state.track_quality * 100.0)
                 pan_err = float(pat_state.pan_error_deg)
                 tilt_err = float(pat_state.tilt_error_deg)
             elif ground_truth_pos and detection_res and detection_res.detected and detection_res.centroid:
                 err_px = float(np.hypot(detection_res.centroid[0] - ground_truth_pos[0], detection_res.centroid[1] - ground_truth_pos[1]))
                 quality = float(detection_res.confidence * 100.0)
-                pan_err = float(detection_res.centroid[0] - 320.0) / 60.0
-                tilt_err = float(detection_res.centroid[1] - 240.0) / 60.0
+                pan_err = float(detection_res.centroid[0] - 320.0) / 160.0
+                tilt_err = float(detection_res.centroid[1] - 240.0) / 160.0
             elif detection_res and detection_res.detected and detection_res.centroid:
                 err_px = float(np.hypot(detection_res.centroid[0] - 320.0, detection_res.centroid[1] - 240.0))
                 quality = float(detection_res.confidence * 100.0)
-                pan_err = float(detection_res.centroid[0] - 320.0) / 60.0
-                tilt_err = float(detection_res.centroid[1] - 240.0) / 60.0
+                pan_err = float(detection_res.centroid[0] - 320.0) / 160.0
+                tilt_err = float(detection_res.centroid[1] - 240.0) / 160.0
             else:
                 err_px = 0.0
                 quality = 0.0
@@ -549,3 +691,67 @@ class TrackScreenView(QWidget):
             )
         except Exception as ex:
             logger.debug("Analytics update error: %s", ex)
+
+        # Cache for CCSDS Telemetry Snapshot Dossier Exporter
+        if dist_frame is not None:
+            self._last_sensor_frame = dist_frame
+        if detection_res is not None:
+            self._last_detection_res = detection_res
+        if estimate is not None:
+            self._last_estimate = estimate
+        if pat_state is not None:
+            self._last_pat_state = pat_state
+
+    def _on_export_snapshot_clicked(self) -> None:
+        """Trigger interactive save file dialog to download telemetry snapshot PNG."""
+        self._export_telemetry_snapshot(prompt_dialog=True)
+
+    def _export_telemetry_snapshot(self, target_path: Optional[str] = None, prompt_dialog: bool = False) -> str:
+        """Export publication-grade CCSDS 141.0-B-1 telemetry snapshot dossier to disk.
+
+        If prompt_dialog is True and target_path is None, opens the native OS Save File Dialog.
+        """
+        import datetime
+        now_stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
+        default_name = f"CCSDS_PAT_SNAPSHOT_{now_stamp}.png"
+
+        chosen_path = target_path
+        if chosen_path is None and prompt_dialog:
+            from PySide6.QtWidgets import QFileDialog
+            default_dir = os.path.abspath("reports/flight_telemetry")
+            os.makedirs(default_dir, exist_ok=True)
+            default_full_path = os.path.join(default_dir, default_name)
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Export Flight Telemetry Snapshot (CCSDS 141.0-B-1)",
+                default_full_path,
+                "PNG Image (*.png);;All Files (*)",
+            )
+            if not file_path:
+                return ""
+            chosen_path = file_path
+        elif chosen_path is None:
+            default_dir = os.path.abspath("reports/flight_telemetry")
+            os.makedirs(default_dir, exist_ok=True)
+            chosen_path = os.path.join(default_dir, default_name)
+
+        try:
+            from simulator.ui.track.snapshot_exporter import generate_ccsds_telemetry_snapshot
+            path = generate_ccsds_telemetry_snapshot(
+                times=self._history_times,
+                errors_px=self._history_errors_px,
+                innovations=self._history_innovations,
+                estimate=self._last_estimate,
+                pat_state=self._last_pat_state,
+                detection_res=self._last_detection_res,
+                sensor_frame=self._last_sensor_frame,
+                output_path=chosen_path,
+            )
+            filename = os.path.basename(path)
+            self.lbl_snapshot_toast.setText(f"✓ Saved: {filename}")
+            logger.info("Exported CCSDS flight telemetry snapshot to %s", path)
+            return path
+        except Exception as ex:
+            logger.error("Failed to export telemetry snapshot: %s", ex)
+            self.lbl_snapshot_toast.setText(f"Export Failed: {ex}")
+            return ""

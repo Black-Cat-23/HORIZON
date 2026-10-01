@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 import time
 from typing import Optional, Tuple, List
@@ -63,7 +64,7 @@ class NeuralBeaconDetector:
 
         try:
             opts = ort.SessionOptions()
-            opts.intra_op_num_threads = 4
+            opts.intra_op_num_threads = min(8, max(2, (os.cpu_count() or 4) - 2))
             opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
             opts.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
             self._session = ort.InferenceSession(
@@ -71,6 +72,10 @@ class NeuralBeaconDetector:
             )
             self._input_name = self._session.get_inputs()[0].name
             logger.info("Successfully initialized ONNX Runtime session for %s", model_path)
+
+            # Warmup inference to eliminate first-frame JIT initialization latency
+            warmup_tensor = np.zeros((1, 3, self._neural_cfg.input_size, self._neural_cfg.input_size), dtype=np.float32)
+            self._session.run(None, {self._input_name: warmup_tensor})
 
             if meta_path.exists():
                 with open(meta_path, "r", encoding="utf-8") as f:
@@ -104,19 +109,44 @@ class NeuralBeaconDetector:
         if self._session is None:
             return self._run_synthetic_heatmap_inference(valid_frame, timestamp, t_start, roi=roi_arg)
 
-        # 1. Preprocessing: Impulse noise removal & Letterbox tensor preparation
-        denoised_frame = apply_adaptive_median_filter(valid_frame, self._config.preprocessing)
-        h_orig, w_orig = denoised_frame.shape
+        # 1. ROI Extraction (if DynamicROI provided)
+        h_full, w_full = valid_frame.shape
+        x_offset, y_offset = 0, 0
+        crop_frame = valid_frame
+
+        if roi_arg is not None:
+            if hasattr(roi_arg, "x1") and hasattr(roi_arg, "x2"):
+                rx1, ry1, rx2, ry2 = int(roi_arg.x1), int(roi_arg.y1), int(roi_arg.x2), int(roi_arg.y2)
+                if not getattr(roi_arg, "is_full_frame", False):
+                    rx1 = max(0, min(w_full - 1, rx1))
+                    ry1 = max(0, min(h_full - 1, ry1))
+                    rx2 = max(rx1 + 16, min(w_full, rx2))
+                    ry2 = max(ry1 + 16, min(h_full, ry2))
+                    crop_frame = valid_frame[ry1:ry2, rx1:rx2]
+                    x_offset, y_offset = rx1, ry1
+            elif isinstance(roi_arg, (tuple, list)) and len(roi_arg) == 4:
+                rx, ry, rw, rh = [int(v) for v in roi_arg]
+                if rw < w_full or rh < h_full:
+                    rx1 = max(0, min(w_full - 1, rx))
+                    ry1 = max(0, min(h_full - 1, ry))
+                    rx2 = max(rx1 + 16, min(w_full, rx1 + rw))
+                    ry2 = max(ry1 + 16, min(h_full, ry1 + rh))
+                    crop_frame = valid_frame[ry1:ry2, rx1:rx2]
+                    x_offset, y_offset = rx1, ry1
+
+        # 2. Preprocessing: Impulse noise removal on active region & tensor preparation
+        denoised_crop = apply_adaptive_median_filter(crop_frame, self._config.preprocessing)
+        h_crop, w_crop = denoised_crop.shape
         in_sz = self._neural_cfg.input_size
-        img_resized = cv2.resize(denoised_frame, (in_sz, in_sz), interpolation=cv2.INTER_LINEAR)
+        img_resized = cv2.resize(denoised_crop, (in_sz, in_sz), interpolation=cv2.INTER_LINEAR)
         img_f32 = img_resized.astype(np.float32) * (1.0 / 255.0)
         img_tensor = np.repeat(img_f32[np.newaxis, :, :], 3, axis=0)
         img_batch = img_tensor[np.newaxis, ...]
 
-        # 2. Execute ONNX Runtime Inference
+        # 3. Execute ONNX Runtime Inference
         raw_outputs = self._session.run(None, {self._input_name: img_batch})[0]
 
-        # 3. Post-process ONNX tensor output [1, 5, 8400]
+        # 4. Post-process ONNX tensor output [1, 5, 8400]
         output = np.squeeze(raw_outputs, axis=0)
         best_cand_bbox: Optional[Tuple[int, int, int, int]] = None
         best_conf: float = 0.0
@@ -125,21 +155,20 @@ class NeuralBeaconDetector:
             boxes = output[:4, :].T
             confs = output[4, :]
 
-            scale_x = w_orig / float(in_sz)
-            scale_y = h_orig / float(in_sz)
+            scale_x = w_crop / float(in_sz)
+            scale_y = h_crop / float(in_sz)
 
             valid_mask = confs >= self._neural_cfg.confidence_threshold
             if np.any(valid_mask):
                 valid_indices = np.where(valid_mask)[0]
-                # Precompute background median once using 4x spatial subsampling for speed
-                bg_est = float(np.median(denoised_frame[::4, ::4]))
+                bg_est = float(np.median(denoised_crop[::4, ::4]))
 
                 # If temporal prediction is available, rank candidates by joint neural confidence & spatial proximity
                 if estimator_prediction is not None:
                     pred_u, pred_v = estimator_prediction
                     def _rank_score(idx: int) -> float:
-                        cx = boxes[idx, 0] * scale_x
-                        cy = boxes[idx, 1] * scale_y
+                        cx = x_offset + boxes[idx, 0] * scale_x
+                        cy = y_offset + boxes[idx, 1] * scale_y
                         dist = np.hypot(cx - pred_u, cy - pred_v)
                         # Proximity bonus within 60px
                         prox = np.exp(-0.5 * (dist / 40.0) ** 2)
@@ -152,56 +181,56 @@ class NeuralBeaconDetector:
                     cx_box, cy_box, w_box, h_box = boxes[idx]
                     conf = float(confs[idx])
 
-                    cx_orig = cx_box * scale_x
-                    cy_orig = cy_box * scale_y
+                    cx_local = cx_box * scale_x
+                    cy_local = cy_box * scale_y
 
-                    # Verify center is inside valid image bounds
-                    if 0.0 <= cx_orig < float(w_orig) and 0.0 <= cy_orig < float(h_orig):
+                    # Verify center is inside valid crop bounds
+                    if 0.0 <= cx_local < float(w_crop) and 0.0 <= cy_local < float(h_crop):
                         x1 = int((cx_box - w_box / 2.0) * scale_x)
                         y1 = int((cy_box - h_box / 2.0) * scale_y)
                         bw = int(w_box * scale_x)
                         bh = int(h_box * scale_y)
 
-                        x1 = max(0, min(w_orig - 1, x1))
-                        y1 = max(0, min(h_orig - 1, y1))
-                        bw = max(1, min(w_orig - x1, bw))
-                        bh = max(1, min(h_orig - y1, bh))
+                        x1 = max(0, min(w_crop - 1, x1))
+                        y1 = max(0, min(h_crop - 1, y1))
+                        bw = max(1, min(w_crop - x1, bw))
+                        bh = max(1, min(h_crop - y1, bh))
 
                         # Check if crop has real optical intensity contrast above background noise
-                        crop = denoised_frame[y1 : y1 + bh, x1 : x1 + bw]
-                        if crop.size >= 9 and bw >= 3 and bh >= 3:
-                            max_val = float(np.max(crop))
-                            bg_local = float(np.median(denoised_frame[max(0, y1-5):min(h_orig, y1+bh+5), max(0, x1-5):min(w_orig, x1+bw+5)]))
+                        sub_crop = denoised_crop[y1 : y1 + bh, x1 : x1 + bw]
+                        if sub_crop.size >= 9 and bw >= 3 and bh >= 3:
+                            max_val = float(np.max(sub_crop))
+                            bg_local = float(np.median(denoised_crop[max(0, y1-5):min(h_crop, y1+bh+5), max(0, x1-5):min(w_crop, x1+bw+5)]))
                             contrast = max_val - bg_local
-                            net_flux = float(np.sum(np.maximum(crop.astype(float) - bg_local, 0.0)))
-                            num_bright = int(np.count_nonzero(crop > bg_local + 12.0))
+                            net_flux = float(np.sum(np.maximum(sub_crop.astype(float) - bg_local, 0.0)))
+                            num_bright = int(np.count_nonzero(sub_crop > bg_local + 12.0))
                             # Reject dark/empty crops or isolated noise impulses
                             if contrast >= 15.0 and net_flux >= 60.0 and num_bright >= 3:
-                                best_cand_bbox = (x1, y1, bw, bh)
+                                best_cand_bbox = (x_offset + x1, y_offset + y1, bw, bh)
                                 best_conf = conf
                                 break
 
-        # 4. Subpixel Centroid Refinement inside Neural Bounding Box ROI
+        # 5. Subpixel Centroid Refinement inside Neural Bounding Box ROI
         centroid: Optional[Tuple[float, float]] = None
         if best_cand_bbox is not None:
             x, y, w, h = best_cand_bbox
             pad = self._config.centroid.roi_padding_px
             x1 = max(0, x - pad)
             y1 = max(0, y - pad)
-            x2 = min(w_orig, x + w + pad)
-            y2 = min(h_orig, y + h + pad)
+            x2 = min(w_full, x + w + pad)
+            y2 = min(h_full, y + h + pad)
 
-            roi_crop = valid_frame[y1:y2, x1:x2]
-            if roi_crop.size > 0:
+            roi_sub = valid_frame[y1:y2, x1:x2]
+            if roi_sub.size > 0:
                 if self._neural_cfg.enable_subpixel_refinement:
-                    min_val = float(np.min(roi_crop))
-                    max_val = float(np.max(roi_crop))
+                    min_val = float(np.min(roi_sub))
+                    max_val = float(np.max(roi_sub))
                     if max_val > min_val + 4.0:
                         thresh_val = min_val + 0.35 * (max_val - min_val)
                     else:
                         thresh_val = min_val
-                    _, mask_crop = cv2.threshold(roi_crop, int(thresh_val), 255, cv2.THRESH_BINARY)
-                    centroid_u, centroid_v, _, _ = compute_weighted_cog(roi_crop, mask_crop, min_val, x1, y1)
+                    _, mask_crop = cv2.threshold(roi_sub, int(thresh_val), 255, cv2.THRESH_BINARY)
+                    centroid_u, centroid_v, _, _ = compute_weighted_cog(roi_sub, mask_crop, min_val, x1, y1)
                     centroid = (centroid_u, centroid_v)
                 else:
                     # Integer bounding box center
@@ -296,7 +325,6 @@ class NeuralBeaconDetector:
             method_used="synthetic_neural_heatmap",
             processing_time_ms=(t_end - t_start) * 1000.0,
             timestamp=timestamp,
-            snr_db=float(20.0 * np.log10(max_val / max(1.0, float(np.std(valid_frame))))),
             roi_bbox=(rx1, ry1, rx2 - rx1, ry2 - ry1) if is_roi else None,
             is_roi_used=is_roi,
         )

@@ -124,10 +124,9 @@ def test_live_screen_external_video_ingestion(qapp, tmp_path):
     import os
     import time
 
-    video_path = "data/samples/isro_sample_beacon_test.mp4"
+    video_path = "data/samples/isro_square_beacon_evaluation_30s.mp4"
     if not os.path.exists(video_path):
-        from scripts.generate_sample_video import generate_sample_beacon_video
-        generate_sample_beacon_video()
+        video_path = "data/samples/isro_sample_beacon_30s.mp4"
 
     screen = LiveScreenView()
     success = screen.load_video_source(video_path)
@@ -161,4 +160,49 @@ def test_live_screen_external_video_ingestion(qapp, tmp_path):
 
     assert out_csv.exists()
     assert out_csv.stat().st_size > 0
+
+
+def test_live_to_track_external_video_end_to_end(qapp):
+    """Verify end-to-end signal streaming from LiveScreenView to TrackScreenView in EXTERNAL_VIDEO mode."""
+    import os
+    import time
+    from simulator.ui.track import TrackScreenView
+
+    video_path = "data/samples/isro_square_beacon_evaluation_30s.mp4"
+    if not os.path.exists(video_path):
+        video_path = "data/samples/isro_sample_beacon_test.mp4"
+
+    live_screen = LiveScreenView()
+    track_screen = TrackScreenView()
+
+    # Wire signal exactly as in AppShell
+    live_screen.track_data_ready.connect(track_screen.update_track_displays)
+    live_screen.simulation_reset.connect(track_screen.reset_telemetry)
+
+    success = live_screen.load_video_source(video_path)
+    assert success is True
+    assert len(track_screen._history_times) == 0
+
+    # Step through 30 frames
+    for _ in range(30):
+        live_screen._execute_video_step(time.perf_counter())
+
+    # Verify Track Screen received telemetry
+    assert len(track_screen._history_times) == 30
+    assert len(track_screen._history_errors_px) == 30
+
+    # Verify radar and KPI coupling synchronization
+    radar_coupling = track_screen.radar_widget._coupling_pct
+    assert radar_coupling > 0.0
+    kpi_coupling_text = track_screen.kpi_strip.card_coupling.lbl_value.text()
+    assert f"{radar_coupling:.1f}%" in kpi_coupling_text
+
+    # Verify StateEstimatePanel updated without error
+    assert track_screen.estimate_panel.telem_x._val_label.text() != "N/A"
+
+    # Test reset signal
+    live_screen._reset_sim()
+    assert len(track_screen._history_times) == 0
+    assert track_screen.kpi_strip.card_handoff.pill.text().strip() == "STANDBY"
+
 

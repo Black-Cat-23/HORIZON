@@ -32,7 +32,7 @@ COLOR_HAIRLINE_BORDER_HEX = "#26262B"
 # ==============================================================================
 # TYPOGRAPHY & RESTRICTED SCOPING
 # ==============================================================================
-FONT_HEADLINE = "'Space Grotesk', 'Bricolage Grotesque', sans-serif"
+FONT_HEADLINE = "'Magnolia Script', 'Space Grotesk', 'Bricolage Grotesque', cursive, sans-serif"
 FONT_TELEMETRY = "'JetBrains Mono', 'Space Mono', 'Courier New', monospace"
 FONT_BODY = "'General Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
 
