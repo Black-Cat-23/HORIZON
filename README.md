@@ -266,3 +266,32 @@ HORIZON/
 - **Release Version**: `v1.0.0`
 - **Problem Statement**: SIH26169 — *AI-Based Virtual Camera Tracking System for Coarse Alignment of Mobile FSOC Terminals*
 - **Organization**: Indian Space Research Organisation (ISRO) / Smart India Hackathon 2026
+
+---
+
+<div align="center">
+
+## 🧑‍🚀 Built By
+
+<table>
+  <tr>
+    <td align="center" width="420">
+      <h2>✦ MITUL RISHI ✦</h2>
+      <h3><em>Lead AI & Systems Architect</em></h3>
+      <p>
+        The HORIZON suite — every algorithm, every workstation, every line of aerospace mathematics — was <strong>designed, engineered, and delivered</strong> by <strong>Mitul Rishi</strong>.
+      </p>
+      <p>
+        From the sub-pixel optical rasterizer and deterministic simulation clock, to the IMM-Adaptive Extended Kalman Filter, the Active Disturbance Rejection Controller, and the 5-screen real-time aerospace desktop suite — this project reflects months of rigorous research, late-night engineering, and an unwavering commitment to solving a real problem for ISRO.
+      </p>
+      <p>
+        <em>"Not just code — an instrument built to track light across space."</em>
+      </p>
+    </td>
+  </tr>
+</table>
+
+*HORIZON — Smart India Hackathon 2026 | ISRO SIH26169*  
+*"Precision that speaks for itself: 0.69 px RMSE · 4.35 ms latency · 100% Lock Retention"*
+
+</div>
