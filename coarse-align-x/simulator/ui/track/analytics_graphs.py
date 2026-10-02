@@ -759,7 +759,7 @@ class JitterPSDSpectrumWidget(QWidget):
             color=CLR_TEXT_TITLE, fontsize=7.2, fontweight="bold", loc="left", pad=4,
         )
 
-        self.canvas.draw()
+        self.canvas.draw_idle()
 
 
 class TimeSeriesAnalyticsWidget(PanelSurface):
@@ -851,6 +851,7 @@ class TimeSeriesAnalyticsWidget(PanelSurface):
         main_layout.addWidget(self.psd_widget)
 
         self._view_mode = self.MODE_MPL_DYNAMICS
+        self._last_analytics_args: Optional[tuple] = None
         self._update_button_styles()
 
     def set_view_mode(self, mode: int) -> None:
@@ -861,6 +862,8 @@ class TimeSeriesAnalyticsWidget(PanelSurface):
         self.phase_portrait.setVisible(mode == self.MODE_PHASE_PORTRAIT)
         self.psd_widget.setVisible(mode == self.MODE_JITTER_PSD)
         self._update_button_styles()
+        if self._last_analytics_args is not None:
+            self.update_analytics(*self._last_analytics_args)
 
     def _update_button_styles(self) -> None:
         active_style = (
@@ -893,11 +896,10 @@ class TimeSeriesAnalyticsWidget(PanelSurface):
         tilt_errors: List[float],
         confidences: List[float],
     ) -> None:
-        """Update all visualization engines from live telemetry."""
-        # 1. Update Matplotlib Multi-Channel Dynamics Workstation
-        self.mpl_workstation.update_dynamics(times, errors_px, innovations)
+        """Update active visualization engine from live telemetry with zero idle overhead."""
+        self._last_analytics_args = (times, errors_px, qualities, innovations, pan_errors, tilt_errors, confidences)
 
-        # 2. Update 6-Channel Telemetry Grid
+        # 1. Update 6-Channel Telemetry Grid (Lightweight QPainter plots, always up-to-date)
         def _range(data: List[float], y_min_floor: float, y_max_ceil: float, min_span: float) -> tuple:
             if not data:
                 return y_min_floor, y_max_ceil
@@ -927,8 +929,10 @@ class TimeSeriesAnalyticsWidget(PanelSurface):
         self.graph_tilt_err.render_plot(times, tilt_errors, y_min=tilt_lo, y_max=tilt_hi)
         self.graph_conf.render_plot(times, confidences,   y_min=conf_lo, y_max=conf_hi)
 
-        # 3. Update Dedicated Phase Portrait
-        self.phase_portrait.update_phase_data(errors_px, times)
-
-        # 4. Update Atmospheric Turbulence PSD & Jitter Spectrum Analyzer
-        self.psd_widget.update_psd(times, errors_px)
+        # 2. Gate Heavy Visualization Engines (Only redraw active mode to prevent Qt GUI stutter)
+        if self._view_mode == self.MODE_MPL_DYNAMICS:
+            self.mpl_workstation.update_dynamics(times, errors_px, innovations)
+        elif self._view_mode == self.MODE_PHASE_PORTRAIT:
+            self.phase_portrait.update_phase_data(errors_px, times)
+        elif self._view_mode == self.MODE_JITTER_PSD:
+            self.psd_widget.update_psd(times, errors_px)

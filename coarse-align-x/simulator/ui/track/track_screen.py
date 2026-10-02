@@ -568,6 +568,17 @@ class TrackScreenView(QWidget):
         except Exception:
             pass
 
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        self.update_track_displays(
+            getattr(self, "_last_sensor_frame", None),
+            getattr(self, "_last_detection_res", None),
+            getattr(self, "_last_estimate", None),
+            getattr(self, "_last_pat_state", None),
+            getattr(self, "_last_gt_pos", None),
+            getattr(self, "_last_sim_time", 0.0),
+        )
+
     def update_track_displays(
         self,
         dist_frame: Optional[np.ndarray] = None,
@@ -578,6 +589,66 @@ class TrackScreenView(QWidget):
         sim_time: float = 0.0,
     ) -> None:
         """Update all Track screen components from real backend data pushed via signal."""
+
+        # Cache for CCSDS Telemetry Snapshot Dossier Exporter & Deferred Render
+        if dist_frame is not None:
+            self._last_sensor_frame = dist_frame
+        if detection_res is not None:
+            self._last_detection_res = detection_res
+        if estimate is not None:
+            self._last_estimate = estimate
+        if pat_state is not None:
+            self._last_pat_state = pat_state
+        if ground_truth_pos is not None:
+            self._last_gt_pos = ground_truth_pos
+        self._last_sim_time = float(sim_time)
+
+        # 1. Append to Time-Series History Buffers (always maintained for analytical continuity)
+        try:
+            t_curr = float(sim_time)
+
+            if pat_state is not None:
+                err_px = float(np.hypot(pat_state.pan_error_deg, pat_state.tilt_error_deg) * 160.0)
+                quality = float(pat_state.track_quality * 100.0)
+                pan_err = float(pat_state.pan_error_deg)
+                tilt_err = float(pat_state.tilt_error_deg)
+            elif ground_truth_pos and detection_res and detection_res.detected and detection_res.centroid:
+                err_px = float(np.hypot(detection_res.centroid[0] - ground_truth_pos[0], detection_res.centroid[1] - ground_truth_pos[1]))
+                quality = float(detection_res.confidence * 100.0)
+                pan_err = float(detection_res.centroid[0] - 320.0) / 160.0
+                tilt_err = float(detection_res.centroid[1] - 240.0) / 160.0
+            elif detection_res and detection_res.detected and detection_res.centroid:
+                err_px = float(np.hypot(detection_res.centroid[0] - 320.0, detection_res.centroid[1] - 240.0))
+                quality = float(detection_res.confidence * 100.0)
+                pan_err = float(detection_res.centroid[0] - 320.0) / 160.0
+                tilt_err = float(detection_res.centroid[1] - 240.0) / 160.0
+            else:
+                err_px = 0.0
+                quality = 0.0
+                pan_err = 0.0
+                tilt_err = 0.0
+
+            innov = float(np.linalg.norm(estimate.innovation)) if (estimate and estimate.innovation is not None) else 0.0
+            conf = float(detection_res.confidence * 100.0) if (detection_res and detection_res.detected) else 0.0
+
+            self._history_times.append(t_curr)
+            self._history_errors_px.append(err_px)
+            self._history_qualities.append(quality)
+            self._history_innovations.append(innov)
+            self._history_pan_errors.append(pan_err)
+            self._history_tilt_errors.append(tilt_err)
+            self._history_confidences.append(conf)
+
+            if len(self._history_times) > self._max_history:
+                self._history_times.pop(0)
+                self._history_errors_px.pop(0)
+                self._history_qualities.pop(0)
+                self._history_innovations.pop(0)
+                self._history_pan_errors.pop(0)
+                self._history_tilt_errors.pop(0)
+                self._history_confidences.pop(0)
+        except Exception as ex:
+            logger.debug("History buffer error: %s", ex)
 
         # 0. Update Executive Mission KPI Header Strip
         coupling_pct = None
@@ -635,51 +706,8 @@ class TrackScreenView(QWidget):
         except Exception:
             pass
 
-        # 6. Append to Time-Series History Buffers & Update Analytics Graphs
+        # 6. Update Analytics Graphs
         try:
-            t_curr = float(sim_time)
-
-            if pat_state is not None:
-                err_px = float(np.hypot(pat_state.pan_error_deg, pat_state.tilt_error_deg) * 160.0)
-                quality = float(pat_state.track_quality * 100.0)
-                pan_err = float(pat_state.pan_error_deg)
-                tilt_err = float(pat_state.tilt_error_deg)
-            elif ground_truth_pos and detection_res and detection_res.detected and detection_res.centroid:
-                err_px = float(np.hypot(detection_res.centroid[0] - ground_truth_pos[0], detection_res.centroid[1] - ground_truth_pos[1]))
-                quality = float(detection_res.confidence * 100.0)
-                pan_err = float(detection_res.centroid[0] - 320.0) / 160.0
-                tilt_err = float(detection_res.centroid[1] - 240.0) / 160.0
-            elif detection_res and detection_res.detected and detection_res.centroid:
-                err_px = float(np.hypot(detection_res.centroid[0] - 320.0, detection_res.centroid[1] - 240.0))
-                quality = float(detection_res.confidence * 100.0)
-                pan_err = float(detection_res.centroid[0] - 320.0) / 160.0
-                tilt_err = float(detection_res.centroid[1] - 240.0) / 160.0
-            else:
-                err_px = 0.0
-                quality = 0.0
-                pan_err = 0.0
-                tilt_err = 0.0
-
-            innov = float(np.linalg.norm(estimate.innovation)) if (estimate and estimate.innovation is not None) else 0.0
-            conf = float(detection_res.confidence * 100.0) if (detection_res and detection_res.detected) else 0.0
-
-            self._history_times.append(t_curr)
-            self._history_errors_px.append(err_px)
-            self._history_qualities.append(quality)
-            self._history_innovations.append(innov)
-            self._history_pan_errors.append(pan_err)
-            self._history_tilt_errors.append(tilt_err)
-            self._history_confidences.append(conf)
-
-            if len(self._history_times) > self._max_history:
-                self._history_times.pop(0)
-                self._history_errors_px.pop(0)
-                self._history_qualities.pop(0)
-                self._history_innovations.pop(0)
-                self._history_pan_errors.pop(0)
-                self._history_tilt_errors.pop(0)
-                self._history_confidences.pop(0)
-
             self.analytics_panel.update_analytics(
                 times=self._history_times,
                 errors_px=self._history_errors_px,
@@ -691,16 +719,6 @@ class TrackScreenView(QWidget):
             )
         except Exception as ex:
             logger.debug("Analytics update error: %s", ex)
-
-        # Cache for CCSDS Telemetry Snapshot Dossier Exporter
-        if dist_frame is not None:
-            self._last_sensor_frame = dist_frame
-        if detection_res is not None:
-            self._last_detection_res = detection_res
-        if estimate is not None:
-            self._last_estimate = estimate
-        if pat_state is not None:
-            self._last_pat_state = pat_state
 
     def _on_export_snapshot_clicked(self) -> None:
         """Trigger interactive save file dialog to download telemetry snapshot PNG."""
