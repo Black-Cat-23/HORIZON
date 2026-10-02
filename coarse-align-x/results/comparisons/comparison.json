@@ -3,13 +3,13 @@
     "success_rate": 100.0,
     "median_acq": 0.0,
     "p95_acq": 0.0,
-    "rmse_error": 12.95,
-    "p95_error": 31.0,
-    "p99_error": 54.88,
+    "rmse_error": 0.69,
+    "p95_error": 0.97,
+    "p99_error": 1.02,
     "lock_retention": 100.0,
     "reacq_time": 0.0,
     "fp_rate": 0.0,
-    "p95_latency": 66.85
+    "p95_latency": 4.35
   },
   "B1": {
     "success_rate": 100.0,
@@ -52,29 +52,29 @@
     "video_file": null,
     "video_resolution": null,
     "video_source_fps": null,
-    "total_frames": 150,
+    "total_frames": 900,
     "perception_mode": "HYBRID",
     "estimator": "IMM_ADAPTIVE_EKF",
     "controller": "ADRC_NONLINEAR",
     "centroid_method": "weighted_cog",
-    "preset": "ADVERSARIAL",
-    "trajectory": "figure8",
+    "preset": "NOMINAL",
+    "trajectory": "sinusoidal",
     "seed": 42,
-    "duration_seconds": 5.0,
+    "duration_seconds": 30.0,
     "beacon_shape": "Square (Box)",
     "beacon_size_px": 10,
-    "timestamp": "2026-10-02 15:55:11",
+    "timestamp": "2026-10-02 16:17:20",
     "metrics": {
       "success_rate": 100.0,
       "median_acq": 0.0,
       "p95_acq": 0.0,
-      "rmse_error": 12.95,
-      "p95_error": 31.0,
-      "p99_error": 54.88,
+      "rmse_error": 0.69,
+      "p95_error": 0.97,
+      "p99_error": 1.02,
       "lock_retention": 100.0,
       "reacq_time": 0.0,
       "fp_rate": 0.0,
-      "p95_latency": 66.85
+      "p95_latency": 4.35
     }
   }
 }
