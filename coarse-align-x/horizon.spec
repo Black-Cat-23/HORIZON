@@ -16,9 +16,15 @@ hiddenimports += [
     'onnxruntime.capi._pybind_state',
     'scipy.special._basic',
     'scipy.optimize._minimize',
+    'scipy.signal',
     'osqp',
     'pyqtgraph',
+    'matplotlib',
     'matplotlib.backends.backend_agg',
+    'matplotlib.backends.backend_qtagg',
+    'filterpy',
+    'filterpy.kalman',
+    'yaml',
     'cv2',
     'numpy',
     'pandas',
@@ -28,13 +34,24 @@ hiddenimports += [
     'reportlab.lib.styles',
     'reportlab.platypus',
     'reportlab.pdfgen',
-    'sources',
-    'sources.video_source',
-    'sources.frame_source',
 ]
+hiddenimports += collect_submodules('simulator')
+hiddenimports += collect_submodules('tracking')
+hiddenimports += collect_submodules('control')
+hiddenimports += collect_submodules('pat')
+hiddenimports += collect_submodules('analysis')
+hiddenimports += collect_submodules('benchmark')
+hiddenimports += collect_submodules('sources')
 
-# Data files to bundle – include models, configs, fonts, icons, plugins, assets
+# Data files to bundle – include models, configs, fonts, icons, plugins, assets, results
 datas = []
+# Results & Benchmark datasets
+if os.path.isdir('results'):
+    for root, _, files in os.walk('results'):
+        for f in files:
+            p = os.path.join(root, f)
+            rel_dir = os.path.relpath(root, '.')
+            datas.append((p, rel_dir))
 # Models (ONNX files & metadata)
 if os.path.isdir('models'):
     datas += collect_data_files('models', includes=['*.onnx'])
