@@ -12,6 +12,13 @@ export const CinematicPreloader: React.FC<CinematicPreloaderProps> = ({ onComple
   const totalBlocks = 14;
 
   useEffect(() => {
+    // Prebuffer hero.mp4 in browser cache for instantaneous smooth playback
+    const prebufferVideo = document.createElement('video');
+    prebufferVideo.src = '/videos/hero.mp4';
+    prebufferVideo.preload = 'auto';
+    prebufferVideo.muted = true;
+    prebufferVideo.load();
+
     // Start background preloading off main thread
     assetPreloader.preloadAll();
 

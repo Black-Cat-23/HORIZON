@@ -8,6 +8,7 @@ interface AnimatedCounterProps {
   duration?: number;
   isActive?: boolean;
   className?: string;
+  once?: boolean;
 }
 
 export const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
@@ -16,20 +17,57 @@ export const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
   prefix = '',
   suffix = '',
   duration = 1600,
-  isActive = true,
+  isActive,
   className = '',
+  once = false,
 }) => {
   const [displayValue, setDisplayValue] = useState<number>(0);
+  const [isInViewport, setIsInViewport] = useState<boolean>(false);
+  
+  const spanRef = useRef<HTMLSpanElement | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!isActive) {
-      setDisplayValue(0);
+    const el = spanRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsInViewport(true);
+          } else {
+            if (!once) {
+              setIsInViewport(false);
+            }
+          }
+        });
+      },
+      {
+        threshold: 0.1,
+        rootMargin: '0px 0px -20px 0px',
+      }
+    );
+
+    observer.observe(el);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [once]);
+
+  const shouldAnimate = isActive !== undefined ? (isActive || isInViewport) : isInViewport;
+
+  useEffect(() => {
+    if (!shouldAnimate) {
+      if (!once) setDisplayValue(0);
       startTimeRef.current = null;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       return;
     }
+
+    startTimeRef.current = null;
 
     const animate = (timestamp: number) => {
       if (!startTimeRef.current) startTimeRef.current = timestamp;
@@ -44,6 +82,8 @@ export const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
 
       if (progress < 1) {
         rafRef.current = requestAnimationFrame(animate);
+      } else {
+        setDisplayValue(value);
       }
     };
 
@@ -52,10 +92,10 @@ export const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [value, duration, isActive]);
+  }, [value, duration, shouldAnimate, once]);
 
   return (
-    <span className={className}>
+    <span ref={spanRef} className={className}>
       {prefix}
       {displayValue.toFixed(decimals)}
       {suffix}

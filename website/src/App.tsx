@@ -12,6 +12,7 @@ import { audioManager } from './core/AudioManager';
 // Cinematic Flow Components
 import { CinematicPreloader } from './components/CinematicPreloader';
 import { CinematicIntroVideo } from './components/CinematicIntroVideo';
+import { InteractiveCursorGlow } from './components/InteractiveCursorGlow';
 
 // Chapters
 import { PreloadGate } from './chapters/00_PreloadGate';
@@ -24,6 +25,7 @@ import { DisturbanceLab } from './chapters/06_DisturbanceLab';
 import { LockLoss } from './chapters/07_LockLoss';
 import { Reacquisition } from './chapters/08_Reacquisition';
 import { SystemArchitecture } from './chapters/09_SystemArchitecture';
+import { CompetitiveDifferentiator } from './chapters/09b_CompetitiveDifferentiator';
 import { BenchmarkProof } from './chapters/10_BenchmarkProof';
 import { ClosingEpilogue } from './chapters/11_ClosingEpilogue';
 
@@ -94,6 +96,9 @@ export const App: React.FC = () => {
         </>
       )}
 
+      {/* 4b. Smooth Interactive Cursor Glow & Ambient Spotlight */}
+      <InteractiveCursorGlow />
+
       {/* 5. IVRESS Minimalist Header */}
       <IVRESSHeader
         isAudioActive={isAudioActive}
@@ -124,6 +129,7 @@ export const App: React.FC = () => {
         <LockLoss isActive={activeChapter.id === 'loss'} />
         <Reacquisition isActive={activeChapter.id === 'reacquire'} />
         <SystemArchitecture isActive={activeChapter.id === 'system'} />
+        <CompetitiveDifferentiator isActive={activeChapter.id === 'differentiator'} />
         <BenchmarkProof isActive={activeChapter.id === 'proof'} />
         <ClosingEpilogue isActive={activeChapter.id === 'closing'} />
       </main>

@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
-const videoSource = '/videos/Earth Zoom In Realistic Clouds With Alpha Matte.mp4';
+const videoSource = '/videos/hero.mp4';
 
 interface CinematicIntroVideoProps {
   onComplete: () => void;
@@ -10,8 +10,6 @@ interface CinematicIntroVideoProps {
 export const CinematicIntroVideo: React.FC<CinematicIntroVideoProps> = ({ onComplete }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isFadingOut, setIsFadingOut] = useState<boolean>(false);
-  const startTime = 6.0; // Start at 6 sec
-  const endTime = 15.0;  // Play until 15 sec
 
   useEffect(() => {
     const video = videoRef.current;
@@ -28,20 +26,20 @@ export const CinematicIntroVideo: React.FC<CinematicIntroVideoProps> = ({ onComp
       }, 750);
     };
 
-    video.currentTime = startTime;
-
     const handleLoadedData = async () => {
       try {
-        video.currentTime = startTime;
         await video.play();
       } catch (err) {
         console.warn('Autoplay or video play fallback:', err);
       }
     };
 
+    const handleEnded = () => {
+      safeTriggerComplete();
+    };
+
     const handleTimeUpdate = () => {
-      if (video.currentTime >= endTime) {
-        video.pause();
+      if (video.duration && video.currentTime >= video.duration - 0.15) {
         safeTriggerComplete();
       }
     };
@@ -51,7 +49,16 @@ export const CinematicIntroVideo: React.FC<CinematicIntroVideoProps> = ({ onComp
       safeTriggerComplete();
     };
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        safeTriggerComplete();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
     video.addEventListener('loadeddata', handleLoadedData);
+    video.addEventListener('canplay', handleLoadedData);
+    video.addEventListener('ended', handleEnded);
     video.addEventListener('timeupdate', handleTimeUpdate);
     video.addEventListener('error', handleError);
 
@@ -59,14 +66,17 @@ export const CinematicIntroVideo: React.FC<CinematicIntroVideoProps> = ({ onComp
       handleLoadedData();
     }
 
-    // Safety timeout: Ensure intro video doesn't get stuck if browser blocks video playback
+    // Safety timeout: Ensure intro video doesn't get stuck if browser blocks video playback (18.2s video + buffer)
     const maxSafetyTimeout = setTimeout(() => {
       safeTriggerComplete();
-    }, 11000);
+    }, 24000);
 
     return () => {
       clearTimeout(maxSafetyTimeout);
+      window.removeEventListener('keydown', handleKeyDown);
       video.removeEventListener('loadeddata', handleLoadedData);
+      video.removeEventListener('canplay', handleLoadedData);
+      video.removeEventListener('ended', handleEnded);
       video.removeEventListener('timeupdate', handleTimeUpdate);
       video.removeEventListener('error', handleError);
     };

@@ -2,7 +2,9 @@
 @import './typography.css';
 
 /* CSS Reset & Global Layout */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -56,12 +58,10 @@ body {
   inset: 0;
   pointer-events: none;
   z-index: 5;
-  background: radial-gradient(
-    ellipse at 50% 50%,
-    rgba(2, 4, 8, 0) 65%,
-    rgba(6, 14, 28, 0.35) 85%,
-    rgba(2, 4, 8, 0.85) 100%
-  );
+  background: radial-gradient(ellipse at 50% 50%,
+      rgba(2, 4, 8, 0) 65%,
+      rgba(6, 14, 28, 0.35) 85%,
+      rgba(2, 4, 8, 0.85) 100%);
 }
 
 /* Hubtown 45° Chamfered Beveled Glass Cards */
@@ -72,16 +72,14 @@ body {
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border-subtle);
   padding: 1.75rem 2rem;
-  clip-path: polygon(
-    0 14px,
-    14px 0,
-    calc(100% - 14px) 0,
-    100% 14px,
-    100% calc(100% - 14px),
-    calc(100% - 14px) 100%,
-    14px 100%,
-    0 calc(100% - 14px)
-  );
+  clip-path: polygon(0 14px,
+      14px 0,
+      calc(100% - 14px) 0,
+      100% 14px,
+      100% calc(100% - 14px),
+      calc(100% - 14px) 100%,
+      14px 100%,
+      0 calc(100% - 14px));
   transition: all 0.4s var(--ease-out-expo);
   pointer-events: auto;
 }
@@ -144,8 +142,13 @@ body {
 }
 
 @keyframes rotateClockwise {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes breatheAura {
@@ -153,6 +156,7 @@ body {
     transform: scale(0.96);
     box-shadow: 0 0 16px rgba(169, 216, 232, 0.2), inset 0 0 8px rgba(169, 216, 232, 0.1);
   }
+
   100% {
     transform: scale(1.04);
     box-shadow: 0 0 36px rgba(169, 216, 232, 0.5), inset 0 0 20px rgba(169, 216, 232, 0.3);
@@ -160,14 +164,33 @@ body {
 }
 
 @keyframes scanLine {
-  0% { transform: translateY(-100%); opacity: 0; }
-  50% { opacity: 1; }
-  100% { transform: translateY(180px); opacity: 0; }
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(180px);
+    opacity: 0;
+  }
 }
 
 @keyframes pulseGlow {
-  0%, 100% { opacity: 0.6; transform: scale(0.95); }
-  50% { opacity: 1; transform: scale(1.08); }
+
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(0.95);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
 }
 
 /* Scrollytelling DOM Container */
@@ -196,6 +219,6 @@ body {
   pointer-events: none;
 }
 
-.chapter-content-inner > * {
+.chapter-content-inner>* {
   pointer-events: auto;
 }

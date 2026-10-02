@@ -27,34 +27,67 @@ export const LockLoss: React.FC<LockLossProps> = ({ isActive }) => {
           />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', maxWidth: '960px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', maxWidth: '960px' }}>
           <p
             className="font-body"
             style={{
               color: 'var(--text-secondary)',
               fontSize: '1.125rem',
-              lineHeight: 1.7,
+              lineHeight: 1.75,
+              fontWeight: 300,
+              margin: 0,
             }}
           >
             When severe obstacles, clouds, or rapid angular acceleration cause complete optical dropouts, the system must not diverge. State estimation covariance grows while maintaining last-known velocity vector.
           </p>
 
           <div
+            className="beveled-glass-card"
             style={{
-              padding: '1.5rem',
-              border: '1px solid rgba(232, 111, 127, 0.4)',
-              backgroundColor: 'rgba(11, 16, 24, 0.75)',
-              backdropFilter: 'blur(8px)',
+              borderColor: 'rgba(232, 111, 127, 0.35)',
+              backgroundColor: 'rgba(10, 19, 34, 0.65)',
             }}
           >
-            <span className="label-caps" style={{ display: 'block', marginBottom: '0.75rem', color: 'var(--state-loss)' }}>
-              DROPOUT DIAGNOSTICS
-            </span>
-            <div className="font-mono data-mono" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.8rem' }}>
-              <div>TRACK STATUS: <span style={{ color: 'var(--state-loss)', fontWeight: 700 }}>LOCK LOST (COASTING)</span></div>
-              <div>OCCLUSION DURATION: <span style={{ color: 'var(--text-primary)' }}>1.20 SECONDS</span></div>
-              <div>KALMAN COVARIANCE P: <span style={{ color: 'var(--state-disturbance)' }}>EXPANDING (UNCERTAINTY GROWING)</span></div>
-              <div>FALLBACK ACTION: <span style={{ color: 'var(--state-loss)' }}>INITIATE REACQUISITION</span></div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <span className="label-caps" style={{ color: 'var(--state-loss)' }}>
+                DROPOUT DIAGNOSTICS
+              </span>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '9999px',
+                  backgroundColor: 'rgba(232, 111, 127, 0.12)',
+                  border: '1px solid rgba(232, 111, 127, 0.35)',
+                  fontSize: '0.65rem',
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--state-loss)',
+                }}
+              >
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--state-loss)' }} />
+                COAST MODE
+              </span>
+            </div>
+
+            <div className="font-mono" style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', fontSize: '0.8rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-muted)' }}>TRACK STATUS:</span>
+                <span style={{ color: 'var(--state-loss)', fontWeight: 700 }}>LOCK LOST (COASTING)</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-muted)' }}>OCCLUSION DURATION:</span>
+                <span style={{ color: 'var(--text-primary)' }}>1.20 SECONDS</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-muted)' }}>COVARIANCE P:</span>
+                <span style={{ color: 'var(--state-disturbance)' }}>EXPANDING BOUNDS</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-muted)' }}>FALLBACK ACTION:</span>
+                <span style={{ color: 'var(--state-signal)' }}>INITIATE REACQUISITION</span>
+              </div>
             </div>
           </div>
         </div>

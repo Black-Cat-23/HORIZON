@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-const architectureImg = '/images/1.jpg';
+const architectureImg = '/images/system_architecture.png';
+const technicalReportPdf = '/TechnicalReport.pdf';
+const userManualPdf = '/USER_MANUAL.pdf';
 
 interface DocItem {
   id: string;
@@ -10,6 +12,9 @@ interface DocItem {
   summary: string;
   highlights: string[];
   image?: string;
+  pdfUrl?: string;
+  downloadUrl: string;
+  downloadName: string;
   contentSections: {
     heading: string;
     body: string;
@@ -31,6 +36,9 @@ const DOCUMENTS: DocItem[] = [
       'Interacting Multiple Model Extended Kalman Filter (IMM-EKF) blending constant-velocity and coordinated-turn models',
       'Kinematic feedforward velocity commands enforcing the physical 5.0°/s gimbal speed limit',
     ],
+    image: architectureImg,
+    downloadUrl: architectureImg,
+    downloadName: 'HORIZON_System_Architecture_Blueprint.png',
     contentSections: [
       {
         heading: 'End-to-End System Dataflow',
@@ -58,7 +66,7 @@ const DOCUMENTS: DocItem[] = [
     title: 'Technical Specification Report',
     category: 'ISRO PS26169 Technical Dossier',
     badge: 'Verified Specifications',
-    pages: '32 Pages · Full Spec',
+    pages: '32 Pages · Full Spec (PDF)',
     summary: 'A detailed engineering document detailing the mathematical foundations, filter formulations, disturbance rejection models, and experimental benchmark results.',
     highlights: [
       'Sub-pixel centroid accuracy within ±0.15 pixels using intensity-weighted Gaussian peak fitting',
@@ -66,6 +74,9 @@ const DOCUMENTS: DocItem[] = [
       'Empirical validation over 1,000 Monte Carlo batch trials achieving a 0.048s mean acquisition time',
       'Benchmark-2 direct external MP4 video bypass evaluation fulfilling 100% of ISRO requirements',
     ],
+    pdfUrl: technicalReportPdf,
+    downloadUrl: technicalReportPdf,
+    downloadName: 'TechnicalReport.pdf',
     contentSections: [
       {
         heading: 'Problem Formulation & Operational Scope',
@@ -101,7 +112,7 @@ const DOCUMENTS: DocItem[] = [
     title: 'Operations & Verification Manual',
     category: 'System Operation Manual',
     badge: 'Operations Guide',
-    pages: '18 Pages · User Guide',
+    pages: '18 Pages · User Guide (PDF)',
     summary: 'A step-by-step operator guide covering simulation setup in Unity 6 LTS, external MP4 video bypass execution, and one-click benchmark report export.',
     highlights: [
       'Comprehensive instructions for running both interactive GUI and headless batch simulations',
@@ -109,6 +120,9 @@ const DOCUMENTS: DocItem[] = [
       'Real-time disturbance lab controls including atmospheric attenuation and platform vibration',
       'Automated export of frame-by-frame CSV logs, JSON performance metrics, and formal PDF summaries',
     ],
+    pdfUrl: userManualPdf,
+    downloadUrl: userManualPdf,
+    downloadName: 'USER_MANUAL.pdf',
     contentSections: [
       {
         heading: 'Running Benchmark-1 Synthetic Simulations',
@@ -147,30 +161,13 @@ export const DocumentationVault: React.FC = () => {
     const doc = DOCUMENTS.find((d) => d.id === docId);
     if (!doc) return;
 
-    let content = `# HORIZON: ${doc.title}\n`;
-    content += `Category: ${doc.category} | ${doc.badge}\n\n`;
-    content += `## Summary\n${doc.summary}\n\n`;
-    content += `## Key Highlights\n${doc.highlights.map((h) => `- ${h}`).join('\n')}\n\n`;
-    content += `## Content & Specifications\n`;
-    doc.contentSections.forEach((s) => {
-      content += `### ${s.heading}\n${s.body}\n\n`;
-      if (s.metrics) {
-        s.metrics.forEach((m) => {
-          content += `* **${m.label}:** ${m.value}\n`;
-        });
-        content += '\n';
-      }
-    });
-
-    const blob = new Blob([content], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${doc.id}_HORIZON_ISRO_PS26169.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const link = document.createElement('a');
+    link.href = doc.downloadUrl;
+    link.download = doc.downloadName;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -351,8 +348,11 @@ export const DocumentationVault: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                <button
-                  onClick={() => handleDownloadDoc(activeDoc.id)}
+                <a
+                  href={activeDoc.downloadUrl}
+                  download={activeDoc.downloadName}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={{
                     padding: '0.55rem 1.15rem',
                     borderRadius: '9999px',
@@ -362,12 +362,16 @@ export const DocumentationVault: React.FC = () => {
                     fontFamily: 'var(--font-body)',
                     fontSize: '0.82rem',
                     fontWeight: 500,
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
                   }}
                 >
-                  Download Spec ↓
-                </button>
+                  <span>{activeDoc.pdfUrl ? 'Download PDF ↓' : 'Download Blueprint ↓'}</span>
+                </a>
                 <button
                   onClick={() => setIsModalOpen(false)}
                   style={{
@@ -439,15 +443,27 @@ export const DocumentationVault: React.FC = () => {
                     >
                       HARDWARE-IN-THE-LOOP ARCHITECTURE & DATAFLOW SCHEMATIC
                     </span>
-                    <span
+                    <a
+                      href={architectureImg}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       style={{
                         fontFamily: 'var(--font-body)',
                         fontSize: '0.75rem',
-                        color: 'var(--text-muted)',
+                        color: 'rgba(213, 224, 255, 0.85)',
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        padding: '0.2rem 0.6rem',
+                        borderRadius: '6px',
+                        backgroundColor: 'rgba(169, 216, 232, 0.12)',
+                        border: '1px solid rgba(169, 216, 232, 0.25)',
                       }}
                     >
-                      60 Hz Real-Time Loop · ISRO PS26169
-                    </span>
+                      <span>Open Full Resolution</span>
+                      <span>↗</span>
+                    </a>
                   </div>
                   <img
                     src={architectureImg}
@@ -456,6 +472,75 @@ export const DocumentationVault: React.FC = () => {
                       width: '100%',
                       height: 'auto',
                       display: 'block',
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Verified PDF Interactive Viewer (for Technical Report & User Manual) */}
+              {activeDoc.pdfUrl && (
+                <div
+                  style={{
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    border: '1px solid rgba(169, 216, 232, 0.28)',
+                    backgroundColor: '#050B14',
+                    boxShadow: '0 12px 36px rgba(0, 0, 0, 0.5)',
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: '0.75rem 1.25rem',
+                      backgroundColor: 'rgba(10, 20, 36, 0.85)',
+                      borderBottom: '1px solid rgba(169, 216, 232, 0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        fontSize: '0.82rem',
+                        color: 'var(--state-signal)',
+                        fontWeight: 600,
+                        letterSpacing: '0.02em',
+                      }}
+                    >
+                      {activeDoc.badge.toUpperCase()} · VERIFIED PDF DOSSIER
+                    </span>
+                    <a
+                      href={activeDoc.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        fontSize: '0.75rem',
+                        color: 'rgba(213, 224, 255, 0.85)',
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        padding: '0.2rem 0.6rem',
+                        borderRadius: '6px',
+                        backgroundColor: 'rgba(169, 216, 232, 0.12)',
+                        border: '1px solid rgba(169, 216, 232, 0.25)',
+                      }}
+                    >
+                      <span>Open Fullscreen PDF</span>
+                      <span>↗</span>
+                    </a>
+                  </div>
+                  <iframe
+                    src={`${activeDoc.pdfUrl}#toolbar=1`}
+                    title={activeDoc.title}
+                    style={{
+                      width: '100%',
+                      height: '620px',
+                      border: 'none',
+                      backgroundColor: '#050B14',
                     }}
                   />
                 </div>

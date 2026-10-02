@@ -8,7 +8,7 @@ interface IVRESSChapterDisplayProps {
 
 export const IVRESSChapterDisplay: React.FC<IVRESSChapterDisplayProps> = ({
   activeChapter,
-  totalChapters = '09',
+  totalChapters = '11',
 }) => {
   // Use '01' on start/preload to match Image 1
   const displayNum = activeChapter.num === '00' ? '01' : activeChapter.num;
